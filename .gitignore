@@ -1,0 +1,8 @@
+/build
+/dist
+/docopt_parser.egg-info
+__pycache__/
+*.pyc
+/.vscode/settings.json
+/docopt-parser.code-workspace
+/docopt_parser/version.py
