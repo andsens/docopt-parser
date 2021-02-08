@@ -4,6 +4,16 @@ import re
 from parsec import ParseError, Parser, Value, eof, generate, many, many1, none_of, optional, regex, sepBy, string
 
 
+def parse(doc):
+  try:
+    return docopt_lang.parse_strict(doc)
+  except ParseError as e:
+    line_no, col = e.loc_info(e.text, e.index)
+    line = doc.split('\n')[line_no]
+    msg = '\n{line}\n{col}^\n{msg}'.format(line=line, col=' ' * col, msg=str(e))
+    raise DocoptParseError(msg) from None
+
+
 def exclude(p, end):
   '''Fails parser p if parser end matches
   '''
@@ -37,47 +47,20 @@ class Node(namedtuple('Node', ['type', 'children'])):
     if type(self.children) is list:
       children = '\n' + '\n'.join([self.childToString(c, indent + 2) for c in self.children])
     else:
-      children = ' ' + str(self.children)
+      children = ' "{str}"'.format(str=str(self.children))
     return '{indent}<{type}>{children}'.format(indent=' ' * indent, type=self.type, children=children)
 
   def __str__(self):
     return self.toString()
 
 
-def parse(doc):
-  try:
-    return docopt_lang.parse_strict(doc)
-  except ParseError as e:
-    line_no, col = e.loc_info(e.text, e.index)
-    line = doc.split('\n')[line_no]
-    msg = '\n{line}\n{col}^\n{msg}'.format(line=line, col=' ' * col, msg=str(e))
-    raise DocoptParseError(msg) from None
-
-
-def req(p):
-  @generate
-  def req_expr():
-    return (yield string('(') >> p.parsecmap(to_node('req_expr')) << string(')'))
-  return req_expr
-
-
-def opt(p):
-  @generate
-  def opt_expr():
-    return (yield string('[') >> p.parsecmap(to_node('opt_expr')) << string(']'))
-  return opt_expr
+def section_title(title):
+  return regex(re.escape(title) + ':', re.IGNORECASE)
 
 
 @generate
 def atom():
-  """atom ::= '(' expr ')' | '[' expr ']' | 'options'
-            | long | shorts | argument | command ;"""
-  atom = yield req(expr) ^ opt(expr) ^ options_shortcut ^ long ^ shorts ^ arg ^ command
-  return atom
-
-
-def section_title(title):
-  return regex(re.escape(title) + ':', re.IGNORECASE)
+  return (yield group ^ opt ^ options_shortcut ^ long ^ shorts ^ arg ^ command)
 
 
 any = regex('.').desc('any char')
@@ -86,22 +69,27 @@ tab = string('\t').desc('<tab>')
 space = string(' ').desc('<space>')
 indent = many1(space) | tab
 nl = string('\n').desc('<newline>')
+symbol_char = regex(r'[^\s|()\[\]<>=]*')
+symbol = (regex(r'[^\s|()\[\]<>=-]') + symbol_char).parsecmap(''.join)
+either = (string('|') ^ (space >> string('|'))) << optional(space)
 rest_of_line = many(not_nl).desc('rest of the line').parsecmap(''.join)
-wrapped_arg = string('<') >> regex(r'([^\>\s])+') << string('>')
-uppercase_arg = regex(r'[A-Z0-9]+')
+wrapped_arg = string('<') >> symbol << string('>').parsecmap(to_node('<arg>'))
+uppercase_arg = regex(r'[A-Z0-9][A-Z0-9-]*').parsecmap(to_node('ARG'))
 arg = (wrapped_arg ^ uppercase_arg).parsecmap(to_node('argument'))
-program = regex(r'\S+').parsecmap(to_node('program'))
-long = string('--') + regex(r'(\S|[^=])+') + optional(regex(' |=') + regex(r'\S+'))
-shorts = string('-') + regex(r'[^-]\S+') + optional(regex(' ') + regex(r'\S+'))
-command = regex(r'\S+').parsecmap(to_node('command'))
-options_shortcut = string('options')
+program = symbol.parsecmap(to_node('program'))
+long = (string('--') >> symbol + optional(regex(r' |=') >> arg)).parsecmap(to_node('--long'))
+shorts = (string('-') >> symbol_char + optional(space >> arg)).parsecmap(to_node('-s'))
+command = symbol.parsecmap(to_node('command'))
+options_shortcut = string('options').parsecmap(to_node('options shortcut'))
 multiple = string('...').parsecmap(to_node('multiple'))
 seq = sepBy(atom + multiple ^ atom, space).parsecmap(to_node('seq'))
-expr = sepBy(seq, string('|')).parsecmap(to_node('expr either'))
+expr = sepBy(seq, either).parsecmap(to_node('expr either'))
+group = (string('(') >> expr << string(')')).parsecmap(to_node('group'))
+opt = (string('[') >> expr << string(']')).parsecmap(to_node('optional'))
 usage_expression = (program << space >> expr)
-usage_lines = sepBy(usage_expression, nl + indent).parsecmap(to_node('usage_lines either'))
+usage_lines = sepBy(usage_expression, nl + indent).parsecmap(to_node('usage lines'))
 usage_section = optional(nl + indent) >> usage_lines << (eof() | nl)
-usage_title = section_title('usage').desc('"Usage:" section').parsecmap(to_node('usage_title'))
+usage_title = section_title('usage').desc('"Usage:" section').parsecmap(to_node('usage title'))
 preamble = (exclude(rest_of_line, usage_title) << nl).desc('Preamble').parsecmap(to_node('preamble'))
 
 
@@ -111,63 +99,3 @@ def doc():
 
 
 docopt_lang = doc.parsecmap(to_node('docopt_lang'))
-
-# '''
-# ^(
-#   [^\n]*
-#   usage:
-#   [^\n]*
-#   \n?
-#   (?:
-#     [ \t]
-#     .*?
-#     (?:\n|$)
-#   )*
-# )
-# '''
-# usage_sections = parse_section('usage:', doc)
-# if len(usage_sections) == 0:
-#     raise DocoptLanguageError('"usage:" (case-insensitive) not found.')
-# if len(usage_sections) > 1:
-#     raise DocoptLanguageError('More than one "usage:" (case-insensitive).')
-# DocoptExit.usage = usage_sections[0]
-
-# options = parse_defaults(doc)
-# pattern = parse_pattern(formal_usage(DocoptExit.usage), options)
-# # [default] syntax for argument is disabled
-# #for a in pattern.flat(Argument):
-# #    same_name = [d for d in arguments if d.name == a.name]
-# #    if same_name:
-# #        a.value = same_name[0].value
-# argv = parse_argv(Tokens(argv), list(options), options_first)
-# pattern_options = set(pattern.flat(Option))
-# for options_shortcut in pattern.flat(OptionsShortcut):
-#     doc_options = parse_defaults(doc)
-#     options_shortcut.children = list(set(doc_options) - pattern_options)
-#     #if any_options:
-#     #    options_shortcut.children += [Option(o.short, o.long, o.argcount)
-#     #                    for o in argv if type(o) is Option]
-# extras(help, version, argv, doc)
-# matched, left, collected = pattern.fix().match(argv)
-# if matched and left == []:  # better error message if left?
-#     return Dict((a.name, a.value) for a in (pattern.flat() + collected))
-# raise DocoptExit()
-
-
-# def parse_section(name, source):
-def parse_section(name):
-  return regex('^([^\n]*' + name + '[^\n]*\n?(?:[ \t].*?(?:\n|$))*)', re.IGNORECASE | re.MULTILINE)
-#     pattern = re.compile('^([^\n]*' + name + '[^\n]*\n?(?:[ \t].*?(?:\n|$))*)',
-#                          re.IGNORECASE | re.MULTILINE)
-#     return [s.strip() for s in pattern.findall(source)]
-
-# def parse_defaults(doc):
-#     defaults = []
-#     for s in parse_section('options:', doc):
-#         # FIXME corner case "bla: options: --foo"
-#         _, _, s = s.partition(':')  # get rid of "options:"
-#         split = re.split('\n[ \t]*(-\S+?)', '\n' + s)[1:]
-#         split = [s1 + s2 for s1, s2 in zip(split[::2], split[1::2])]
-#         options = [Option.parse(s) for s in split if s.startswith('-')]
-#         defaults += options
-#     return defaults

@@ -3,12 +3,12 @@
 # from tests.conftest import parse_usecases
 # next(parse_usecases("tests/docopt-parser-usecases.txt"))
 
-from docopt_parser.parser import parse
+from docopt_parser.parser import parse, docopt_lang
 from docopt_parser.docopt import parse_section, formal_usage, docopt
 
 doc = '''Naval Fate.
 Usage:
-  prog ship new <name>... | prog ship [<name>] move <x> <y> [--speed=<kn>]
+  prog ship new <name>...  | ship [<name>] move <x> <y> [--speed=<kn>]
   prog ship shoot <x> <y>
   prog mine (set|remove) <x> <y> [--moored|--drifting]
   prog -h | --help
@@ -24,6 +24,10 @@ Options:
 '''
 
 # print(formal_usage(parse_section('usage:', doc)[0]))
-print(parse(doc))
+try:
+  print(docopt_lang.parse(doc))
+except Exception:
+  pass
+parse(doc)
 # [print(r) for r in parse(doc)]
 # print(docopt(doc))
