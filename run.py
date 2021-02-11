@@ -22,7 +22,7 @@ Options:
   --drifting    Drifting mine.
 
 '''
-
+# print(docopt(doc))
 # print(formal_usage(parse_section('usage:', doc)[0]))
 try:
   print(docopt_lang.parse(doc))

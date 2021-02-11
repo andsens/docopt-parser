@@ -54,9 +54,6 @@ class Node(namedtuple('Node', ['type', 'name', 'children'])):
   def __str__(self):
     return self.toString()
 
-def section_title(title):
-  return regex(re.escape(title) + ':', re.IGNORECASE)
-
 def symbol_char(disallowed):
   return none_of('| \n' + disallowed)
 
@@ -96,7 +93,7 @@ def command(disallowed):
   return symbol(disallowed).parsecmap(to_node('command'))
 
 def seq(disallowed):
-  return sepBy(atom(disallowed), space).parsecmap(to_node('seq'))
+  return sepBy(atom(disallowed), exclude(whitespace, nl)).parsecmap(to_node('seq'))
 
 def expr(disallowed):
   return sepBy(seq(disallowed), either).parsecmap(to_node('expr'))
@@ -109,28 +106,54 @@ def group():
 def opt():
   return (yield (string('[') >> expr(']') << string(']')).parsecmap(to_node('optional')))
 
-any = regex('.').desc('any char')
+def section_title(title_re):
+  return regex(r'(%s):' % title_re, re.IGNORECASE)
+
+any = regex(r'.|\n').desc('any char')
 not_nl = none_of('\n').desc('*not* <newline>')
 tab = string('\t').desc('<tab>')
 space = string(' ').desc('<space>')
+whitespace = regex(r'\s').desc('<whitespace>')
 indent = many1(space) | tab
 nl = string('\n').desc('<newline>')
 multiple = string('...').parsecmap(to_node('multiple'))
 either = (string('|') ^ (space >> string('|'))) << optional(space)
-rest_of_line = many(not_nl).desc('rest of the line').parsecmap(''.join)
 wrapped_arg = (string('<') >> symbol('>') << string('>')).parsecmap(to_node('<arg>'))
 uppercase_arg = regex(r'[A-Z0-9][A-Z0-9-]*').parsecmap(to_node('ARG'))
 arg = (wrapped_arg ^ uppercase_arg)
-program = symbol('').parsecmap(to_node('program'))
 options_shortcut = string('options').parsecmap(to_node('options shortcut'))
-usage_expression = (program << space >> expr(''))
-usage_lines = sepBy(usage_expression, nl + indent).parsecmap(to_node('usage lines'))
-usage_section = optional(nl + indent) >> usage_lines << (eof() | nl)
-usage_title = section_title('usage').desc('"Usage:" section').parsecmap(to_node('usage title'))
-preamble = (exclude(rest_of_line, usage_title) << nl).desc('Preamble').parsecmap(to_node('preamble'))
+
+@generate
+def usage_lines():
+  prog = yield symbol('')
+  yield many(whitespace)
+  expressions = [(yield expr(''))]
+  yield many(whitespace)
+  expressions += yield sepBy(string(prog) << many(whitespace) >> expr(''), nl + indent)
+  return Node('usage_lines', None, expressions)
+
+text = many1(
+  exclude(any, section_title('usage|options'))).desc('Text').parsecmap(lambda c: to_node('text')(''.join(c)))
+
+# option_lines = sepBy(option_line, nl + indent).parsecmap(to_node('usage lines'))
+
+usage_section = section_title('usage') >> optional(nl + indent) >> usage_lines << (eof() | nl)
+# options_section = section_title('options') >> optional(nl + indent) >> option_lines << (eof() | nl)
+
+# \n[ \t]*(-\S+?)
+
+# # FIXME corner case "bla: options: --foo"
+# _, _, s = s.partition(':')  # get rid of "options:"
+# split = re.split('\n[ \t]*(-\S+?)', '\n' + s)[1:]
+# split = [s1 + s2 for s1, s2 in zip(split[::2], split[1::2])]
+# options = [Option.parse(s) for s in split if s.startswith('-')]
+# defaults += options
 
 @generate
 def doc():
-  return [(yield preamble), (yield usage_title), (yield usage_section)]
+  non_usage = yield many(text)
+  usage = yield usage_section
+  non_usage += yield many(text)
+  return [usage] + non_usage
 
 docopt_lang = doc.parsecmap(to_node('docopt_lang'))
