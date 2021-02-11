@@ -18,9 +18,7 @@
     "python.linting.enabled": true,
     "python.linting.flake8Enabled": true,
     "python.linting.flake8Args": [
-      "--ignore=E111,E114,E121",
-      "--max-line-length=120",
-      "--exclude=tests/bash-versions"
+      "--config=.flake8"
     ],
     "python.testing.pytestEnabled": true,
     "shellcheck.executablePath": "/usr/local/bin/shellcheck",
