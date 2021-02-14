@@ -3,8 +3,6 @@
 # from tests.conftest import parse_usecases
 # next(parse_usecases("tests/docopt-parser-usecases.txt"))
 
-from docopt_parser.parser import parse, docopt_lang
-from docopt_parser.docopt import parse_section, formal_usage, docopt
 
 doc = '''Naval Fate.
 Usage:
@@ -17,17 +15,21 @@ Usage:
 Options:
   -h --help     Show this screen.
   --version     Show version.
-  --speed=<kn>  Speed in knots [default: 10].
+  --speed=<kn>  Speed in knots
+                test [default: 10].
   --moored      Mored (anchored) mine.
   --drifting    Drifting mine.
-
 '''
+# from docopt_parser.docopt import parse_section, formal_usage, docopt
 # print(docopt(doc))
 # print(formal_usage(parse_section('usage:', doc)[0]))
+from docopt_parser.parsec import ParseError
+from docopt_parser.parser import explain_error, option_line, long, parse, docopt_lang
+# text = '--speed=<kn>  Speed in knots'
+text = doc
 try:
+  # print(option_line.parse_strict(text))
   print(docopt_lang.parse(doc))
-except Exception:
-  pass
-parse(doc)
-# [print(r) for r in parse(doc)]
-# print(docopt(doc))
+  print(docopt_lang.parse_strict(doc))
+except ParseError as e:
+  print(explain_error(e, text))
