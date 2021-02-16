@@ -15,8 +15,7 @@ Usage:
 Options:
   -h --help     Show this screen.
   --version     Show version.
-  --speed=<kn>  Speed in knots
-                test [default: 10].
+  --speed=<kn>  Speed in knots [default: 10].
   --moored      Mored (anchored) mine.
   --drifting    Drifting mine.
 '''

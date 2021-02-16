@@ -83,7 +83,9 @@ def long(excludes):
     yield string('--')
     name = yield symbol(excludes | string('='))
     arg_node = yield optional(one_of(' =') >> arg)
-    return Node('--long', name, [arg_node])
+    if arg_node:
+      arg_node = [arg_node]
+    return Node('--long', name, arg_node)
   return p
 
 def short(excludes):
@@ -92,7 +94,9 @@ def short(excludes):
     yield string('-')
     name = yield symbol_char(excludes | string('='))
     arg_node = yield optional(space >> arg)
-    return Node('-s', name, [arg_node])
+    if arg_node:
+      arg_node = [arg_node]
+    return Node('-s', name, arg_node)
   return p
 
 def shorts(excludes):
@@ -154,7 +158,7 @@ def option_line():
   excludes = one_of(' \n')
   nodes = yield sepBy1(long(excludes) ^ short(excludes), one_of(' ,'))
   yield space + many1(space)
-  desc = yield optional(many(exclude(any, (nl + nl) ^ (nl + indent + string('-')))).parsecmap(
+  desc = yield optional(many(exclude(any, (nl + nl) ^ (nl + eof()) ^ (nl + indent + string('-')))).parsecmap(
     lambda c: to_node('text')(''.join(c))))
   return Node('option line', '', nodes + [desc])
 
@@ -163,7 +167,7 @@ text = many1(
 
 option_lines = sepBy(option_line, nl + indent).parsecmap(to_node('option lines'))
 usage_section = section_title('usage') >> optional(nl + indent) >> usage_lines << (eof() | nl)
-options_section = section_title('options') >> optional(nl + indent) >> option_lines  # << (eof() | nl)
+options_section = section_title('options') >> optional(nl + indent) >> option_lines << (eof() | nl)
 
 @generate
 def doc():
