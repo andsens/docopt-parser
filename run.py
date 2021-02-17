@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
-
-# from tests.conftest import parse_usecases
-# next(parse_usecases("tests/docopt-parser-usecases.txt"))
-
+from docopt_parser.parsec import ParseError
+from docopt_parser.parser import explain_error, docopt_lang
 
 doc = '''Naval Fate.
 Usage:
@@ -11,6 +9,7 @@ Usage:
   prog mine (set|remove) <x> <y> [--moored|--drifting]
   prog -h | --help
   prog --version
+  prog [-hv]
 
 Options:
   -h --help     Show this screen.
@@ -19,16 +18,9 @@ Options:
   --moored      Mored (anchored) mine.
   --drifting    Drifting mine.
 '''
-# from docopt_parser.docopt import parse_section, formal_usage, docopt
-# print(docopt(doc))
-# print(formal_usage(parse_section('usage:', doc)[0]))
-from docopt_parser.parsec import ParseError
-from docopt_parser.parser import explain_error, option_line, long, parse, docopt_lang
-# text = '--speed=<kn>  Speed in knots'
-text = doc
+
 try:
-  # print(option_line.parse_strict(text))
   print(docopt_lang.parse(doc))
   print(docopt_lang.parse_strict(doc))
 except ParseError as e:
-  print(explain_error(e, text))
+  print(explain_error(e, doc))

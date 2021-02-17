@@ -33,6 +33,11 @@ def to_node(node_type):
     return Node(node_type, name, children)
   return construct
 
+def join_text_node(node_type):
+  def construct(children, name=None):
+    return Node(node_type, name, ''.join(children))
+  return construct
+
 
 class Node(namedtuple('Node', ['type', 'name', 'children'])):
 
@@ -45,6 +50,8 @@ class Node(namedtuple('Node', ['type', 'name', 'children'])):
   def toString(self, indent=0):
     if type(self.children) is list:
       children = '\n' + '\n'.join([self.childToString(c, indent + 2) for c in self.children])
+    elif type(self.children) is tuple:
+      children = ' (tuple)\n' + '\n'.join([self.childToString(c, indent + 2) for c in self.children])
     elif self.children is not None:
       children = ' "{str}"'.format(str=str(self.children))
     else:
@@ -65,11 +72,10 @@ def symbol(excludes):
   return many1(symbol_char(excludes)).parsecmap(''.join)
 
 def atom(excludes):
-  excludes = excludes | multiple
-
   @generate
   def p():
-    node = yield group(excludes) ^ opt(excludes) ^ options_shortcut ^ long(excludes) ^ shorts(excludes) ^ arg ^ command(excludes)
+    excl = excludes | multiple
+    node = yield group ^ opt ^ options_shortcut ^ long(excl) ^ shorts(excl) ^ arg ^ command(excl)
     mult = yield optional(multiple)
     if mult is not None:
       return to_node('multiple')(node)
@@ -93,15 +99,22 @@ def short(excludes):
   def p():
     yield string('-')
     name = yield symbol_char(excludes | string('='))
-    arg_node = yield optional(space >> arg)
+    arg_node = yield optional((space | string('=')) >> arg)
     if arg_node:
       arg_node = [arg_node]
     return Node('-s', name, arg_node)
   return p
 
 def shorts(excludes):
-  # TODO: Handle multiple shorts
-  return short(excludes)
+  @generate
+  def p():
+    yield string('-')
+    name = yield many1(symbol_char(excludes | string('=')))
+    arg_node = yield optional((space | string('=')) >> arg)
+    if arg_node:
+      arg_node = [arg_node]
+    return Node('-shorts', name, arg_node)
+  return p
 
 def command(excludes):
   return symbol(excludes).parsecmap(to_node('command'))
@@ -112,23 +125,6 @@ def seq(excludes):
 def expr(excludes):
   return sepBy(seq(excludes), either).parsecmap(to_node('expr'))
 
-def group(excludes):
-  @generate
-  def p():
-    # Need to inherit disallowed here, but be able to remove invalid ones
-    return (yield (string('(') >> expr(excludes | string(')')) << string(')')).parsecmap(to_node('group')))
-  return p
-
-def opt(excludes):
-  @generate
-  def p():
-    # Need to inherit disallowed here, but be able to remove invalid ones
-    return (yield (string('[') >> expr(excludes | string(']')) << string(']')).parsecmap(to_node('optional')))
-  return p
-
-def section_title(title_re):
-  return regex(r'(%s):' % title_re, re.IGNORECASE)
-
 any = regex(r'.|\n').desc('any char')
 not_nl = none_of('\n').desc('*not* <newline>')
 tab = string('\t').desc('<tab>')
@@ -138,14 +134,19 @@ indent = many1(space) | tab
 nl = string('\n').desc('<newline>')
 multiple = string('...').parsecmap(to_node('multiple'))
 either = many(space) >> string('|') << many(space)
+opt = (string('[') >> expr(one_of('| \n]')) << string(']')).parsecmap(to_node('optional'))
+group = (string('(') >> expr(one_of('| \n)')) << string(')')).parsecmap(to_node('group'))
 wrapped_arg = (string('<') >> symbol(string('>')) << string('>')).parsecmap(to_node('<arg>'))
 uppercase_arg = regex(r'[A-Z0-9][A-Z0-9-]+').parsecmap(to_node('ARG'))
 arg = (wrapped_arg ^ uppercase_arg)
 options_shortcut = string('options').parsecmap(to_node('options shortcut'))
+option_default = (regex(r'\[default: ', re.IGNORECASE) >> many(none_of('\n]')) << string(']')).parsecmap(join_text_node('default'))
+option_doc_terminator = (nl + nl) ^ (nl + eof()) ^ (nl + indent + string('-'))
+option_doc = many1(exclude(any, option_default ^ option_doc_terminator)).parsecmap(join_text_node('option desc'))
 
 @generate
 def usage_lines():
-  excludes = one_of('| \n')
+  excludes = one_of('| \n[(')
   prog = yield symbol(excludes)
   yield many(whitespace)
   expressions = [(yield expr(excludes))]
@@ -153,21 +154,16 @@ def usage_lines():
   expressions += yield sepBy(string(prog) << many(whitespace) >> expr(excludes), nl + indent)
   return Node('usage_lines', None, expressions)
 
-@generate
-def option_line():
-  excludes = one_of(' \n')
-  nodes = yield sepBy1(long(excludes) ^ short(excludes), one_of(' ,'))
-  yield space + many1(space)
-  desc = yield optional(many(exclude(any, (nl + nl) ^ (nl + eof()) ^ (nl + indent + string('-')))).parsecmap(
-    lambda c: to_node('text')(''.join(c))))
-  return Node('option line', '', nodes + [desc])
+option_ident = sepBy1(long(one_of(' \n')) ^ short(one_of(' \n')), one_of(' ,')).parsecmap(to_node('option ident'))
+option_desc = optional(option_doc) >> optional(option_default) << optional(option_doc)
+option_line = (option_ident + optional(space + many1(space) >> option_desc)).parsecmap(to_node('option line'))
 
 text = many1(
-  exclude(any, section_title('usage|options'))).desc('Text').parsecmap(lambda c: to_node('text')(''.join(c)))
+  exclude(any, regex(r'options:|usage:', re.I))).desc('Text').parsecmap(join_text_node('text'))
 
 option_lines = sepBy(option_line, nl + indent).parsecmap(to_node('option lines'))
-usage_section = section_title('usage') >> optional(nl + indent) >> usage_lines << (eof() | nl)
-options_section = section_title('options') >> optional(nl + indent) >> option_lines << (eof() | nl)
+usage_section = regex(r'usage:', re.I) >> optional(nl + indent) >> usage_lines << (eof() | nl)
+options_section = regex(r'options:', re.I) >> optional(nl + indent) >> option_lines << (eof() | nl)
 
 @generate
 def doc():
