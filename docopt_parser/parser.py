@@ -14,6 +14,21 @@ def explain_error(e, text):
   line = text.split('\n')[line_no]
   return '\n{line}\n{col}^\n{msg}'.format(line=line, col=' ' * col, msg=str(e))
 
+def splat(constr):
+  return lambda args: constr(*args)
+
+def unsplat(constr):
+  return lambda *args: constr(args)
+
+def join_string(res):
+  flat = ''
+  if isinstance(res, list) or isinstance(res, tuple):
+    for item in res:
+      flat += join_string(item)
+    return flat
+  else:
+    return res
+
 def exclude(p, end):
   '''Fails parser p if parser end matches
   '''
@@ -26,104 +41,51 @@ def exclude(p, end):
       return p(text, index)
   return exclude_parser
 
-def to_node(node_type):
-  def construct(children, name=None):
-    if isinstance(children, Node):
-      children = [children]
-    return Node(node_type, name, children)
-  return construct
-
-def join_text_node(node_type):
-  def construct(children, name=None):
-    return Node(node_type, name, ''.join(children))
-  return construct
-
-
-class Node(namedtuple('Node', ['type', 'name', 'children'])):
-
-  def childToString(self, child, indent):
-    if isinstance(child, Node):
-      return child.toString(indent + 2)
-    else:
-      return '{indent}{type}: {str}'.format(indent=(' ' * (indent + 2)), type=str(type(child)), str=str(child))
-
-  def toString(self, indent=0):
-    if type(self.children) is list:
-      children = '\n' + '\n'.join([self.childToString(c, indent + 2) for c in self.children])
-    elif type(self.children) is tuple:
-      children = ' (tuple)\n' + '\n'.join([self.childToString(c, indent + 2) for c in self.children])
-    elif self.children is not None:
-      children = ' "{str}"'.format(str=str(self.children))
-    else:
-      children = ''
-    if self.name:
-      return '{indent}{type} <{name}>{children}'.format(
-        indent=' ' * indent, type=self.type, name=self.name, children=children)
-    else:
-      return '{indent}{type}{children}'.format(indent=' ' * indent, type=self.type, children=children)
-
-  def __str__(self):
-    return self.toString()
 
 def symbol_char(excludes):
   return exclude(any, excludes)
 
 def symbol(excludes):
-  return many1(symbol_char(excludes)).parsecmap(''.join)
+  return many1(symbol_char(excludes)).desc('symbol').parsecmap(''.join)
+
+Multiple = namedtuple('Multiple', ['atom'])
+multiple = string('...').desc('multiplier (...)')
+def multi(of):
+  return optional(multiple).parsecmap(lambda m: Multiple(of) if m else of)
 
 def atom(excludes):
   @generate
   def p():
     excl = excludes | multiple
-    node = yield group ^ opt ^ options_shortcut ^ long(excl) ^ shorts(excl) ^ arg ^ command(excl)
-    mult = yield optional(multiple)
-    if mult is not None:
-      return to_node('multiple')(node)
-    else:
-      return node
+    a = yield (group ^ opt ^ options_shortcut ^ long(excl) ^ shorts(excl) ^ arg ^ command(excl)).bind(multi)
+    return a
   return p
 
+Long = namedtuple('Long', ['name', 'arg'])
 def long(excludes):
-  @generate
-  def p():
-    yield string('--')
-    name = yield symbol(excludes | string('='))
-    arg_node = yield optional(one_of(' =') >> arg)
-    if arg_node:
-      arg_node = [arg_node]
-    return Node('--long', name, arg_node)
-  return p
+  return (string('--') >> symbol(excludes | string('=')) + optional(one_of(' =') >> arg)) \
+    .desc('long option (--long)').parsecmap(splat(Long))
 
+Short = namedtuple('Short', ['name', 'arg'])
 def short(excludes):
-  @generate
-  def p():
-    yield string('-')
-    name = yield symbol_char(excludes | string('='))
-    arg_node = yield optional((space | string('=')) >> arg)
-    if arg_node:
-      arg_node = [arg_node]
-    return Node('-s', name, arg_node)
-  return p
+  return (string('-') >> symbol_char(excludes | string('=')) + optional((space | string('=')) >> arg))\
+    .desc('short option (-a)').parsecmap(splat(Short))
 
+Shorts = namedtuple('Shorts', ['name', 'arg'])
 def shorts(excludes):
-  @generate
-  def p():
-    yield string('-')
-    name = yield many1(symbol_char(excludes | string('=')))
-    arg_node = yield optional((space | string('=')) >> arg)
-    if arg_node:
-      arg_node = [arg_node]
-    return Node('-shorts', name, arg_node)
-  return p
+  return (string('-') >> many1(symbol_char(excludes | string('='))) + optional((space | string('=')) >> arg))\
+    .desc('short options (-abc)').parsecmap(splat(Shorts))
 
+Command = namedtuple('Command', ['name'])
 def command(excludes):
-  return symbol(excludes).parsecmap(to_node('command'))
+  return symbol(excludes).desc('command').parsecmap(Command)
 
 def seq(excludes):
-  return sepBy(atom(excludes), exclude(whitespace, nl)).parsecmap(to_node('seq'))
+  return sepBy(atom(excludes), exclude(whitespace, nl)).desc('sequence')
 
+Expression = namedtuple('Expression', ['select'])
 def expr(excludes):
-  return sepBy(seq(excludes), either).parsecmap(to_node('expr'))
+  return sepBy(seq(excludes), either).desc('expression').parsecmap(Expression)
 
 any = regex(r'.|\n').desc('any char')
 not_nl = none_of('\n').desc('*not* <newline>')
@@ -132,17 +94,16 @@ space = string(' ').desc('<space>')
 whitespace = regex(r'\s').desc('<whitespace>')
 indent = many1(space) | tab
 nl = string('\n').desc('<newline>')
-multiple = string('...').parsecmap(to_node('multiple'))
-either = many(space) >> string('|') << many(space)
-opt = (string('[') >> expr(one_of('| \n]')) << string(']')).parsecmap(to_node('optional'))
-group = (string('(') >> expr(one_of('| \n)')) << string(')')).parsecmap(to_node('group'))
-wrapped_arg = (string('<') >> symbol(string('>')) << string('>')).parsecmap(to_node('<arg>'))
-uppercase_arg = regex(r'[A-Z0-9][A-Z0-9-]+').parsecmap(to_node('ARG'))
-arg = (wrapped_arg ^ uppercase_arg)
-options_shortcut = string('options').parsecmap(to_node('options shortcut'))
-option_default = (regex(r'\[default: ', re.IGNORECASE) >> many(none_of('\n]')) << string(']')).parsecmap(join_text_node('default'))
-option_doc_terminator = (nl + nl) ^ (nl + eof()) ^ (nl + indent + string('-'))
-option_doc = many1(exclude(any, option_default ^ option_doc_terminator)).parsecmap(join_text_node('option desc'))
+either = (many(space) >> string('|') << many(space)).desc('<pipe> (|)')
+Optional = namedtuple('Optional', ['select'])
+opt = (string('[') >> expr(one_of('| \n]')) << string(']')).desc('[optional]').parsecmap(Optional)
+group = (string('(') >> expr(one_of('| \n)')) << string(')')).desc('(group)').parsecmap(Expression)
+wrapped_arg = (string('<') + symbol(string('>')) + string('>')).desc('<ARG>').parsecmap(join_string)
+uppercase_arg = regex(r'[A-Z0-9][A-Z0-9-]+').desc('ARG')
+Argument = namedtuple('Argument', ['name'])
+arg = (wrapped_arg ^ uppercase_arg).desc('argument').parsecmap(Argument)
+OptionsShortcut = namedtuple('OptionsShortcut', [])
+options_shortcut = string('options').parsecmap(lambda x: OptionsShortcut())
 
 @generate
 def usage_lines():
@@ -152,24 +113,62 @@ def usage_lines():
   expressions = [(yield expr(excludes))]
   yield many(whitespace)
   expressions += yield sepBy(string(prog) << many(whitespace) >> expr(excludes), nl + indent)
-  return Node('usage_lines', None, expressions)
+  return Expression(expressions)
 
-option_ident = sepBy1(long(one_of(' \n')) ^ short(one_of(' \n')), one_of(' ,')).parsecmap(to_node('option ident'))
+option_default = (
+  regex(r'\[default: ', re.IGNORECASE) >> many(none_of('\n]')) << string(']')
+).desc('[default: ]').parsecmap(join_string)
+option_ident = sepBy1(long(one_of(' \n')) ^ short(one_of(' \n')), one_of(' ,')).desc('option identifier')
+option_line_terminator = (nl + nl) ^ (nl + eof()) ^ (nl + indent + string('-'))
+option_doc = many1(exclude(any, option_default ^ option_line_terminator)).desc('option documentation')
 option_desc = optional(option_doc) >> optional(option_default) << optional(option_doc)
-option_line = (option_ident + optional(space + many1(space) >> option_desc)).parsecmap(to_node('option line'))
+
+OptionLine = namedtuple('OptionLine', ['ident', 'default'])
+option_line = (
+  option_ident + optional(space + many1(space) >> option_desc)
+).desc('option line').parsecmap(splat(OptionLine))
 
 text = many1(
-  exclude(any, regex(r'options:|usage:', re.I))).desc('Text').parsecmap(join_text_node('text'))
+  exclude(any, regex(r'options:|usage:', re.I))).desc('Text').parsecmap(join_string)
 
-option_lines = sepBy(option_line, nl + indent).parsecmap(to_node('option lines'))
+OptionLines = namedtuple('OptionLines', 'lines')
+option_lines = sepBy(option_line, nl + indent).parsecmap(OptionLines)
 usage_section = regex(r'usage:', re.I) >> optional(nl + indent) >> usage_lines << (eof() | nl)
 options_section = regex(r'options:', re.I) >> optional(nl + indent) >> option_lines << (eof() | nl)
 
 @generate
 def doc():
-  nodes = yield many(text ^ options_section)
-  nodes.append((yield usage_section))
-  nodes += yield many(text ^ options_section)
-  return nodes
+  options = yield many(text ^ options_section)
+  usage = yield usage_section
+  options += yield many(text ^ options_section)
+  return usage, [o for o in options if isinstance(o, OptionLines)]
+DocoptLang = namedtuple('DocoptLang', ['usage', 'options'])
+docopt_lang = doc.parsecmap(splat(DocoptLang))
 
-docopt_lang = doc.parsecmap(to_node('docopt_lang'))
+
+def ast_tostr(ast, indent=''):
+  tree = ''
+  if isinstance(ast, tuple):
+    c_indent = indent + '  '
+    tree += f'{indent}<{type(ast).__name__}>'
+    if 'name' in list(ast._fields):
+      tree += f': {ast.name}\n'
+    else:
+      tree += '\n'
+    for key in ast._fields:
+      if key == 'name':
+        continue
+      val = getattr(ast, key)
+      if isinstance(val, tuple):
+        tree += ast_tostr(val, c_indent)
+      elif isinstance(val, list):
+        for item in val:
+          tree += ast_tostr(item, c_indent)
+      else:
+        tree += f'{c_indent}{key}: {val}\n'
+  elif isinstance(ast, list):
+    for item in ast:
+      tree += ast_tostr(item, indent)
+  else:
+    tree += f'{indent}{ast}\n'
+  return tree

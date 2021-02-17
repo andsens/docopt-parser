@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from docopt_parser.parsec import ParseError
-from docopt_parser.parser import explain_error, docopt_lang
+from docopt_parser.parser import ast_tostr, explain_error, docopt_lang
 
 doc = '''Naval Fate.
 Usage:
@@ -21,6 +21,6 @@ Options:
 
 try:
   print(docopt_lang.parse(doc))
-  print(docopt_lang.parse_strict(doc))
+  print(ast_tostr(docopt_lang.parse_strict(doc)))
 except ParseError as e:
   print(explain_error(e, doc))
