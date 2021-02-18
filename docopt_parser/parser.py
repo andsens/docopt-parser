@@ -1,22 +1,17 @@
+from docopt_parser.ast import Argument, Command, DocoptAst, Expression, Long, \
+  Multiple, OptionLine, OptionLines, Optional, OptionsShortcut, Short, Shorts
 from docopt_parser.parser_utils import exclude, explain_error, join_string, splat
 from docopt_parser import DocoptParseError
 import re
 from parsec import ParseError, eof, generate, many, many1, none_of, one_of, optional, regex, sepBy, sepBy1, string
-from collections import namedtuple
 
-Multiple = namedtuple('Multiple', ['atom'])
-Long = namedtuple('Long', ['name', 'arg'])
-Short = namedtuple('Short', ['name', 'arg'])
-Shorts = namedtuple('Shorts', ['name', 'arg'])
-Command = namedtuple('Command', ['name'])
-Expression = namedtuple('Expression', ['select'])
-Optional = namedtuple('Optional', ['select'])
-Argument = namedtuple('Argument', ['name'])
-OptionsShortcut = namedtuple('OptionsShortcut', [])
-OptionLine = namedtuple('OptionLine', ['ident', 'default'])
-OptionLines = namedtuple('OptionLines', 'lines')
-DocoptLang = namedtuple('DocoptLang', ['usage', 'options'])
-
+any = regex(r'.|\n').desc('any char')
+not_nl = none_of('\n').desc('*not* <newline>')
+tab = string('\t').desc('<tab>')
+space = string(' ').desc('<space>')
+whitespace = regex(r'\s').desc('<whitespace>')
+indent = many1(space) | tab
+nl = string('\n').desc('<newline>')
 
 def symbol_char(excludes):
   return exclude(any, excludes)
@@ -57,13 +52,6 @@ def seq(excludes):
 def expr(excludes):
   return sepBy(seq(excludes), either).desc('expression').parsecmap(Expression)
 
-any = regex(r'.|\n').desc('any char')
-not_nl = none_of('\n').desc('*not* <newline>')
-tab = string('\t').desc('<tab>')
-space = string(' ').desc('<space>')
-whitespace = regex(r'\s').desc('<whitespace>')
-indent = many1(space) | tab
-nl = string('\n').desc('<newline>')
 text = many1(exclude(any, regex(r'options:|usage:', re.I))).desc('Text').parsecmap(join_string)
 either = (many(space) >> string('|') << many(space)).desc('<pipe> (|)')
 opt = (string('[') >> expr(one_of('| \n][(')) << string(']')).desc('[optional]').parsecmap(Optional)
@@ -106,7 +94,7 @@ def doc():
   options += yield many(text ^ options_section)
   return usage, [o for o in options if isinstance(o, OptionLines)]
 
-docopt_lang = doc.parsecmap(splat(DocoptLang))
+docopt_lang = doc.parsecmap(splat(DocoptAst))
 
 def parse(doc):
   try:

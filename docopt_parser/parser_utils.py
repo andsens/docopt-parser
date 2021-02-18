@@ -1,4 +1,5 @@
-from parsec import Parser, Value
+from docopt_parser.ast import DocoptAst
+from parsec import ParseError, Parser, Value
 
 def splat(constr):
   return lambda args: constr(*args)
@@ -15,7 +16,7 @@ def join_string(res):
   else:
     return res
 
-def exclude(p, end):
+def exclude(p: Parser, end: Parser):
   '''Fails parser p if parser end matches
   '''
   @Parser
@@ -27,12 +28,12 @@ def exclude(p, end):
       return p(text, index)
   return exclude_parser
 
-def explain_error(e, text):
+def explain_error(e: ParseError, text: str):
   line_no, col = e.loc_info(e.text, e.index)
   line = text.split('\n')[line_no]
   return '\n{line}\n{col}^\n{msg}'.format(line=line, col=' ' * col, msg=str(e))
 
-def ast_tostr(ast, indent=''):
+def ast_tostr(ast: DocoptAst, indent=''):
   tree = ''
   if isinstance(ast, tuple):
     c_indent = indent + '  '
