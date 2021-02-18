@@ -1,6 +1,6 @@
 from docopt_parser import DocoptParseError
 import re
-from .parsec import ParseError, Parser, Value, eof, generate, many, many1, none_of, one_of, optional, regex, sepBy, sepBy1, string
+from parsec import ParseError, Parser, Value, eof, generate, many, many1, none_of, one_of, optional, regex, sepBy, sepBy1, string
 from collections import namedtuple
 
 Multiple = namedtuple('Multiple', ['atom'])
