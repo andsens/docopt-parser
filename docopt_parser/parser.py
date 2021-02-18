@@ -157,11 +157,8 @@ def ast_tostr(ast, indent=''):
       if key == 'name':
         continue
       val = getattr(ast, key)
-      if isinstance(val, tuple):
+      if isinstance(val, tuple) or isinstance(val, list):
         tree += ast_tostr(val, c_indent)
-      elif isinstance(val, list):
-        for item in val:
-          tree += ast_tostr(item, c_indent)
       else:
         tree += f'{c_indent}{key}: {val}\n'
   elif isinstance(ast, list):
