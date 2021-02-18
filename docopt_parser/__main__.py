@@ -1,32 +1,47 @@
 #!/usr/bin/env python3
+from docopt_parser.optimize import optimize
+from docopt_parser.parser_utils import ast_tostr
 import sys
 import os
 import docopt
 import logging
-import json
 import termcolor
-from . import DocoptParseError, __doc__ as pkg_doc, __name__ as root_name, __version__
-from .parser import parse_doc
+from docopt_parser import DocoptParseError, __doc__ as pkg_doc, __name__ as root_name, __version__
+from docopt_parser.parser import docopt_lang
+from parsec import ParseError
+from docopt_parser.parser_utils import explain_error
 
 log = logging.getLogger(root_name)
 
 __doc__ = pkg_doc + """
 Usage:
-  docopt-parser [options]
+  docopt-parser [-O] ast
+  docopt-parser -h
+  docopt-parser --version
 
 Options:
-  --help -h            Show this help screen
-  --version            Show the docopt.sh version
+  -O         Do not optimize the AST
+  --help -h  Show this help screen
+  --version  Show the docopt.sh version
 """
 
 
 def docopt_parser(params):
   try:
-    ast = parse_doc(sys.stdin.read())
-    sys.stdout.write("%s\n" % json.dumps(ast, indent=2))
+    doc = sys.stdin.read()
+    try:
+      ast = docopt_lang.parse_strict(doc)
+      if not params['-O']:
+        ast = optimize(ast)
+    except ParseError as e:
+      raise DocoptParseError(explain_error(e, doc)) from None
+    if params['ast']:
+      txt_ast = ast_tostr(ast)
+      sys.stdout.write(txt_ast)
   except DocoptParseError as e:
     log.error(str(e))
     sys.exit(e.exit_code)
+
 
 
 def setup_logging():

@@ -1,9 +1,8 @@
-from docopt_parser.ast import Argument, Command, DocoptAst, Expression, Long, \
-  Multiple, OptionLine, OptionLines, Optional, OptionsShortcut, Short, Shorts
-from docopt_parser.parser_utils import exclude, explain_error, join_string, splat
-from docopt_parser import DocoptParseError
+from docopt_parser.ast import Argument, Command, DocoptAst, Choice, Long, \
+  Multiple, OptionLine, Optional, Options, OptionsShortcut, Sequence, Short, Shorts
+from docopt_parser.parser_utils import exclude, join_string, splat
 import re
-from parsec import ParseError, eof, generate, many, many1, none_of, one_of, optional, regex, sepBy, sepBy1, string
+from parsec import eof, generate, many, many1, none_of, one_of, optional, regex, sepBy, sepBy1, string
 
 any = regex(r'.|\n').desc('any char')
 not_nl = none_of('\n').desc('*not* <newline>')
@@ -47,15 +46,15 @@ def command(excludes):
   return symbol(excludes).desc('command').parsecmap(Command)
 
 def seq(excludes):
-  return sepBy(atom(excludes), exclude(whitespace, nl)).desc('sequence')
+  return sepBy(atom(excludes), exclude(whitespace, nl)).desc('sequence').parsecmap(Sequence)
 
 def expr(excludes):
-  return sepBy(seq(excludes), either).desc('expression').parsecmap(Expression)
+  return sepBy(seq(excludes), either).desc('expression').parsecmap(Choice)
 
 text = many1(exclude(any, regex(r'options:|usage:', re.I))).desc('Text').parsecmap(join_string)
 either = (many(space) >> string('|') << many(space)).desc('<pipe> (|)')
 opt = (string('[') >> expr(one_of('| \n][(')) << string(']')).desc('[optional]').parsecmap(Optional)
-group = (string('(') >> expr(one_of('| \n)([')) << string(')')).desc('(group)').parsecmap(Expression)
+group = (string('(') >> expr(one_of('| \n)([')) << string(')')).desc('(group)')
 wrapped_arg = (string('<') + symbol(string('>')) + string('>')).desc('<ARG>').parsecmap(join_string)
 uppercase_arg = regex(r'[A-Z0-9][A-Z0-9-]+').desc('ARG')
 arg = (wrapped_arg ^ uppercase_arg).desc('argument').parsecmap(Argument)
@@ -69,7 +68,7 @@ def usage_lines():
   expressions = [(yield expr(excludes))]
   yield many(whitespace)
   expressions += yield sepBy(string(prog) << many(whitespace) >> expr(excludes), nl + indent)
-  return Expression(expressions)
+  return Choice(expressions)
 
 option_default = (
   regex(r'\[default: ', re.IGNORECASE) >> many(none_of('\n]')) << string(']')
@@ -83,7 +82,7 @@ option_line = (
   option_ident + optional(space + many1(space) >> option_desc)
 ).desc('option line').parsecmap(splat(OptionLine))
 
-option_lines = sepBy(option_line, nl + indent).parsecmap(OptionLines)
+option_lines = sepBy(option_line, nl + indent).parsecmap(Options)
 usage_section = regex(r'usage:', re.I) >> optional(nl + indent) >> usage_lines << (eof() | nl)
 options_section = regex(r'options:', re.I) >> optional(nl + indent) >> option_lines << (eof() | nl)
 
@@ -92,12 +91,7 @@ def doc():
   options = yield many(text ^ options_section)
   usage = yield usage_section
   options += yield many(text ^ options_section)
-  return usage, [o for o in options if isinstance(o, OptionLines)]
+  return usage, [o for o in options if isinstance(o, Options)]
 
 docopt_lang = doc.parsecmap(splat(DocoptAst))
 
-def parse(doc):
-  try:
-    return docopt_lang.parse_strict(doc)
-  except ParseError as e:
-    raise DocoptParseError(explain_error(e, doc)) from None
