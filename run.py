@@ -20,7 +20,6 @@ Options:
 '''
 
 try:
-  print(docopt_lang.parse(doc))
   print(ast_tostr(docopt_lang.parse_strict(doc)))
 except ParseError as e:
   print(explain_error(e, doc))
