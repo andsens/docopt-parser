@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from parsec import ParseError
-from docopt_parser.parser import ast_tostr, explain_error, docopt_lang
+from docopt_parser.parser_utils import ast_tostr, explain_error
+from docopt_parser.parser import docopt_lang
 
 doc = '''Naval Fate.
 Usage:
