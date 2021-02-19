@@ -47,6 +47,7 @@ def ast_tostr(ast: DocoptAst, indent=''):
         continue
       val = getattr(ast, key)
       if isinstance(val, (tuple, list)):
+        tree += f'{c_indent}{key}:\n'
         tree += ast_tostr(val, c_indent)
       else:
         tree += f'{c_indent}{key}: {val}\n'

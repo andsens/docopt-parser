@@ -43,4 +43,4 @@ def merge_options(ast: DocoptAst):
   option_lines = []
   for options in ast.options:
     option_lines += options.lines
-  return DocoptAst(ast.usage, [Options(option_lines)])
+  return DocoptAst(ast.usage, option_lines)
