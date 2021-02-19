@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from docopt_parser.validate import validate
 from docopt_parser.optimize import optimize
 from docopt_parser.parser_utils import ast_tostr
 import sys
@@ -31,6 +32,7 @@ def docopt_parser(params):
     doc = sys.stdin.read()
     try:
       ast = docopt_lang.parse_strict(doc)
+      validate(ast)
       if not params['-O']:
         ast = optimize(ast)
     except ParseError as e:
