@@ -6,6 +6,8 @@ Usage:
   prog -h | --help
   prog --version
   prog [-hv]
+  prog [-kAARG]
+  prog [options]
 
 Options:
   -h --help     Show this screen.

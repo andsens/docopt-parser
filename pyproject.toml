@@ -29,4 +29,5 @@ test = [
   "pytest",
   "pytest-xdist",
   "pytest-flake8",
+  'hypethesis'
 ]

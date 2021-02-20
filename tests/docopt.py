@@ -339,6 +339,7 @@ def parse_shorts(tokens, options):
     parsed = []
     while left != '':
         short, left = '-' + left[0], left[1:]
+        print(short)
         similar = [o for o in options if o.short == short]
         if len(similar) > 1:
             raise tokens.error('%s is specified ambiguously %d times' %

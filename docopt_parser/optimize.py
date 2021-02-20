@@ -1,46 +1,32 @@
-from docopt_parser.ast import Choice, DocoptAst, Optional, Options, Sequence
+from typing import Union
+from docopt_parser.parser_utils import ast_map
+from docopt_parser.ast import Choice, DocoptAst, Optional, Sequence
 
 def optimize(ast: DocoptAst):
-  ast = ast_map(remove_single_choice_or_seq, ast)
-  ast = ast_map(remove_nested_choice_or_seq, ast)
-  ast = ast_map(remove_nested_optional, ast)
-  ast = merge_options(ast)
+  ast = remove_single_choice_or_seq(ast)
+  ast = remove_nested_choice_or_seq(ast)
+  ast = remove_nested_optional(ast)
   return ast
 
-def ast_map(pred, ast):
-  if isinstance(ast, tuple):
-    return pred(type(ast)(*map(lambda node: ast_map(pred, node), ast)))
-  elif isinstance(ast, list):
-    return pred(list(map(lambda node: ast_map(pred, node), ast)))
-  else:
-    return pred(ast)
-
 def remove_single_choice_or_seq(ast):
-  if isinstance(ast, (Choice, Sequence)) and len(ast.items) == 1:
-    return ast.items[0]
-  else:
-    return ast
+  def mapper(n):
+    return n.items[0]
+
+  return ast_map(mapper, ast, lambda n: isinstance(n, (Choice, Sequence)) and len(n.items) == 1)
 
 def remove_nested_choice_or_seq(ast):
-  if isinstance(ast, (Choice, Sequence)):
+  def mapper(n: Union[Choice, Sequence]):
     new_items = []
-    for item in ast.items:
-      if isinstance(item, type(ast)):
+    for item in n.items:
+      if isinstance(item, type(n)):
         new_items += item.items
       else:
         new_items.append(item)
-    return type(ast)(new_items)
-  else:
-    return ast
+    return type(n)(new_items)
+
+  return ast_map(mapper, ast, lambda n: isinstance(n, (Choice, Sequence)))
 
 def remove_nested_optional(ast):
-  if isinstance(ast, Optional) and isinstance(ast.item, Optional):
-    return Optional(ast.item.item)
-  else:
-    return ast
-
-def merge_options(ast: DocoptAst):
-  option_lines = []
-  for options in ast.options:
-    option_lines += options.lines
-  return DocoptAst(ast.usage, option_lines)
+  def mapper(n: Optional):
+    return Optional(n.item.item)
+  return ast_map(mapper, ast, lambda n: isinstance(n, Optional) and isinstance(n.item, Optional))
