@@ -1,6 +1,5 @@
 import sys
-from typing import Iterable
-from docopt_parser.ast import DocoptAst
+from tests.docopt import DocoptLanguageError
 from parsec import ParseError, Parser, Value
 
 def splat(constr):
@@ -9,16 +8,16 @@ def splat(constr):
 def unsplat(constr):
   return lambda *args: constr(args)
 
-def flatten_tuples(constr):
-  def flatten(arg):
-    if isinstance(arg, tuple):
-      t = []
-      for item in arg:
-        t += flatten(item)
-      return tuple(t)
+def flatten(arg):
+  if not isinstance(arg, (tuple, list)):
+    raise DocoptLanguageError('flatten(arg): argument not a tuple or list')
+  t = []
+  for item in arg:
+    if isinstance(item, (tuple, list)):
+      t += [elm for elm in item]
     else:
-      return [arg]
-  return lambda arg: constr(flatten(arg))
+      t.append(item)
+  return type(arg)(t)
 
 def debug(arg):
   sys.stderr.write('{}\n'.format(arg))
@@ -49,31 +48,6 @@ def explain_error(e: ParseError, text: str):
   line_no, col = e.loc_info(e.text, e.index)
   line = text.split('\n')[line_no]
   return '\n{line}\n{col}^\n{msg}'.format(line=line, col=' ' * col, msg=str(e))
-
-def ast_tostr(ast: DocoptAst, indent=''):
-  tree = ''
-  if isinstance(ast, tuple):
-    c_indent = indent + '  '
-    tree += f'{indent}<{type(ast).__name__}>'
-    if 'name' in list(ast._fields):
-      tree += f': {ast.name}\n'
-    else:
-      tree += '\n'
-    for key in ast._fields:
-      if key == 'name':
-        continue
-      val = getattr(ast, key)
-      if isinstance(val, (tuple, list)):
-        tree += f'{c_indent}{key}:\n'
-        tree += ast_tostr(val, c_indent)
-      else:
-        tree += f'{c_indent}{key}: {val}\n'
-  elif isinstance(ast, list):
-    for item in ast:
-      tree += ast_tostr(item, indent)
-  else:
-    tree += f'{indent}{ast}\n'
-  return tree
 
 def ast_map(pred, node, f=lambda n: True):
   outer_pred = pred if f(node) else id
