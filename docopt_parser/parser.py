@@ -41,22 +41,18 @@ class DocoptAst(AstNode):
   def __repr__(self):
     return f'''<Docopt>
   usage:
-  {self.indent(self.usage, 2)}
+{self.indent([self.usage], 2)}
   options:
-  {self.indent(self.options, 2)}'''
+{self.indent(self.options, 2)}'''
 
-  @generate
-  def doc():
-    text = many1(exclude(char, regex(r'options:|usage:', re.I))).desc('Text').parsecmap(join_string)
-    options = yield many(text ^ Option.section)
-    usage = yield Usage.section
-    options += yield many(text ^ Option.section)
-    return usage, [o for o in options if isinstance(o, list)]
-
-  def new(args):
-    return DocoptAst(*args)
-
-  lang = doc.parsecmap(new)
+  @classmethod
+  def parse(cls, txt):
+    no_options_text = many1(exclude(char, regex(r'options:', re.I))).desc('Text').parsecmap(join_string)
+    parsed = many(no_options_text ^ Option.section).parse_strict(txt)
+    options = [o for o in parsed if isinstance(o, list)]
+    no_usage_text = many1(exclude(char, regex(r'usage:', re.I))).desc('Text').parsecmap(join_string)
+    usage = (no_usage_text >> Usage.section << no_usage_text).parse_strict(txt)
+    return cls(usage, options)
 
 
 class Option(AstNode):

@@ -29,7 +29,7 @@ def docopt_parser(params):
   try:
     doc = sys.stdin.read()
     try:
-      ast = DocoptAst.lang.parse_strict(doc)
+      ast = DocoptAst.parse(doc)
       # ast = resolve_options(ast)
       # print(ast)
       # validate(ast)
