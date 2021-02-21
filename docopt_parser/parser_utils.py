@@ -32,18 +32,6 @@ def join_string(res):
   else:
     return res
 
-def exclude(p: Parser, end: Parser):
-  '''Fails parser p if parser end matches
-  '''
-  @Parser
-  def exclude_parser(text, index):
-    res = end(text, index)
-    if res.status:
-      return Value.failure(index, f'something other than {res.value}')
-    else:
-      return p(text, index)
-  return exclude_parser
-
 char_descriptions = {
   ' ': '<space>',
   '\n': '<newline>',
@@ -51,20 +39,37 @@ char_descriptions = {
   '|': '<pipe> (|)'
 }
 
-any_char = regex(r'.|\n').desc('any char')
-def char(allowed=any_char, disallowed=None):
-  if isinstance(allowed, str):
-    desc = ' or '.join(map(lambda c: char_descriptions.get(c, c), allowed))
-    a = one_of(allowed).desc(desc)
-  else:
-    a = allowed
-  if disallowed is not None:
-    if isinstance(disallowed, str):
-      desc = ' or '.join(map(lambda c: char_descriptions.get(c, c), disallowed))
-      d = one_of(disallowed).desc(desc)
+def describe_value(val):
+  if len(val) > 1:
+    return val
+  return char_descriptions.get(val, val)
+
+def exclude(p: Parser, end: Parser):
+  '''Fails parser p if parser end matches
+  '''
+  @Parser
+  def exclude_parser(text, index):
+    res = end(text, index)
+    if res.status:
+      return Value.failure(index, f'something other than {describe_value(res.value)}')
     else:
-      d = disallowed
-    d = one_of(disallowed) if isinstance(disallowed, str) else disallowed
+      return p(text, index)
+  return exclude_parser
+
+any_char = regex(r'.|\n').desc('any char')
+def char(legal=any_char, illegal=None):
+  if isinstance(legal, str):
+    desc = ' or '.join(map(describe_value, legal))
+    a = one_of(legal).desc(desc)
+  else:
+    a = legal
+  if illegal is not None:
+    if isinstance(illegal, str):
+      desc = ' or '.join(map(describe_value, illegal))
+      d = one_of(illegal).desc(desc)
+    else:
+      d = illegal
+    d = one_of(illegal) if isinstance(illegal, str) else illegal
     return exclude(a, d)
   else:
     return a
@@ -78,7 +83,7 @@ def lookahead(p: Parser):
     if res.status:
       return Value.success(index, res.value)
     else:
-      return res
+      return Value.failure(index, res.value)
   return lookahead_parser
 
 def explain_error(e: ParseError, text: str):
