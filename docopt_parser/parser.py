@@ -1,16 +1,17 @@
 from functools import reduce
 from tests.docopt import DocoptLanguageError
-from docopt_parser.parser_utils import char, flatten, join_string, lookahead, splat
+from docopt_parser.parser_utils import char, exclude, flatten, join_string, lookahead, splat
 import re
-from parsec import eof, generate, many, many1, optional, regex, sepBy, sepBy1, string
+from parsec import eof, generate, many, many1, optional, regex, sepBy, string
 
 nl = char('\n')
 whitespaces = many1(char(regex(r'\s'), nl)).parsecmap(join_string).desc('<whitespace>')
+eol = optional(whitespaces) + (nl | eof())
 indent = (many1(char(' ')) | char('\t')).parsecmap(join_string).desc('<indent> (spaces or tabs)')
-multiple = string('...').desc('multiplier (...)')
+multiple = optional(whitespaces) >> string('...').desc('multiplier (...)')
 
-def symbol(excludes):
-  return many1(char(disallowed=excludes)).desc('symbol').parsecmap(join_string)
+def ident(excludes):
+  return many1(char(disallowed=excludes)).desc('identifier').parsecmap(join_string)
 
 
 class AstNode(object):
@@ -89,14 +90,14 @@ class Option(AstNode):
 
   @generate('options')
   def opts():
-    exclude = char(' \n')
-    first = yield Short.options(exclude) ^ Long.options(exclude)
+    excludes = char(' \n')
+    first = yield Short.options(excludes) ^ Long.options(excludes)
     if isinstance(first, Long):
-      opt_short = yield optional(many1(char(' ,')) >> Short.options(exclude))
+      opt_short = yield optional(many1(char(' ,')) >> Short.options(excludes))
       opt_long = first
     else:
       opt_short = first
-      opt_long = yield optional(many1(char(' ,')) >> Long.options(exclude))
+      opt_long = yield optional(many1(char(' ,')) >> Long.options(excludes))
     if opt_short is not None and opt_long is not None:
       if opt_short.arg is not None and opt_long.arg is None:
         opt_long.arg = opt_short.arg
@@ -130,18 +131,18 @@ class Long(AstNode):
     def p():
       yield string('-' + self.name)
       if self.arg is not None:
-        yield (optional(char('=')) >> symbol(excludes)).desc('argument (=ARG)')
+        yield (optional(char('=')) >> ident(excludes)).desc('argument (=ARG)')
       return self
     return p
 
   def usage(excludes):
     argument = (char('=') >> Argument.arg).desc('argument')
-    return (char('-') >> symbol(excludes | char('=')) + optional(argument)) \
+    return (char('-') >> ident(excludes | char('=')) + optional(argument)) \
         .desc('long option (--long)').parsecmap(splat(Long))
 
   def options(excludes):
     argument = (char(' =') >> Argument.arg).desc('argument')
-    return (string('--') >> symbol(excludes | char('=')) + optional(argument)) \
+    return (string('--') >> ident(excludes | char('=')) + optional(argument)) \
         .desc('long option (--long)').parsecmap(splat(Long))
 
 
@@ -159,7 +160,7 @@ class Short(AstNode):
     def p():
       yield string(self.name)
       if self.arg is not None:
-        yield (optional(char(' ')) >> symbol(excludes)).desc('argument ( ARG)')
+        yield (optional(char(' ')) >> ident(excludes)).desc('argument ( ARG)')
       return self
     return p
 
@@ -184,12 +185,15 @@ class Usage(object):
     def p():
       yield regex(r'usage:', re.I)
       yield optional(nl + indent)
-      prog = yield symbol(excludes)
+      prog = yield ident(excludes)
       yield whitespaces
       expressions = [(yield expr(excludes, options))]
       while (yield optional(nl + indent)) is not None:
-        expressions.append((yield string(prog) << whitespaces >> expr(excludes, options)))
+        yield string(prog)
+        yield whitespaces
+        e = yield expr(excludes, options)
         yield optional(whitespaces)
+        expressions.append(e)
       yield (eof() | nl)
       return Choice(expressions)
     return p
@@ -199,7 +203,9 @@ either = (many(char(' ')) >> char('|') << many(char(' '))).desc('<pipe> (|)')
 def expr(excludes, options):
   @generate('expression')
   def p():
-    nodes = yield sepBy1(seq(excludes, options), either)
+    nodes = [(yield seq(excludes, options))]
+    while (yield optional(either)) is not None:
+      nodes.append((yield seq(excludes, options)))
     if len(nodes) > 1:
       return Choice(nodes)
     else:
@@ -209,7 +215,12 @@ def expr(excludes, options):
 def seq(excludes, options):
   @generate('sequence')
   def p():
-    nodes = yield sepBy1(atom(excludes, options), whitespaces)
+    nodes = [(yield atom(excludes, options))]
+    while (yield optional(exclude(whitespaces, either))) is not None:
+      nodes.append((yield atom(excludes, options)))
+      if (yield optional(lookahead(eol))) is not None:
+        yield optional(whitespaces)
+        break
     if len(nodes) > 1:
       return Sequence(nodes)
     else:
@@ -315,7 +326,7 @@ class Command(AstNode):
     return f'''<Command>: {self.name}'''
 
   def command(excludes):
-    return symbol(excludes).desc('command').parsecmap(Command)
+    return ident(excludes).desc('command').parsecmap(Command)
 
 
 class Argument(AstNode):
@@ -328,7 +339,7 @@ class Argument(AstNode):
   def new(args):
     return Argument(args)
 
-  wrapped_arg = (char('<') + symbol(char('>')) + char('>')).desc('<ARG>').parsecmap(join_string)
+  wrapped_arg = (char('<') + ident(char('\n>')) + char('>')).desc('<ARG>').parsecmap(join_string)
   uppercase_arg = regex(r'[A-Z0-9][A-Z0-9-]+').desc('ARG')
   arg = (wrapped_arg ^ uppercase_arg).desc('argument').parsecmap(new)
 

@@ -1,12 +1,12 @@
 Naval Fate.
 Usage:
-  prog ship new <name>...  | ship [<name>] move <x> <y> [--speed=<kn>]
+  prog ship new name... | ship [<name>] move <x> <y> [--speed=<kn>]
   prog ship shoot <x> <y>
-  prog mine (set|remove) ((<x> <y> [[--moored|--drifting]]))
+  prog mine (set|remove) ((<x> <y [[--moored|--drifting]]))
   prog -h | --help
   prog --version
   prog [-hv] -y
-  prog -k
+  prog -kF
   prog [options]
 
 Options:
