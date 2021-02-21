@@ -355,14 +355,25 @@ class OptionsShortcut(AstNode):
 
 
 class Options(AstNode):
-  def __init__(self, names):
-    self.names = names
+  def __init__(self, options):
+    self.options = options
 
   def __repr__(self):
     return f'''<Options>
-{self.indent(self.names)}'''
+{self.indent(self.options)}'''
 
-  def options(excludes, options):
+  @classmethod
+  def map_references(cls, options, candidates):
+    def find(o):
+      option = next(filter(lambda opt: o in [opt.short, opt.long], options), None)
+      if option is not None:
+        return OptionRef(option, o.arg)
+      else:
+        return o
+    return list(map(find, candidates))
+
+  @classmethod
+  def options(cls, excludes, options):
     @generate('Options (-s or --long)')
     def p():
       # Check if we should consume, the lookahead checks if this is unambiguously the
@@ -383,5 +394,15 @@ class Options(AstNode):
           break
         else:
           opts.append(opt)
-      return Options(opts)
+      return Options(cls.map_references(options, opts))
     return p
+
+
+class OptionRef(AstNode):
+  def __init__(self, option, arg):
+    self.option = option
+    self.arg = arg
+
+  def __repr__(self):
+    return f'''<OptionRef>
+  {self.indent(self.option.short or self.option.long)}'''
