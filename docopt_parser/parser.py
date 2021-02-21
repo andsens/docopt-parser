@@ -1,8 +1,8 @@
 from functools import reduce
 from tests.docopt import DocoptLanguageError
-from docopt_parser.parser_utils import char, exclude, flatten, join_string, lookahead, splat
+from docopt_parser.parser_utils import char, exclude, outer_desc, flatten, join_string, lookahead, splat, string
 import re
-from parsec import eof, generate, many, many1, optional, regex, sepBy, string
+from parsec import eof, generate, many, many1, optional, regex, times
 
 nl = char('\n')
 whitespaces = many1(char(regex(r'\s'), nl)).parsecmap(join_string).desc('<whitespace>')
@@ -16,7 +16,7 @@ def ident(illegal, starts_with=None):
   return (
     starts_with
     + many(char(illegal=illegal))
-  ).desc('identifier').parsecmap(flatten).parsecmap(join_string)
+  ).parsecmap(flatten).parsecmap(join_string) ^ outer_desc('identifier')
 
 
 class AstNode(object):
@@ -59,11 +59,19 @@ class DocoptAst(AstNode):
 
   @classmethod
   def parse(cls, txt):
-    no_options_text = many1(char(illegal=regex(r'options:', re.I))).desc('Text').parsecmap(join_string)
-    parsed = many(no_options_text ^ Option.section).parse_strict(txt)
+    re_options_section = regex(r'options:', re.I)
+    # We do the counting and the times() instead of just many(options) in order to get
+    # better parser errors. Since many() is fine with 0 results, the parser just ends up
+    # expecting EOF on parser failure and fails with that message instead
+    no_options_text = many(char(illegal=re_options_section)).desc('Text').parsecmap(join_string)
+    exp_opt_sections = len(many(no_options_text >> re_options_section << no_options_text).parse(txt))
+    parsed = times(
+      no_options_text >> Option.section() << no_options_text,
+      mint=exp_opt_sections, maxt=exp_opt_sections
+    ).parse_strict(txt)
     options = flatten([o for o in parsed if isinstance(o, list)])
     cls.validate_unambiguous_options(options)
-    no_usage_text = many1(char(illegal=regex(r'usage:', re.I))).desc('Text').parsecmap(join_string)
+    no_usage_text = many(char(illegal=regex(r'usage:', re.I))).desc('Text').parsecmap(join_string)
     usage = (no_usage_text >> Usage.section(options) << no_usage_text).parse_strict(txt)
     return cls(usage, options)
 
@@ -82,9 +90,6 @@ class Option(AstNode):
       '' if doc2 is None else doc2,
     ])
 
-  def new(args):
-    return Option(*args)
-
   def __repr__(self):
     return f'''<Option>
   short: {self.indent(self.short) if self.short else 'None'}
@@ -98,11 +103,11 @@ class Option(AstNode):
     illegal = char(' \n')
     first = yield Short.options(illegal) ^ Long.options(illegal)
     if isinstance(first, Long):
-      opt_short = yield optional(many1(char(' ,')) >> Short.options(illegal))
+      opt_short = yield optional(char(' ,') >> Short.options(illegal))
       opt_long = first
     else:
       opt_short = first
-      opt_long = yield optional(many1(char(' ,')) >> Long.options(illegal))
+      opt_long = yield optional(char(' ,') >> Long.options(illegal))
     if opt_short is not None and opt_long is not None:
       if opt_short.arg is not None and opt_long.arg is None:
         opt_long.arg = opt_short.arg
@@ -110,16 +115,36 @@ class Option(AstNode):
         opt_short.arg = opt_long.arg
     return (opt_short, opt_long)
 
-  default = (
-    regex(r'\[default: ', re.IGNORECASE) >> many(char(illegal='\n]')) << char(']')
-  ).desc('[default: ]').parsecmap(join_string)
-  terminator = (nl + nl) ^ (nl + eof()) ^ (nl + indent + char('-'))
-  doc = many1(char(illegal=default ^ terminator)).desc('option documentation').parsecmap(join_string)
-  desc = (optional(doc) + optional(default) + optional(doc)).parsecmap(flatten)
-  line = (opts + optional(char(' ') + many1(char(' ')) >> desc)).desc('option line').parsecmap(flatten).parsecmap(new)
 
-  option_lines = sepBy(line, nl + indent)
-  section = regex(r'options:', re.I) >> optional(nl + indent) >> option_lines << (eof() | nl)
+  @classmethod
+  def section(cls):
+    next_option = nl + indent + char('-')
+    terminator = (nl + nl) ^ (nl + eof()) ^ next_option
+    default = (
+      regex(r'\[default: ', re.IGNORECASE) >> many(char(illegal='\n]')) << char(']')
+    ).desc('[default: ]').parsecmap(join_string)
+    doc = many1(char(illegal=default ^ terminator)).desc('option documentation').parsecmap(join_string)
+    options = []
+
+    @generate('options section')
+    def p():
+      yield regex(r'options:', re.I)
+      yield optional(nl + indent)
+      while True:
+        doc1 = _default = doc2 = None
+        (short, long) = yield cls.opts
+        if (yield optional(lookahead(whitespaces + char(illegal='\n')))) is not None:
+          yield (char(' ') + many1(char(' '))) ^ outer_desc('at least 2 spaces')
+          doc1 = yield optional(doc)
+          _default = yield optional(default)
+          doc2 = yield optional(doc)
+        options.append(cls(short, long, doc1, _default, doc2))
+        if (yield lookahead(optional(next_option))) is None:
+          break
+        yield nl + indent
+      yield eof() | nl
+      return options
+    return p
 
 
 class Long(AstNode):
@@ -136,7 +161,7 @@ class Long(AstNode):
     def p():
       yield string('-' + self.name)
       if self.arg is not None:
-        yield (optional(char('=')) >> ident(illegal)).desc('argument (=ARG)')
+        yield (char('=') >> ident(illegal)).desc('argument (=ARG)')
       return self
     return p
 
@@ -146,9 +171,18 @@ class Long(AstNode):
         .desc('long option (--long)').parsecmap(splat(Long))
 
   def options(illegal):
-    argument = (char(' =') >> Argument.arg).desc('argument')
-    return (string('--') >> ident(illegal | char('=')) + optional(argument)) \
-        .desc('long option (--long)').parsecmap(splat(Long))
+    @generate('long option (--long)')
+    def p():
+      argument = (char(' =') >> Argument.arg).desc('argument')
+      yield string('--')
+      name = yield ident(illegal | char('='))
+      if (yield optional(lookahead(char('=')))) is not None:
+        # Definitely an argument, make sure we fail with "argument expected"
+        arg = yield argument
+      else:
+        arg = yield optional(argument)
+      return Long(name, arg)
+    return p
 
 
 class Short(AstNode):
@@ -295,7 +329,7 @@ class Sequence(AstNode):
 
 class Group(object):
   def group(options):
-    return (char('(') >> expr(char('| \n)(['), options) << char(')')).desc('(group)')
+    return (char('(') >> expr(char('| \n)(['), options) << char(')'))
 
 
 class Optional(AstNode):
@@ -329,7 +363,7 @@ class Command(AstNode):
 
   def command(illegal):
     starts_with = char(illegal=illegal | char('-'))
-    return ident(illegal, starts_with).desc('command').parsecmap(Command)
+    return ident(illegal, starts_with).parsecmap(Command)
 
 
 class ArgumentSeparator(AstNode):
@@ -339,7 +373,7 @@ class ArgumentSeparator(AstNode):
   def new(args):
     return ArgumentSeparator()
 
-  separator = string('--').desc('argument separator (--)').parsecmap(new)
+  separator = string('--').parsecmap(new)
 
 
 class Argument(AstNode):

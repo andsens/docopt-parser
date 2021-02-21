@@ -44,6 +44,9 @@ def describe_value(val):
     return val
   return char_descriptions.get(val, val)
 
+def outer_desc(message):
+  return Parser(lambda _, index: Value.failure(index, message))
+
 def exclude(p: Parser, end: Parser):
   '''Fails parser p if parser end matches
   '''
@@ -85,6 +88,17 @@ def lookahead(p: Parser):
     else:
       return Value.failure(index, res.value)
   return lookahead_parser
+
+def string(s):
+    '''Parser a string.'''
+    @Parser
+    def string_parser(text, index=0):
+        slen = len(s)
+        if text[index:index + slen] == s:
+            return Value.success(index + slen, s)
+        else:
+            return Value.failure(index, s)
+    return string_parser
 
 def explain_error(e: ParseError, text: str):
   line_no, col = e.loc_info(e.text, e.index)
