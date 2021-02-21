@@ -6,13 +6,13 @@ Usage:
   prog -h | --help
   prog --version
   prog [-hv] -y
-  prog -kAARG
+  prog -k
   prog [options]
 
 Options:
   -h --help     Show this screen.
   --version     Show version.
-  -s=ARG
+  -k=ARG
   --speed=<kn>  Speed in knots [default: 10].
   --moored      Mored (anchored) mine.
   --drifting    Drifting mine.

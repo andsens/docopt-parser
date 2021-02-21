@@ -90,13 +90,13 @@ class Option(AstNode):
   @generate('options')
   def opts():
     exclude = char(' \n')
-    first = yield Short.short(exclude) ^ Long.long(exclude)
+    first = yield Short.options(exclude) ^ Long.options(exclude)
     if isinstance(first, Long):
-      opt_short = yield optional(many1(char(' ,')) >> Short.short(exclude))
+      opt_short = yield optional(many1(char(' ,')) >> Short.options(exclude))
       opt_long = first
     else:
       opt_short = first
-      opt_long = yield optional(many1(char(' ,')) >> Long.long(exclude))
+      opt_long = yield optional(many1(char(' ,')) >> Long.options(exclude))
     if opt_short is not None and opt_long is not None:
       if opt_short.arg is not None and opt_long.arg is None:
         opt_long.arg = opt_short.arg
@@ -128,20 +128,21 @@ class Long(AstNode):
   def usage_parser(self, excludes):
     @generate(f'--{self.name}')
     def p():
-      yield char('-')
-      yield string(self.name)
+      yield string('-' + self.name)
       if self.arg is not None:
-        yield char('=')
-        yield symbol(excludes)
+        yield (optional(char('=')) >> symbol(excludes)).desc('argument (=ARG)')
       return self
     return p
 
-  def long(excludes, first_dash=True):
-    p = (char('-') >> symbol(excludes | char('=')) + optional(char(' =') >> Argument.arg)) \
-      .desc('long option (--long)').parsecmap(splat(Long))
-    if first_dash:
-      p = char('-') >> p
-    return p
+  def usage(excludes):
+    argument = (char('=') >> Argument.arg).desc('argument')
+    return (char('-') >> symbol(excludes | char('=')) + optional(argument)) \
+        .desc('long option (--long)').parsecmap(splat(Long))
+
+  def options(excludes):
+    argument = (char(' =') >> Argument.arg).desc('argument')
+    return (string('--') >> symbol(excludes | char('=')) + optional(argument)) \
+        .desc('long option (--long)').parsecmap(splat(Long))
 
 
 class Short(AstNode):
@@ -158,16 +159,20 @@ class Short(AstNode):
     def p():
       yield string(self.name)
       if self.arg is not None:
-        yield optional(char(' '))
-        yield symbol(excludes)
+        yield (optional(char(' ')) >> symbol(excludes)).desc('argument ( ARG)')
       return self
     return p
 
-  def short(excludes, dash=True):
-    p = (char(disallowed=excludes | char('=-')) + optional(char(' =') >> Argument.arg)) \
-      .desc('short option (-a)').parsecmap(splat(Short))
-    if dash:
-      p = char('-') >> p
+  def usage(excludes):
+    argument = (char(' ') >> Argument.arg).desc('argument')
+    p = (char(disallowed=excludes | char('=-')) + optional(argument)) \
+        .desc('short option (-a)').parsecmap(splat(Short))
+    return p
+
+  def options(excludes):
+    argument = (char(' =') >> Argument.arg).desc('argument')
+    p = (char('-') >> char(disallowed=excludes | char('=-')) + optional(argument)) \
+        .desc('short option (-a)').parsecmap(splat(Short))
     return p
 
 
@@ -359,10 +364,10 @@ class Options(AstNode):
       known_shorts = [o.short.usage_parser(excludes) for o in options if o.short is not None]
       short_p = reduce(lambda mem, p: mem ^ p, known_shorts)
 
-      opt = yield long_p ^ short_p ^ Long.long(excludes, first_dash=False) ^ Short.short(excludes, dash=False)
+      opt = yield long_p | short_p | Long.usage(excludes) | Short.usage(excludes)
       opts = [opt]
       while isinstance(opt, Short) and opt.arg is None:
-        opt = yield optional(short_p ^ Short.short(excludes, dash=False))
+        opt = yield optional(short_p ^ Short.usage(excludes))
         if opt is None:
           break
         else:
