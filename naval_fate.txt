@@ -5,13 +5,14 @@ Usage:
   prog mine (set|remove) ((<x> <y> [[--moored|--drifting]]))
   prog -h | --help
   prog --version
-  prog [-hv]
+  prog [-hv] -y
   prog [-kAARG]
   prog [options]
 
 Options:
   -h --help     Show this screen.
   --version     Show version.
+  -s=ARG
   --speed=<kn>  Speed in knots [default: 10].
   --moored      Mored (anchored) mine.
   --drifting    Drifting mine.

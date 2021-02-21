@@ -199,6 +199,7 @@ class Option(LeafPattern):
         if argcount:
             matched = re.findall('\[default: (.*)\]', description, flags=re.I)
             value = matched[0] if matched else None
+        print(short, long, argcount, value)
         return class_(short, long, argcount, value)
 
     def single_match(self, left):
@@ -339,7 +340,6 @@ def parse_shorts(tokens, options):
     parsed = []
     while left != '':
         short, left = '-' + left[0], left[1:]
-        print(short)
         similar = [o for o in options if o.short == short]
         if len(similar) > 1:
             raise tokens.error('%s is specified ambiguously %d times' %
@@ -419,7 +419,9 @@ def parse_atom(tokens, options):
     elif token.startswith('--') and token != '--':
         return parse_long(tokens, options)
     elif token.startswith('-') and token not in ('-', '--'):
-        return parse_shorts(tokens, options)
+        s = parse_shorts(tokens, options)
+        print(s)
+        return s
     elif token.startswith('<') and token.endswith('>') or token.isupper():
         return [Argument(tokens.move())]
     else:

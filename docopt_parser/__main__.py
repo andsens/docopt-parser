@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# from docopt_parser.options import resolve_options
-# from docopt_parser.validate import validate
 from docopt_parser.parser import DocoptAst
 import sys
 import os
@@ -30,9 +28,6 @@ def docopt_parser(params):
     doc = sys.stdin.read()
     try:
       ast = DocoptAst.parse(doc)
-      # ast = resolve_options(ast)
-      # print(ast)
-      # validate(ast)
     except ParseError as e:
       raise DocoptParseError(explain_error(e, doc)) from None
     if params['ast']:

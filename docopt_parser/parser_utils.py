@@ -48,27 +48,3 @@ def explain_error(e: ParseError, text: str):
   line_no, col = e.loc_info(e.text, e.index)
   line = text.split('\n')[line_no]
   return '\n{line}\n{col}^\n{msg}'.format(line=line, col=' ' * col, msg=str(e))
-
-def ast_map(pred, node, f=lambda n: True):
-  outer_pred = pred if f(node) else id
-  if isinstance(node, tuple):
-    return outer_pred(type(node)(*map(lambda node: ast_map(pred, node, f), node)))
-  elif isinstance(node, list):
-    return outer_pred(list(map(lambda node: ast_map(pred, node, f), node)))
-  else:
-    return outer_pred(node)
-
-def ast_collect(pred, ast):
-  items = []
-  for item in ast:
-    if pred(item):
-      items.append(item)
-    if isinstance(item, (tuple, list)):
-      items += ast_collect(pred, item)
-  return items
-
-def ast_findall(ast_type, ast):
-  return ast_collect(lambda n: isinstance(n, ast_type), ast)
-
-def id(arg):
-  return arg
