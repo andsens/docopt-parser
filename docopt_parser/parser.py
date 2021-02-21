@@ -1,6 +1,6 @@
 from functools import reduce
 from tests.docopt import DocoptLanguageError
-from docopt_parser.parser_utils import char, debug, exclude, flatten, join_string, lookahead, splat
+from docopt_parser.parser_utils import char, exclude, flatten, join_string, lookahead, splat
 import re
 from parsec import eof, generate, many, many1, optional, regex, sepBy, string
 
@@ -190,15 +190,16 @@ class Usage(object):
     def p():
       yield regex(r'usage:', re.I)
       yield optional(nl + indent)
-      prog = yield ident(illegal)
-      yield whitespaces
-      expressions = [(yield expr(illegal, options))]
-      while (yield optional(nl + indent)) is not None:
+      prog = yield lookahead(ident(illegal))
+      expressions = []
+      while True:
         yield string(prog)
         yield whitespaces
         e = yield expr(illegal, options)
         yield optional(whitespaces)
         expressions.append(e)
+        if (yield optional(nl + indent)) is None:
+          break
       yield (eof() | nl)
       return Choice(expressions)
     return p
