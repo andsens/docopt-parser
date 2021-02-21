@@ -1,6 +1,6 @@
 import sys
 from tests.docopt import DocoptLanguageError
-from parsec import ParseError, Parser, Value
+from parsec import ParseError, Parser, Value, one_of, regex
 
 def splat(constr):
   return lambda args: constr(*args)
@@ -44,7 +44,50 @@ def exclude(p: Parser, end: Parser):
       return p(text, index)
   return exclude_parser
 
+char_descriptions = {
+  ' ': '<space>',
+  '\n': '<newline>',
+  '\t': '<tab>',
+  '|': '<pipe> (|)'
+}
+
+any_char = regex(r'.|\n').desc('any char')
+def char(allowed=any_char, disallowed=None):
+  if isinstance(allowed, str):
+    desc = ' or '.join(map(lambda c: char_descriptions.get(c, c), allowed))
+    a = one_of(allowed).desc(desc)
+  else:
+    a = allowed
+  if disallowed is not None:
+    if isinstance(disallowed, str):
+      desc = ' or '.join(map(lambda c: char_descriptions.get(c, c), disallowed))
+      d = one_of(disallowed).desc(desc)
+    else:
+      d = disallowed
+    d = one_of(disallowed) if isinstance(disallowed, str) else disallowed
+    return exclude(a, d)
+  else:
+    return a
+
+def lookahead(p: Parser):
+  '''Parses without consuming
+  '''
+  @Parser
+  def lookahead_parser(text, index):
+    res = p(text, index)
+    if res.status:
+      return Value.success(index, res.value)
+    else:
+      return res
+  return lookahead_parser
+
 def explain_error(e: ParseError, text: str):
   line_no, col = e.loc_info(e.text, e.index)
-  line = text.split('\n')[line_no]
-  return '\n{line}\n{col}^\n{msg}'.format(line=line, col=' ' * col, msg=str(e))
+  lines = text.split('\n')
+  prev_line = ''
+  if line_no > 0:
+    prev_line = lines[line_no - 1] + '\n'
+  line = lines[line_no]
+  col = ' ' * col
+  msg = str(e)
+  return f'{prev_line}{line}\n{col}^\n{msg}'

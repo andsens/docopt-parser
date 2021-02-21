@@ -31,7 +31,7 @@ def docopt_parser(params):
     except ParseError as e:
       raise DocoptParseError(explain_error(e, doc)) from None
     if params['ast']:
-      sys.stdout.write(repr(ast) + '\n')
+      sys.stdout.write(repr(ast.usage) + '\n')
   except DocoptParseError as e:
     log.error(str(e))
     sys.exit(e.exit_code)
