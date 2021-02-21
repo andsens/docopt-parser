@@ -6,7 +6,7 @@ Usage:
   prog -h | --help
   prog --version
   prog [-hv] -y
-  prog [-kAARG]
+  prog -kAARG
   prog [options]
 
 Options:

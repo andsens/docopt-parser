@@ -136,9 +136,12 @@ class Long(AstNode):
       return self
     return p
 
-  def long(excludes):
-    return (string('--') >> symbol(excludes | char('=')) + optional(char(' =') >> Argument.arg)) \
+  def long(excludes, first_dash=True):
+    p = (char('-') >> symbol(excludes | char('=')) + optional(char(' =') >> Argument.arg)) \
       .desc('long option (--long)').parsecmap(splat(Long))
+    if first_dash:
+      p = char('-') >> p
+    return p
 
 
 class Short(AstNode):
@@ -160,9 +163,12 @@ class Short(AstNode):
       return self
     return p
 
-  def short(excludes):
-    return (char('-') >> char(disallowed=excludes | char('=-')) + optional(char(' =') >> Argument.arg)) \
+  def short(excludes, dash=True):
+    p = (char(disallowed=excludes | char('=-')) + optional(char(' =') >> Argument.arg)) \
       .desc('short option (-a)').parsecmap(splat(Short))
+    if dash:
+      p = char('-') >> p
+    return p
 
 
 class Usage(object):
@@ -214,7 +220,7 @@ def atom(excludes, options):
     # we can give useful error messages of what was expected
     a = yield (
       Group.group(options) | Optional.optional(options) | OptionsShortcut.shortcut
-      | UsageOptions.options(excl, options)
+      | Options.options(excl, options)
       | (Argument.arg ^ Command.command(excl))
     ).bind(Multiple.multi)
     return a
@@ -332,37 +338,34 @@ class OptionsShortcut(AstNode):
   shortcut = string('options').parsecmap(new)
 
 
-class UsageOptions(AstNode):
-  def __init__(self, names, arg):
+class Options(AstNode):
+  def __init__(self, names):
     self.names = names
-    self.arg = arg
 
   def __repr__(self):
-    return f'''<UsageOptions>
-  arg: {self.arg}
+    return f'''<Options>
 {self.indent(self.names)}'''
 
   def options(excludes, options):
     @generate('Options (-s or --long)')
     def p():
       # Check if we should consume, the lookahead checks if this is unambiguously the
-      # beginning of an option
-      any_long = char('-') + optional(char('-')) + char(disallowed=excludes | char('-'))
-      any_short = char('-') + char(disallowed=excludes | char('-'))
-      yield lookahead(any_long ^ any_short)
+      # beginning of an option. This way we can cause atom() to fail with a useful message
+      any_option = char('-') + optional(char('-')) + char(disallowed=excludes | char('-'))
+      yield lookahead(any_option)
       yield char('-')
       known_longs = [o.long.usage_parser(excludes) for o in options if o.long is not None]
       long_p = reduce(lambda mem, p: mem ^ p, known_longs)
       known_shorts = [o.short.usage_parser(excludes) for o in options if o.short is not None]
       short_p = reduce(lambda mem, p: mem ^ p, known_shorts)
 
-      opt = yield long_p ^ short_p
+      opt = yield long_p ^ short_p ^ Long.long(excludes, first_dash=False) ^ Short.short(excludes, dash=False)
       opts = [opt]
       while isinstance(opt, Short) and opt.arg is None:
-        opt = yield optional(short_p)
+        opt = yield optional(short_p ^ Short.short(excludes, dash=False))
         if opt is None:
           break
         else:
           opts.append(opt)
-      return opts
+      return Options(opts)
     return p
