@@ -26,10 +26,7 @@ Options:
 def docopt_parser(params):
   try:
     doc = sys.stdin.read()
-    try:
-      ast = DocoptAst.parse(doc)
-    except ParseError as e:
-      raise DocoptParseError(explain_error(e, doc)) from None
+    ast = DocoptAst.parse(doc)
     if params['ast']:
       sys.stdout.write(repr(ast) + '\n')
   except DocoptParseError as e:

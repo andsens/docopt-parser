@@ -109,4 +109,4 @@ def explain_error(e: ParseError, text: str):
   line = lines[line_no]
   col = ' ' * col
   msg = str(e)
-  return f'{prev_line}{line}\n{col}^\n{msg}'
+  return f'\n{prev_line}{line}\n{col}^\n{msg}'

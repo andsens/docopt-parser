@@ -1,8 +1,15 @@
+from docopt_parser import DocoptParseError
 from functools import reduce
 from tests.docopt import DocoptLanguageError
-from docopt_parser.parser_utils import char, exclude, outer_desc, flatten, join_string, lookahead, splat, string
+from docopt_parser.parser_utils import char, exclude, explain_error, \
+  outer_desc, flatten, join_string, lookahead, splat, string
 import re
-from parsec import eof, generate, many, many1, optional, regex, times
+from parsec import ParseError, eof, generate, many, many1, optional, regex, times
+
+
+# TODO:
+# Measing the repeated options parser, where e.g. -AA or --opt --opt becomes a counter
+# Handle options that are not referenced from usage
 
 nl = char('\n')
 whitespaces = many1(char(regex(r'\s'), nl)).parsecmap(join_string).desc('<whitespace>')
@@ -59,21 +66,26 @@ class DocoptAst(AstNode):
 
   @classmethod
   def parse(cls, txt):
-    re_options_section = regex(r'options:', re.I)
-    # We do the counting and the times() instead of just many(options) in order to get
-    # better parser errors. Since many() is fine with 0 results, the parser just ends up
-    # expecting EOF on parser failure and fails with that message instead
-    no_options_text = many(char(illegal=re_options_section)).desc('Text').parsecmap(join_string)
-    exp_opt_sections = len(many(no_options_text >> re_options_section << no_options_text).parse(txt))
-    parsed = times(
-      no_options_text >> Option.section() << no_options_text,
-      mint=exp_opt_sections, maxt=exp_opt_sections
-    ).parse_strict(txt)
-    options = flatten([o for o in parsed if isinstance(o, list)])
-    cls.validate_unambiguous_options(options)
-    no_usage_text = many(char(illegal=regex(r'usage:', re.I))).desc('Text').parsecmap(join_string)
-    usage = (no_usage_text >> Usage.section(options) << no_usage_text).parse_strict(txt)
-    return cls(usage, options)
+    try:
+      re_options_section = regex(r'options:', re.I)
+      # We do the counting and the times() instead of just many(options) in order to get
+      # better parser errors. Since many() is fine with 0 results, the parser just ends up
+      # expecting EOF on parser failure and fails with that message instead
+      no_options_text = many(char(illegal=re_options_section)).desc('Text').parsecmap(join_string)
+      exp_opt_sections = len(many(no_options_text >> re_options_section << no_options_text).parse(txt))
+      parsed = (
+        no_options_text >> times(
+          no_options_text >> Option.section() << no_options_text,
+          mint=exp_opt_sections, maxt=exp_opt_sections
+        ) << no_options_text
+      ).parse_strict(txt)
+      options = flatten([o for o in parsed if isinstance(o, list)])
+      cls.validate_unambiguous_options(options)
+      no_usage_text = many(char(illegal=regex(r'usage:', re.I))).desc('Text').parsecmap(join_string)
+      usage = (no_usage_text >> Usage.section(options) << no_usage_text).parse_strict(txt)
+      return cls(usage, options)
+    except ParseError as e:
+      raise DocoptParseError(explain_error(e, txt)) from e
 
 
 class Option(AstNode):
@@ -130,7 +142,7 @@ class Option(AstNode):
     def p():
       yield regex(r'options:', re.I)
       yield optional(nl + indent)
-      while True:
+      while (yield lookahead(optional(char('-')))) is not None:
         doc1 = _default = doc2 = None
         (short, long) = yield cls.opts
         if (yield optional(lookahead(whitespaces + char(illegal='\n')))) is not None:
@@ -211,7 +223,7 @@ class Short(AstNode):
 
   def options(illegal):
     argument = (char(' =') >> Argument.arg).desc('argument')
-    p = (char('-') >> char(illegal=illegal | char('=-')) + optional(argument)) \
+    p = (char('-') >> char(illegal=illegal | char('=-')) + optional(optional(char(' =') >> argument))) \
         .desc('short option (-a)').parsecmap(splat(Short))
     return p
 
@@ -228,9 +240,12 @@ class Usage(object):
       expressions = []
       while True:
         yield string(prog)
-        yield whitespaces
-        e = yield expr(illegal, options)
+        if (yield optional(whitespaces)) is None:
+          break
+        e = yield optional(expr(illegal, options))
         yield optional(whitespaces)
+        if e is None:
+          e = Sequence([])
         expressions.append(e)
         if (yield optional(nl + indent)) is None:
           break
@@ -429,9 +444,9 @@ class Options(AstNode):
       yield lookahead(any_option)
       yield char('-')
       known_longs = [o.long.usage_parser(illegal) for o in options if o.long is not None]
-      long_p = reduce(lambda mem, p: mem ^ p, known_longs)
+      long_p = reduce(lambda mem, p: mem ^ p, known_longs, outer_desc('no --long in Options:'))
       known_shorts = [o.short.usage_parser(illegal) for o in options if o.short is not None]
-      short_p = reduce(lambda mem, p: mem ^ p, known_shorts)
+      short_p = reduce(lambda mem, p: mem ^ p, known_shorts, outer_desc('no --short in Options:'))
 
       opt = yield long_p | short_p | Long.usage(illegal) | Short.usage(illegal)
       opts = [opt]

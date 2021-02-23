@@ -6,3 +6,4 @@ __pycache__/
 /.vscode/settings.json
 /docopt-parser.code-workspace
 /docopt_parser/version.py
+/.hypothesis
