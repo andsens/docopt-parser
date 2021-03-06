@@ -187,12 +187,12 @@ class Long(AstNode):
     return f'''--{self.name}
   arg: {self.arg}'''
 
-  def usage_parser(self, illegal):
+  def usage_parser(self):
     @generate(f'--{self.name}')
     def p():
       yield string('-' + self.name)
       if self.arg is not None:
-        yield (char('=') >> ident(illegal)).desc('argument (=ARG)')
+        yield (char('= ') >> Argument.arg).desc('argument (=ARG)')
       return self
     return p
 
@@ -225,12 +225,12 @@ class Short(AstNode):
     return f'''-{self.name}
   arg: {self.arg}'''
 
-  def usage_parser(self, illegal):
+  def usage_parser(self):
     @generate(f'-{self.name}')
     def p():
       yield string(self.name)
       if self.arg is not None:
-        yield (optional(char(' ')) >> ident(illegal)).desc('argument ( ARG)')
+        yield (optional(char(' ')) >> Argument.arg).desc('argument ( ARG)')
       return self
     return p
 
@@ -480,10 +480,10 @@ class Options(AstNode):
       any_option = char('-') + optional(char('-')) + char(illegal=illegal | char('-'))
       yield lookahead(any_option)
       yield char('-')
-      known_longs = [o.long.usage_parser(illegal) for o in options if o.long is not None]
+      known_longs = [o.long.usage_parser() for o in options if o.long is not None]
       long_p = reduce(lambda mem, p: mem ^ p, known_longs, outer_desc('no --long in Options:'))
-      known_shorts = [o.short.usage_parser(illegal) for o in options if o.short is not None]
-      short_p = reduce(lambda mem, p: mem ^ p, known_shorts, outer_desc('no --short in Options:'))
+      known_shorts = [o.short.usage_parser() for o in options if o.short is not None]
+      short_p = reduce(lambda mem, p: mem ^ p, known_shorts, outer_desc('no -s in Options:'))
 
       opt = yield long_p | short_p | Long.usage(illegal) | Short.usage(illegal)
       opts = [opt]

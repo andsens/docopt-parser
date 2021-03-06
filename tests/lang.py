@@ -80,7 +80,7 @@ def to_usage_option(o):
 def docopt_help(draw):
   section_sizes = draw(section_partitions)
   total = reduce(lambda mem, n: mem + n, section_sizes)
-  options = draw(lists(option, unique_by=(lambda s: s[0], lambda s: s[0]), min_size=total, max_size=total))
+  options = draw(lists(option, unique_by=(lambda s: s[0], lambda s: s[1]), min_size=total, max_size=total))
   pos = 0
   usage_options = options[pos:(pos + section_sizes[0])]
   s_usage_options = ' '.join(map(to_usage_option, usage_options))
@@ -121,8 +121,9 @@ def docopt_help(draw):
         elements.append(draw(nl_indent))
     option_sections.append(f'{draw(options_title)}{draw(maybe(nl_indent))}{"".join(elements)}')
     pos += size
-  s_option_sections = '\n'.join(option_sections)
+  s_option_sections = '\n\n'.join(option_sections)
   return f'''{draw(other_text)}{usage_section}
+
 {s_option_sections}'''
 
 
