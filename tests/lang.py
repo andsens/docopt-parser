@@ -25,9 +25,14 @@ def chars(legal=None, illegal=None, **kwargs):
   else:
     return text(alphabet=char(illegal=illegal), **kwargs)
 
+def ident(illegal, starts_with=None):
+  if starts_with is not None:
+    return tuples(starts_with, chars(illegal=illegal)).map(lambda t: ''.join(t))
+  else:
+    return chars(illegal=illegal, min_size=1)
+
 nl = char('\n')
-spaces = chars(' ', min_size=1)
-indent = one_of(spaces, char('\t'))
+indent = one_of(chars(' ', min_size=1), char('\t'))
 nl_indent = tuples(nl, indent).map(''.join)
 def maybe(gen):
   return one_of(just(''), gen)
@@ -39,12 +44,6 @@ def not_re(*args):
   def check(s):
     return all((r.search(s) is None for r in args))
   return check
-
-def ident(illegal, starts_with=None):
-  if starts_with is not None:
-    return tuples(starts_with, chars(illegal=illegal)).map(lambda t: ''.join(t))
-  else:
-    return chars(illegal=illegal, min_size=1)
 
 other_text = text().filter(not_re(re_usage, re_options))
 usage_title = from_regex(re_usage, fullmatch=True)
