@@ -59,7 +59,25 @@ option = tuples(
   one_of(none(), short_ident),
   one_of(none(), long_ident),
 ).filter(lambda x: x[0] is not None or x[1] is not None)
-section_partitions = lists(integers(min_value=0, max_value=20), min_size=1, max_size=20)
+
+
+def partition_list(list_to_partition):
+  def partition(indices):
+    lists = []
+    pos = 0
+    for index in sorted(indices):
+      lists.append(list_to_partition[pos:index])
+      pos = index
+    return lists
+  return partition
+
+
+options = lists(option, unique_by=(lambda s: s[0], lambda s: s[1]), min_size=5).flatmap(
+  lambda all_options: lists(
+    integers(min_value=0, max_value=max(len(all_options) - 1, 0)), unique=True, min_size=1
+  ).map(partition_list(all_options))
+)
+
 option_line_doc_sep = text(alphabet=char(' '), min_size=2)
 option_doc_text = text().filter(not_re(re_usage, re_options, re_default))
 opt_arg_sep = char(' =')
@@ -77,18 +95,13 @@ def to_usage_option(o):
 
 @composite
 def docopt_help(draw):
-  section_sizes = draw(section_partitions)
-  total = reduce(lambda mem, n: mem + n, section_sizes)
-  options = draw(lists(option, unique_by=(lambda s: s[0], lambda s: s[1]), min_size=total, max_size=total))
-  pos = 0
-  usage_options = options[pos:(pos + section_sizes[0])]
+  usage_options, *options_sections_options = draw(options)
   s_usage_options = ' '.join(map(to_usage_option, usage_options))
   usage_section = f'{draw(usage_title)}{draw(maybe(nl_indent))}prog {s_usage_options}'
-  pos += section_sizes[0]
   option_sections = []
-  for size in section_sizes[1:]:
+  for options_section_options in options_sections_options:
     elements = []
-    for i, opt in enumerate(options[pos:(pos + size)]):
+    for i, opt in enumerate(options_section_options):
       short, long = opt
       s_default = draw(default)
       if short:
@@ -116,10 +129,9 @@ def docopt_help(draw):
         elements.append(s_opt_doc)
       else:
         elements.append(draw(chars(' ')))
-      if i < size - 1:
+      if i < len(options_section_options) - 1:
         elements.append(draw(nl_indent))
     option_sections.append(f'{draw(options_title)}{draw(maybe(nl_indent))}{"".join(elements)}')
-    pos += size
   s_option_sections = '\n\n'.join(option_sections)
   return f'''{draw(other_text)}{usage_section}
 
