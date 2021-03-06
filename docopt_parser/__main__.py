@@ -6,8 +6,6 @@ import docopt
 import logging
 import termcolor
 from docopt_parser import DocoptParseError, __doc__ as pkg_doc, __name__ as root_name, __version__
-from parsec import ParseError
-from docopt_parser.parser_utils import explain_error
 
 log = logging.getLogger(root_name)
 

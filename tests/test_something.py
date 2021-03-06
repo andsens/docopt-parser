@@ -16,5 +16,7 @@ class TestParser(unittest.TestCase):
   def test_parse(self, s):
     assert isinstance(DocoptAst.parse(s), DocoptAst)
 
+  # Never expect <None> or <nl>
+
 if __name__ == "__main__":
   unittest.main()

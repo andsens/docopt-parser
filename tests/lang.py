@@ -1,7 +1,10 @@
 from hypothesis.strategies import one_of, characters, just, text, from_regex, \
   sets, tuples, none, composite, lists, sampled_from, integers
+from hypothesis import settings, Verbosity
 import re
 from functools import reduce
+
+settings(verbosity=Verbosity.verbose)
 
 def char(legal=None, illegal=None):
   if (legal is None) == (illegal is None):
@@ -14,16 +17,16 @@ def char(legal=None, illegal=None):
   else:
     return characters(blacklist_characters=illegal)
 
-def chars(legal=None, illegal=None):
+def chars(legal=None, illegal=None, **kwargs):
   if (legal is None) == (illegal is None):
     raise Exception('chars(): legal and illegal parameters are mutually exclusive')
   if legal is not None:
-    return text(alphabet=char(legal=legal))
+    return text(alphabet=char(legal=legal), **kwargs)
   else:
-    return text(alphabet=char(illegal=illegal))
+    return text(alphabet=char(illegal=illegal), **kwargs)
 
 nl = char('\n')
-spaces = lists(char(' '), min_size=1).map(''.join)
+spaces = chars(' ', min_size=1)
 indent = one_of(spaces, char('\t'))
 nl_indent = tuples(nl, indent).map(''.join)
 def maybe(gen):
@@ -38,13 +41,10 @@ def not_re(*args):
   return check
 
 def ident(illegal, starts_with=None):
-  @composite
-  def gen(draw):
-    start = legal = characters(blacklist_characters=illegal)
-    if starts_with is not None:
-      start = starts_with
-    return f'{draw(start)}{draw(legal)}'
-  return gen()
+  if starts_with is not None:
+    return tuples(starts_with, chars(illegal=illegal)).map(lambda t: ''.join(t))
+  else:
+    return chars(illegal=illegal, min_size=1)
 
 other_text = text().filter(not_re(re_usage, re_options))
 usage_title = from_regex(re_usage, fullmatch=True)
@@ -54,8 +54,8 @@ wrapped_arg = ident('\n>').map(lambda s: f'<{s}>')
 uppercase_arg = from_regex(r'[A-Z0-9][A-Z0-9-]+', fullmatch=True)
 arg = one_of([wrapped_arg, uppercase_arg])
 
-short_ident = characters(blacklist_characters='-=')
-long_ident = text(alphabet=characters(blacklist_characters='-'), min_size=2)
+short_ident = char(illegal='-=| \n()[]')
+long_ident = ident(illegal='=| \n()[]', starts_with=char(illegal='-=| \n()[]'))
 option = tuples(
   one_of(none(), short_ident),
   one_of(none(), long_ident),
@@ -70,11 +70,11 @@ default = one_of(none(), text().filter(not_re(re_usage, re_options)))
 def to_usage_option(o):
   short, long = o
   if short and long:
-    return '(-{short}|--{long})'
+    return f'(-{short}|--{long})'
   if short:
-    return '-{short}'
+    return f'-{short}'
   if long:
-    return '-{long}'
+    return f'--{long}'
 
 @composite
 def docopt_help(draw):
@@ -106,12 +106,19 @@ def docopt_help(draw):
           elements.append(f'--{long}{draw(opt_arg_sep)}{opt_arg}')
         else:
           elements.append(f'--{long}')
-      elements.append(draw(option_doc_text))
+      opt_doc = []
+      opt_doc.append(draw(option_doc_text))
       if s_default:
-        elements.append(f'[default: {s_default}]')
-      elements.append(draw(option_doc_text))
+        opt_doc.append(f'[default: {s_default}]')
+      opt_doc.append(draw(option_doc_text))
+      s_opt_doc = ''.join(opt_doc)
+      if len(s_opt_doc) > 0:
+        elements.append(draw(chars(' ', min_size=2)))
+        elements.append(s_opt_doc)
+      else:
+        elements.append(draw(chars(' ')))
       if i < size - 1:
-        elements.append(draw(maybe(nl_indent)))
+        elements.append(draw(nl_indent))
     option_sections.append(f'{draw(options_title)}{draw(maybe(nl_indent))}{"".join(elements)}')
     pos += size
   s_option_sections = '\n'.join(option_sections)

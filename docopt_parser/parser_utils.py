@@ -86,7 +86,7 @@ def lookahead(p: Parser):
     if res.status:
       return Value.success(index, res.value)
     else:
-      return Value.failure(index, res.value)
+      return Value.failure(index, res.expected)
   return lookahead_parser
 
 def string(s):

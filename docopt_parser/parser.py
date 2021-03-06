@@ -4,11 +4,11 @@ from tests.docopt import DocoptLanguageError
 from docopt_parser.parser_utils import char, exclude, explain_error, \
   outer_desc, flatten, join_string, lookahead, splat, string
 import re
-from parsec import ParseError, eof, generate, many, many1, optional, regex, times
+from parsec import ParseError, eof, generate, many, many1, optional, regex
 
 
 # TODO:
-# Measing the repeated options parser, where e.g. -AA or --opt --opt becomes a counter
+# Missing the repeated options parser, where e.g. -AA or --opt --opt becomes a counter
 # Handle options that are not referenced from usage
 
 nl = char('\n')
@@ -65,25 +65,40 @@ class DocoptAst(AstNode):
       raise DocoptLanguageError(', '.join(messages))
 
   @classmethod
+  def option_sections(cls):
+    re_options_section = regex(r'options:', re.I)
+    no_options_text = many(char(illegal=re_options_section)).desc('Text').parsecmap(join_string)
+
+    @generate('options sections')
+    def p():
+      first_section = yield lookahead(optional(no_options_text >> re_options_section))
+      if first_section is not None:
+        sections = yield many1(no_options_text >> Option.section() << no_options_text)
+        return flatten(sections)
+      else:
+        return []
+    return p
+
+  @classmethod
+  def lang(cls):
+    no_usage_text = many(char(illegal=regex(r'usage:', re.I))).desc('Text').parsecmap(join_string)
+
+    @generate('docopt help text')
+    def p():
+      # We need all options before parsing the usage section, so we may need to consume past it
+      # before actually parsing it. So the options parsing is a lookahead. In order to fail
+      # with a proper error message while parsing the options sections, we reparse everything
+      # without the lookahead if the lookahead fails
+      options = yield lookahead(cls.option_sections()) ^ cls.option_sections()
+      cls.validate_unambiguous_options(options)
+      usage = yield (no_usage_text >> Usage.section(options) << no_usage_text)
+      return cls(usage, options)
+    return p
+
+  @classmethod
   def parse(cls, txt):
     try:
-      re_options_section = regex(r'options:', re.I)
-      # We do the counting and the times() instead of just many(options) in order to get
-      # better parser errors. Since many() is fine with 0 results, the parser just ends up
-      # expecting EOF on parser failure and fails with that message instead
-      no_options_text = many(char(illegal=re_options_section)).desc('Text').parsecmap(join_string)
-      exp_opt_sections = len(many(no_options_text >> re_options_section << no_options_text).parse(txt))
-      parsed = (
-        no_options_text >> times(
-          no_options_text >> Option.section() << no_options_text,
-          mint=exp_opt_sections, maxt=exp_opt_sections
-        ) << no_options_text
-      ).parse_strict(txt)
-      options = flatten([o for o in parsed if isinstance(o, list)])
-      cls.validate_unambiguous_options(options)
-      no_usage_text = many(char(illegal=regex(r'usage:', re.I))).desc('Text').parsecmap(join_string)
-      usage = (no_usage_text >> Usage.section(options) << no_usage_text).parse_strict(txt)
-      return cls(usage, options)
+      return cls.lang().parse_strict(txt)
     except ParseError as e:
       raise DocoptParseError(explain_error(e, txt)) from e
 
@@ -136,16 +151,20 @@ class Option(AstNode):
       regex(r'\[default: ', re.IGNORECASE) >> many(char(illegal='\n]')) << char(']')
     ).desc('[default: ]').parsecmap(join_string)
     doc = many1(char(illegal=default ^ terminator)).desc('option documentation').parsecmap(join_string)
-    options = []
 
     @generate('options section')
     def p():
+      options = []
       yield regex(r'options:', re.I)
+      # TODO: nl + indent is not optional
       yield optional(nl + indent)
       while (yield lookahead(optional(char('-')))) is not None:
         doc1 = _default = doc2 = None
         (short, long) = yield cls.opts
-        if (yield optional(lookahead(whitespaces + char(illegal='\n')))) is not None:
+        if (yield optional(lookahead(whitespaces + (eof() | nl)))) is not None:
+          # Consume trailing whitespaces
+          yield whitespaces
+        elif (yield optional(lookahead(char(illegal='\n')))) is not None:
           yield (char(' ') + many1(char(' '))) ^ outer_desc('at least 2 spaces')
           doc1 = yield optional(doc)
           _default = yield optional(default)
@@ -222,13 +241,34 @@ class Short(AstNode):
     return p
 
   def options(illegal):
-    argument = (char(' =') >> Argument.arg).desc('argument')
-    p = (char('-') >> char(illegal=illegal | char('=-')) + optional(optional(char(' =') >> argument))) \
-        .desc('short option (-a)').parsecmap(splat(Short))
+    @generate('short option (-s)')
+    def p():
+      argument = (char(' =') >> Argument.arg).desc('argument')
+      yield string('-')
+      name = yield ident(illegal | char('=-'))
+      if (yield optional(lookahead(char('=')))) is not None:
+        # Definitely an argument, make sure we fail with "argument expected"
+        arg = yield argument
+      else:
+        arg = yield optional(argument)
+      return Short(name, arg)
     return p
 
 
 class Usage(object):
+
+  def line(prog, options):
+    illegal = char('| \n[(')
+
+    @generate('usage line')
+    def p():
+      yield string(prog)
+      e = yield optional(whitespaces >> expr(illegal, options))
+      if e is None:
+        e = Sequence([])
+      return e
+    return p
+
   def section(options):
     illegal = char('| \n[(')
 
@@ -236,19 +276,16 @@ class Usage(object):
     def p():
       yield regex(r'usage:', re.I)
       yield optional(nl + indent)
-      prog = yield lookahead(ident(illegal))
+      prog = yield lookahead(optional(ident(illegal)))
       expressions = []
-      while True:
-        yield string(prog)
-        if (yield optional(whitespaces)) is None:
-          break
-        e = yield optional(expr(illegal, options))
-        yield optional(whitespaces)
-        if e is None:
-          e = Sequence([])
-        expressions.append(e)
-        if (yield optional(nl + indent)) is None:
-          break
+      if prog is not None:
+        while True:
+          expressions.append((yield Usage.line(prog, options)))
+          # consume trailing whitespace
+          yield optional(whitespaces)
+          if (yield optional(nl + indent)) is None:
+            break
+      # TODO: must expect two newlines if anything follows
       yield (eof() | nl)
       return Choice(expressions)
     return p
@@ -401,7 +438,7 @@ class Argument(AstNode):
   def new(args):
     return Argument(args)
 
-  wrapped_arg = (char('<') + ident(char('\n>')) + char('>')).desc('<ARG>').parsecmap(join_string)
+  wrapped_arg = (char('<') + ident(char('\n>')) + char('>')).desc('<arg>').parsecmap(join_string)
   uppercase_arg = regex(r'[A-Z0-9][A-Z0-9-]+').desc('ARG')
   arg = (wrapped_arg ^ uppercase_arg).desc('argument').parsecmap(new)
 
