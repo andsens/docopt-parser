@@ -1,10 +1,12 @@
 from hypothesis.strategies import one_of, characters, just, text, from_regex, \
-  sets, tuples, none, composite, lists, sampled_from, integers
+  sets, tuples, none, composite, lists, sampled_from, integers, shared, booleans, \
+  fixed_dictionaries
 from hypothesis import settings, Verbosity
 import re
-from functools import reduce
 
 settings(verbosity=Verbosity.verbose)
+
+# pluralize strategies, like hypothesis
 
 def char(legal=None, illegal=None):
   if (legal is None) == (illegal is None):
@@ -34,8 +36,12 @@ def ident(illegal, starts_with=None):
 nl = char('\n')
 indent = one_of(chars(' ', min_size=1), char('\t'))
 nl_indent = tuples(nl, indent).map(''.join)
+
 def maybe(gen):
-  return one_of(just(''), gen)
+  return one_of(none(), gen)
+
+def maybe_s(gen):
+  return maybe(gen).flatmap(lambda res: just('') if res is None else just(res))
 
 re_usage = re.compile(r'usage:', re.I)
 re_options = re.compile(r'options:', re.I)
@@ -47,7 +53,6 @@ def not_re(*args):
 
 other_text = text().filter(not_re(re_usage, re_options))
 usage_title = from_regex(re_usage, fullmatch=True)
-options_title = from_regex(re_options, fullmatch=True)
 
 wrapped_arg = ident('\n>').map(lambda s: f'<{s}>')
 uppercase_arg = from_regex(r'[A-Z0-9][A-Z0-9-]+', fullmatch=True)
@@ -55,88 +60,153 @@ arg = one_of([wrapped_arg, uppercase_arg])
 
 short_ident = char(illegal='-=| \n()[]')
 long_ident = ident(illegal='=| \n()[]', starts_with=char(illegal='-=| \n()[]'))
-option = tuples(
-  one_of(none(), short_ident),
-  one_of(none(), long_ident),
-).filter(lambda x: x[0] is not None or x[1] is not None)
+option = fixed_dictionaries({
+  'ident': one_of(
+    tuples(short_ident, none()),
+    tuples(none(), long_ident),
+  ),
+  'has_arg': booleans(),
+})
 
+def partition_options_list(list_to_partition):
+  known_shorts = [o['ident'][0] for o in list_to_partition if o['ident'][0] is not None]
+  unused_short = short_ident.filter(lambda s: s not in known_shorts)
+  known_longs = [o['ident'][1] for o in list_to_partition if o['ident'][1] is not None]
+  unused_long = long_ident.filter(lambda s: s not in known_longs)
 
-def partition_list(list_to_partition):
+  @composite
+  def add_alt_opt(draw, o):
+    short, long = o['ident']
+    if short is None:
+      _short = draw(maybe(unused_short))
+      if _short is not None:
+        known_shorts.append(short)
+      return {
+        'short': None if _short is None else {
+          'ident': _short,
+          'has_arg': draw(booleans()) if o['has_arg'] else False
+        },
+        'long': {'ident': long, 'has_arg': o['has_arg']},
+        'has_arg': o['has_arg'],
+      }
+    if long is None:
+      _long = draw(maybe(unused_long))
+      if _long is not None:
+        known_longs.append(_long)
+      return {
+        'short': {'ident': short, 'has_arg': o['has_arg']},
+        'long': None if _long is None else {
+          'ident': _long,
+          'has_arg': draw(booleans()) if o['has_arg'] else False
+        },
+        'has_arg': o['has_arg'],
+      }
+
   def partition(indices):
-    lists = []
+    if len(indices) == 0:
+      return fixed_dictionaries({
+        'usage': tuples(),
+        'options': tuples()
+      })
+    index, *indices = sorted(indices)
     pos = 0
-    for index in sorted(indices):
-      lists.append(list_to_partition[pos:index])
+    usage = tuples() if pos == index else tuples(*map(just, list_to_partition[pos:index]))
+    lists = []
+    for index in indices:
+      lists.append(tuples() if pos == index else tuples(*map(add_alt_opt, list_to_partition[pos:index])))
       pos = index
-    return lists
+    lists.append(tuples() if pos == len(list_to_partition) - 1 else tuples(*map(add_alt_opt, list_to_partition[pos:])))
+    return fixed_dictionaries({
+      'usage': usage,
+      'options': tuples(*lists)
+    })
   return partition
 
 
-options = lists(option, unique_by=(lambda s: s[0], lambda s: s[1]), min_size=5).flatmap(
-  lambda all_options: lists(
-    integers(min_value=0, max_value=max(len(all_options) - 1, 0)), unique=True, min_size=1
-  ).map(partition_list(all_options))
+all_options = shared(lists(option, unique_by=lambda o: o['ident']))
+
+partitioned_options = shared(all_options.flatmap(
+  lambda all_opts: lists(
+      integers(min_value=0, max_value=max(len(all_opts) - 1, 0)), unique=True
+    ).flatmap(partition_options_list(all_opts))
+))
+
+usage_options = partitioned_options.flatmap(lambda p: just(p['usage']))
+
+
+opt_arg = fixed_dictionaries({'sep': char(' ='), 'ident': arg})
+option_doc_text = text(min_size=1).filter(not_re(re_usage, re_options, re_default))
+documented_options = partitioned_options.flatmap(
+  lambda partitions: tuples(*map(
+    lambda options: tuples(*map(
+      lambda opt: fixed_dictionaries({
+          'indent': maybe(indent),
+          'short': fixed_dictionaries({
+            'ident': just(opt['short']['ident']),
+            'arg': opt_arg if opt['short']['has_arg'] else none()
+          }) if opt['short'] is not None else none(),
+          'long': fixed_dictionaries({
+            'ident': just(opt['long']['ident']),
+            'arg': opt_arg if opt['long']['has_arg'] else none()
+          }) if opt['long'] is not None else none(),
+          'doc': tuples(option_doc_text, option_doc_text),
+          'default': maybe(text().filter(not_re(re_usage, re_options))) if opt['has_arg'] else none(),
+        }).flatmap(lambda o: fixed_dictionaries({
+          **{k: just(v) for k, v in o.items()},
+          'opt_sep': char(', ') if o['short'] is not None and o['long'] is not None else none(),
+          'doc_sep':
+          text(alphabet=char(' '), min_size=2) if o['default'] is not None or len(''.join(o['doc'])) > 0 else none(),
+        })),
+      options
+    )) if len(options) > 0 else tuples(),
+    partitions['options']))
 )
 
-option_line_doc_sep = text(alphabet=char(' '), min_size=2)
-option_doc_text = text().filter(not_re(re_usage, re_options, re_default))
-opt_arg_sep = char(' =')
-opt_sep = char(', ')
-default = one_of(none(), text().filter(not_re(re_usage, re_options)))
+option_sections = documented_options.flatmap(
+  lambda sections: tuples(*map(
+    lambda options: fixed_dictionaries({
+      'title': from_regex(re_options, fullmatch=True),
+      'lines': just(map(
+          lambda opt: ''.join([
+            opt['indent'] if opt['indent'] else '',
+            f"-{opt['short']['ident']}" if opt['short'] else '',
+            opt['short']['arg']['sep'] if opt['short'] and opt['short']['arg'] else '',
+            opt['short']['arg']['ident'] if opt['short'] and opt['short']['arg'] else '',
+            opt['opt_sep'] if opt['opt_sep'] else '',
+            f"--{opt['long']['ident']}" if opt['long'] else '',
+            opt['long']['arg']['sep'] if opt['long'] and opt['long']['arg'] else '',
+            opt['long']['arg']['ident'] if opt['long'] and opt['long']['arg'] else '',
+            opt['doc_sep'] if opt['doc_sep'] else '',
+            opt['doc'][0] if opt['doc'] else '',
+            f"[default: {opt['default']}]" if opt['default'] else '',
+            opt['doc'][1] if opt['doc'] else '',
+          ]),
+          options))
+    }),
+    sections)) if len(sections) > 0 else tuples()
+).map(
+  lambda sections: map(
+    lambda section: '\n'.join([section['title']] + list(section['lines'])),
+    sections
+  )
+)
 
 def to_usage_option(o):
-  short, long = o
-  if short and long:
-    return f'(-{short}|--{long})'
+  short, long = o['ident']
   if short:
-    return f'-{short}'
+    return f"-{short}"
   if long:
-    return f'--{long}'
+    return f"--{long}"
 
 @composite
 def docopt_help(draw):
-  usage_options, *options_sections_options = draw(options)
-  s_usage_options = ' '.join(map(to_usage_option, usage_options))
-  usage_section = f'{draw(usage_title)}{draw(maybe(nl_indent))}prog {s_usage_options}'
-  option_sections = []
-  for options_section_options in options_sections_options:
-    elements = []
-    for i, opt in enumerate(options_section_options):
-      short, long = opt
-      s_default = draw(default)
-      if short:
-        opt_arg = draw(arg)
-        if arg:
-          elements.append(f'-{short}{draw(opt_arg_sep)}{opt_arg}')
-        else:
-          elements.append(f'-{short}')
-        if long:
-          elements.append(draw(opt_sep))
-      if long:
-        opt_arg = draw(arg)
-        if opt_arg:
-          elements.append(f'--{long}{draw(opt_arg_sep)}{opt_arg}')
-        else:
-          elements.append(f'--{long}')
-      opt_doc = []
-      opt_doc.append(draw(option_doc_text))
-      if s_default:
-        opt_doc.append(f'[default: {s_default}]')
-      opt_doc.append(draw(option_doc_text))
-      s_opt_doc = ''.join(opt_doc)
-      if len(s_opt_doc) > 0:
-        elements.append(draw(chars(' ', min_size=2)))
-        elements.append(s_opt_doc)
-      else:
-        elements.append(draw(chars(' ')))
-      if i < len(options_section_options) - 1:
-        elements.append(draw(nl_indent))
-    option_sections.append(f'{draw(options_title)}{draw(maybe(nl_indent))}{"".join(elements)}')
-  s_option_sections = '\n\n'.join(option_sections)
+  uo = draw(usage_options)
+  s_usage_options = ' '.join(map(to_usage_option, uo))
+  usage_section = f'{draw(usage_title)}{draw(maybe_s(nl_indent))}prog {s_usage_options}'
+  s_option_sections = '\n\n'.join(draw(option_sections))
   return f'''{draw(other_text)}{usage_section}
 
 {s_option_sections}'''
-
 
 arguments = sets(arg)
 command = ident('\n', characters(blacklist_characters='-\n'))

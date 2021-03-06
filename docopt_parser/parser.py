@@ -10,6 +10,7 @@ from parsec import ParseError, eof, generate, many, many1, optional, regex
 # TODO:
 # Missing the repeated options parser, where e.g. -AA or --opt --opt becomes a counter
 # Handle options that are not referenced from usage
+# Indents are optional in both usage: & options:
 
 nl = char('\n')
 whitespaces = many1(char(regex(r'\s'), nl)).parsecmap(join_string).desc('<whitespace>')
@@ -128,7 +129,7 @@ class Option(AstNode):
   @generate('options')
   def opts():
     illegal = char(' \n')
-    first = yield Short.options(illegal) ^ Long.options(illegal)
+    first = yield Short.options(illegal | char(' ,')) ^ Long.options(illegal | char(' ,'))
     if isinstance(first, Long):
       opt_short = yield optional(char(' ,') >> Short.options(illegal))
       opt_long = first
@@ -245,7 +246,7 @@ class Short(AstNode):
     def p():
       argument = (char(' =') >> Argument.arg).desc('argument')
       yield string('-')
-      name = yield ident(illegal | char('=-'))
+      name = yield char(illegal=illegal | char('=-'))
       if (yield optional(lookahead(char('=')))) is not None:
         # Definitely an argument, make sure we fail with "argument expected"
         arg = yield argument
