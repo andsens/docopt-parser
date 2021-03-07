@@ -193,7 +193,7 @@ class Long(AstNode):
     def p():
       yield string('-' + self.name)
       if self.arg is not None:
-        yield (char('= ') >> Argument.arg).desc('argument (=ARG)')
+        yield (char(' =') >> Argument.arg).desc('argument (=ARG)')
       return self
     return p
 
@@ -231,12 +231,12 @@ class Short(AstNode):
     def p():
       yield string(self.name)
       if self.arg is not None:
-        yield (optional(char(' ')) >> Argument.arg).desc('argument ( ARG)')
+        yield (optional(char(' =')) >> Argument.arg).desc('argument ( ARG)')
       return self
     return p
 
   def usage(illegal):
-    argument = (char(' ') >> Argument.arg).desc('argument')
+    argument = (char(' =') >> Argument.arg).desc('argument')
     p = (char(illegal=illegal | char('=-')) + optional(argument)) \
         .desc('short option (-a)').parsecmap(splat(Short))
     return p
