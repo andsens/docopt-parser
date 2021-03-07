@@ -4,8 +4,8 @@ from hypothesis.strategies import one_of, characters, just, text, from_regex, \
 from collections import namedtuple
 import re
 
-def maybe(gen):
-  return one_of(none(), gen)
+def maybe(strategy):
+  return one_of(none(), strategy)
 
 def chars(legal=None, illegal=None):
   if (legal is None) == (illegal is None):
@@ -31,3 +31,4 @@ def not_re(*args):
 
 nl = chars('\n')
 indents = one_of(text(alphabet=chars(' '), min_size=1), chars('\t'))
+whitespaces = from_regex(r'\s').filter(lambda s: s != '\n')

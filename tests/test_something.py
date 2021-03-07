@@ -1,4 +1,4 @@
-from tests.lang import docopt_help
+from tests.lang import docopt_help, Usage
 from docopt_parser import DocoptParseError
 from docopt_parser.parser import DocoptAst
 import unittest
@@ -6,9 +6,9 @@ from hypothesis import given
 
 
 class TestParser(unittest.TestCase):
-  @given(docopt_help())
+  @given(Usage.usages)
   def test_parse(self, s):
-    assert isinstance(DocoptAst.parse(s), DocoptAst)
+    assert isinstance(DocoptAst.parse(str(s)), DocoptAst)
 
 
   # TODO: Never expect <None> or <nl>

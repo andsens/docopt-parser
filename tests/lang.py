@@ -1,7 +1,7 @@
-from tests import chars, idents, maybe, indents, not_re
-from hypothesis.strategies import one_of, characters, just, text, from_regex, \
-  sets, tuples, none, composite, lists, integers, shared, booleans, \
-  fixed_dictionaries, deferred, recursive
+from tests import chars, idents, maybe, indents, not_re, whitespaces
+from hypothesis.strategies import one_of, just, text, from_regex, \
+  tuples, none, composite, lists, integers, shared, booleans, \
+  fixed_dictionaries, recursive
 from hypothesis import settings, Verbosity
 import re
 
@@ -19,13 +19,13 @@ re_default = re.compile(r'\[default: [^\]]*\]', re.I)
 other_text = text().filter(not_re(re_usage, re_options))
 usage_title = from_regex(re_usage, fullmatch=True)
 
-wrapped_arg = idents('\n>').map(lambda s: f'<{s}>')
-uppercase_arg = from_regex(r'[A-Z0-9][A-Z0-9-]+', fullmatch=True)
-arg = one_of([wrapped_arg, uppercase_arg])
+_wrapped_arg = idents('\n>').map(lambda s: f'<{s}>')
+_uppercase_arg = from_regex(r'[A-Z0-9][A-Z0-9-]+', fullmatch=True)
+_arg = one_of([_wrapped_arg, _uppercase_arg])
 
 short_idents = chars(illegal='-=| \n()[],')
 long_idents = idents(illegal='=| \n()[],', starts_with=chars(illegal='-=| \n()[]'))
-option = fixed_dictionaries({
+_option = fixed_dictionaries({
   'ident': one_of(
     tuples(short_idents, none()),
     tuples(none(), long_idents),
@@ -88,9 +88,9 @@ def partition_options_list(list_to_partition):
   return partition
 
 
-all_options = shared(lists(option, unique_by=lambda o: o['ident']))
+_all_options = shared(lists(_option, unique_by=lambda o: o['ident']))
 
-partitioned_options = shared(all_options.flatmap(
+partitioned_options = shared(_all_options.flatmap(
   lambda all_opts: lists(
       integers(min_value=0, max_value=max(len(all_opts) - 1, 0)), unique=True
     ).flatmap(partition_options_list(all_opts))
@@ -99,7 +99,7 @@ partitioned_options = shared(all_options.flatmap(
 usage_options = partitioned_options.flatmap(lambda p: just(p['usage']))
 
 
-opt_arg = fixed_dictionaries({'sep': chars(' ='), 'ident': arg})
+opt_arg = fixed_dictionaries({'sep': chars(' ='), 'ident': _arg})
 option_doc_text = text(min_size=1).filter(not_re(re_usage, re_options, re_default))
 documented_options = partitioned_options.flatmap(
   lambda partitions: tuples(*map(
@@ -177,37 +177,157 @@ def docopt_help(draw):
 
 {s_option_sections}'''
 
-arguments = sets(arg)
-command = idents('\n', characters(blacklist_characters='-\n'))
-argument_separator = just('--')
 
-expression = deferred(lambda: lists(expression))
-sequence = deferred(lambda: lists(atom))
-@composite
-def group(draw):
-  return f'({draw(expression)})'
-@composite
-def optional(draw):
-  return f'[{draw(expression)}]'
+class AstNode(object):
+  pass
 
-options_shortcut = just('options')
-argument_separator = just('argument_separator')
+  def indent(self, node, lvl=1):
+    if isinstance(node, list):
+      lines = '\n'.join(map(repr, node)).split('\n')
+      return '\n'.join(['  ' * lvl + line for line in lines])
+    else:
+      lines = repr(node).split('\n')
+      lines = [lines[0]] + ['  ' * lvl + line for line in lines[1:]]
+      return '\n'.join(lines)
 
-# option_ref =
-atom = one_of(
-  group,
-  optional,
-  options_shortcut,
-  # usage_options,
-  # option_ref,
-  arg,
-  command,
-  argument_separator,
-)
-# strategies.recursive(base, extend, *, max_leaves=100)
-# hypothesis.strategies.sampled_from(elements)
+class IdentNode(AstNode):
+  def __hash__(self):
+    return hash(self.ident)
+
+class PlainOption(IdentNode):
+  def __init__(self, short, long, has_arg):
+    if short:
+      self.ident = short
+      self.type = '-'
+    else:
+      self.ident = long
+      self.type = '--'
+    self.has_arg = has_arg
+
+  def __repr__(self):
+    arg = ' <ARG>' if self.has_arg else ''
+    return f'<PlainOption>: {self.type}{self.ident}{arg}'
+
+  options = one_of(
+    tuples(short_idents, none(), booleans()),
+    tuples(none(), long_idents, booleans()),
+  ).map(lambda o: PlainOption(*o))
+
+
+class Command(IdentNode):
+  def __init__(self, ident):
+    self.ident = ident
+
+  def __repr__(self):
+    return f'<Command>: {self.ident}'
+
+  def __str__(self):
+    return f"{self.ident}"
+
+  commands = idents('| \n[]()', starts_with=chars(illegal='-| \n[]()')).map(lambda c: Command(c))
+
+class Argument(IdentNode):
+  def __init__(self, ident):
+    self.ident = ident
+
+  def __repr__(self):
+    return f'<Argument>: {self.ident}'
+
+  def __str__(self):
+    return self.ident
+
+  wrapped_args = idents('\n>').map(lambda s: f'<{s}>')
+  uppercase_args = from_regex(r'[A-Z0-9][A-Z0-9-]+', fullmatch=True)
+  args = one_of(wrapped_args, uppercase_args).map(lambda a: Argument(a))
+
+class ArgumentSeparator(AstNode):
+  def __repr__(self):
+    return '<ArgumentSeparator>'
+
+  def __str__(self):
+    return '--'
+
+  separators = just('--').map(lambda _: ArgumentSeparator())
+
+class OptionsShortcut(AstNode):
+  def __repr__(self):
+    return '<OptionsShortcut>'
+
+  def __str__(self):
+    return 'options'
+
+  shortcuts = just('options').map(lambda _: OptionsShortcut())
+
+class Choice(AstNode):
+  def __init__(self, items):
+    self.items = items
+
+  def __repr__(self):
+    return f'''<Choice>
+{self.indent(self.items)}'''
+
+  eithers = tuples(text(alphabet=chars(' ')), chars('|'), text(alphabet=chars(' '))).map(''.join)
+
+  def __str__(self):
+    if len(self.items) > 1:
+      return f"({'|'.join(map(str, self.items))})"
+    else:
+      return str(self.items[0])
+
+class Sequence(AstNode):
+  def __init__(self, items):
+    self.items = items
+
+  def __repr__(self):
+    return f"""<Sequence>
+{self.indent(self.items)}"""
+
+  def __str__(self):
+    return ' '.join(map(str, self.items))
+
+class Optional(AstNode):
+  def __init__(self, items):
+    self.items = items
+
+  def __repr__(self):
+    return f"""<Optional>
+  {self.indent(self.items)}"""
+
+  def __str__(self):
+    return f"[{' '.join(map(str, self.items))}]"
+
+class Usage(AstNode):
+  def __init__(self, root):
+    self.root = root
+
+  def __repr__(self):
+    return f"""<Usage>
+  {self.indent(self.root)}"""
+
+  def __str__(self):
+    if type(self.root) is list:
+      lines = '\n'.join(map(lambda line: f'  prog {line}', map(str, self.root)))
+    else:
+      lines = f'  prog {str(self.root)}'
+    return f"""Usage:
+{lines}
+"""
+
+  usages = recursive(
+    lists(one_of(
+      ArgumentSeparator.separators,
+      Command.commands,
+      Argument.args,
+      OptionsShortcut.shortcuts
+    ), min_size=1),
+    lambda items: one_of(
+      just(Choice),
+      just(Sequence),
+      just(Optional),
+    ).flatmap(lambda N: items.map(lambda i: N(i) if type(i) is list else N([i])))
+  ).map(lambda n: Usage(n))
 
 if __name__ == "__main__":
   import sys
   sys.ps1 = '>>>'
-  print(docopt_help().example())
+  print(Usage.usages.example())

@@ -129,7 +129,7 @@ class Option(AstNode):
   @generate('options')
   def opts():
     illegal = char(' \n')
-    first = yield Short.options(illegal | char(' ,')) ^ Long.options(illegal | char(' ,'))
+    first = yield Long.options(illegal | char(' ,')) | Short.options(illegal | char(' ,'))
     if isinstance(first, Long):
       opt_short = yield optional(char(' ,') >> Short.options(illegal))
       opt_long = first
@@ -328,7 +328,7 @@ def atom(illegal, options):
   return (
     Group.group(options) | Optional.optional(options) | OptionsShortcut.shortcut
     | Options.options(excl, options)
-    | (Argument.arg ^ Command.command(excl) ^ ArgumentSeparator.separator)
+    | (Argument.arg ^ Command.command(excl)) | ArgumentSeparator.separator
   ).bind(Multiple.multi).desc('atom')
 
 
@@ -386,12 +386,12 @@ class Group(object):
 
 
 class Optional(AstNode):
-  def __init__(self, item):
-    self.item = item
+  def __init__(self, items):
+    self.items = items
 
   def __repr__(self):
     return f'''<Optional>
-  {self.indent(self.item)}'''
+{self.indent(self.items)}'''
 
   def new(arg):
     return Optional(arg)
@@ -400,10 +400,10 @@ class Optional(AstNode):
     @generate('[optional]')
     def p():
       node = yield (char('[') >> expr(char('| \n][('), options) << char(']'))
-      if isinstance(node, Optional):
-        return Optional(node.item)
+      if isinstance(node, (Optional, Sequence)):
+        return Optional(node.items)
       else:
-        return Optional(node)
+        return Optional([node])
     return p
 
 
@@ -440,7 +440,7 @@ class Argument(AstNode):
     return Argument(args)
 
   wrapped_arg = (char('<') + ident(char('\n>')) + char('>')).desc('<arg>').parsecmap(join_string)
-  uppercase_arg = regex(r'[A-Z0-9][A-Z0-9-]+').desc('ARG')
+  uppercase_arg = (regex(r'[A-Z0-9][A-Z0-9-]*') >> lookahead(nl | whitespaces | eof())).desc('ARG')
   arg = (wrapped_arg ^ uppercase_arg).desc('argument').parsecmap(new)
 
 
