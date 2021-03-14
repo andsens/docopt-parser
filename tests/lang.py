@@ -1,11 +1,10 @@
 from typing import Iterable
-from tests import chars, idents, maybe, indents, not_re, whitespaces
-from hypothesis.strategies import one_of, just, text, from_regex, \
-  tuples, none, composite, lists, integers, shared, booleans, \
-  fixed_dictionaries, recursive, sampled_from
+from tests import chars, idents, maybe, indents, not_re
+from hypothesis.strategies import one_of, just, text, from_regex, tuples, none, lists, integers, shared, booleans, \
+  fixed_dictionaries, recursive, sampled_from, permutations
 from hypothesis import settings, Verbosity
 from functools import reduce
-from itertools import repeat, chain
+from itertools import chain
 import re
 
 settings(verbosity=Verbosity.verbose)
@@ -25,6 +24,46 @@ usage_title = from_regex(re_usage, fullmatch=True)
 short_idents = chars(illegal='-=| \n()[],')
 long_idents = idents(illegal='=| \n()[],', starts_with=chars(illegal='-=| \n()[]'))
 
+def partition_options(sizes):
+  known_shorts = []
+  unused_shorts = short_idents.filter(lambda s: s not in known_shorts)
+  known_longs = []
+  unused_longs = long_idents.filter(lambda s: s not in known_longs)
+
+  def register_drawn(o):
+    short, long, _ = o
+    if short:
+      known_shorts.append(short)
+    if long:
+      known_longs.append(long)
+    return just(o)
+
+  usage = one_of(
+    tuples(unused_shorts, none(), booleans()),
+    tuples(none(), unused_longs, booleans()),
+  ).flatmap(register_drawn).map(lambda o: UsageOption(*o))
+
+  documented = one_of(
+    tuples(unused_shorts, none(), booleans()),
+    tuples(none(), unused_longs, booleans()),
+    tuples(unused_shorts, unused_longs, booleans()),
+  ).flatmap(register_drawn).map(lambda o: DocumentedOption(*o))
+
+  usage_size, *options_sizes = sizes
+  return fixed_dictionaries({
+    'usage': lists(usage, min_size=usage_size, max_size=usage_size),
+    'documented': tuples(*map(
+      lambda size: lists(documented, min_size=size, max_size=size),
+      options_sizes
+    ))
+  })
+
+section_sizes = lists(
+  integers(min_value=0, max_value=20), min_size=1, unique=True
+).map(lambda indices: reduce(lambda sizes, i: sizes + [i - sum(sizes)], sorted(indices), []))
+
+partitioned_options = shared(section_sizes.flatmap(partition_options))
+
 
 class AstNode(object):
   pass
@@ -39,75 +78,20 @@ class AstNode(object):
       return '\n'.join(lines)
 
 class IdentNode(AstNode):
+  def __init__(self, ident):
+    self.ident = ident
+
   def __hash__(self):
     return hash(self.ident)
 
-def partitioned_options(sizes):
-  known_shorts = []
-  unused_shorts = short_idents.filter(lambda s: s not in known_shorts)
-  known_longs = []
-  unused_longs = long_idents.filter(lambda s: s not in known_longs)
-
-  def register_drawn(o):
-    short, long, _ = o
-    if short:
-      known_shorts.append(short)
-    if long:
-      known_longs.append(long)
-    return just(o)
-
-  usage_options = one_of(
-    tuples(unused_shorts, none(), booleans()),
-    tuples(none(), unused_longs, booleans()),
-  ).flatmap(register_drawn).map(lambda o: UsageOption(*o))
-
-  documented_options = one_of(
-    tuples(unused_shorts, none(), booleans()),
-    tuples(none(), unused_longs, booleans()),
-    tuples(unused_shorts, unused_longs, booleans()),
-  ).flatmap(register_drawn).map(lambda o: DocumentedOption(*o))
-
-  usage_size, *options_sizes = sizes
-  return fixed_dictionaries({
-    'usage': lists(usage_options, min_size=usage_size, max_size=usage_size),
-    'documented': tuples(*map(
-      lambda size: lists(documented_options, min_size=size, max_size=size),
-      options_sizes
-    ))
-  })
-
-section_sizes = lists(
-  integers(min_value=0, max_value=20), min_size=3, unique=True
-).map(lambda indices: reduce(lambda sizes, i: sizes + [i - sum(sizes)], sorted(indices), []))
-
-all_options = shared(section_sizes.flatmap(partitioned_options))
-usage_options = all_options.flatmap(lambda p: just(p['usage']))
-documented_options = all_options.flatmap(lambda p: just(p['documented']))
-
-class UsageOption(AstNode):
+class Option(IdentNode):
   def __init__(self, short, long, has_arg):
-    if short:
-      self.ident = short
-      self.type = '-'
-    else:
-      self.ident = long
-      self.type = '--'
-    self.has_arg = has_arg
-
-  def __repr__(self):
-    arg = ' <ARG>' if self.has_arg else ''
-    return f'<Option>: {self.type}{self.ident}{arg}'
-
-  def __str__(self):
-    arg = ' <ARG>' if self.has_arg else ''
-    return f'{self.type}{self.ident}{arg}'
-
-class DocumentedOption(AstNode):
-  def __init__(self, short, long, has_arg):
+    super().__init__(f'--{long}' if long else f'-{short}')
     self.short = short
     self.long = long
     self.has_arg = has_arg
 
+class DocumentedOption(Option):
   def __repr__(self):
     arg = ' <ARG>' if self.has_arg else ''
     short = f'-{self.short}' if self.short else ''
@@ -122,13 +106,27 @@ class DocumentedOption(AstNode):
     ident = f'{short}, {long}' if self.short and self.long else short or long
     return f'{ident}{arg}'
 
-  def usage_ref(self):
-    arg = ' <ARG>' if self.has_arg else ''
-    ident = f'-{self.short}' if self.short else f'--{self.long}'
-    return f'{ident}{arg}'
+  all = partitioned_options.flatmap(lambda p: just(p['documented']))
 
-class OptionRef(AstNode):
+class UsageOption(Option):
+  def __init__(self, short, long, has_arg):
+    super().__init__(short, long, has_arg)
+    self.type = '-' if short else '--'
+
+  def __repr__(self):
+    arg = ' <ARG>' if self.has_arg else ''
+    return f'<Option>: {self.type}{self.ident}{arg}'
+
+  def __str__(self):
+    arg = ' <ARG>' if self.has_arg else ''
+    return f'{self.type}{self.ident}{arg}'
+
+  all = partitioned_options.flatmap(lambda p: just(p['usage']))
+  options = all.flatmap(sampled_from)
+
+class OptionRef(Option):
   def __init__(self, option):
+    super().__init__(option.short, option.long, option.has_arg)
     self.option = option
 
   def __repr__(self):
@@ -136,14 +134,64 @@ class OptionRef(AstNode):
   {self.indent(self.option)}'''
 
   def __str__(self):
-    return self.option.usage_ref()
+    arg = ' <ARG>' if self.has_arg else ''
+    ident = f'-{self.short}' if self.short else f'--{self.long}'
+    return f'{ident}{arg}'
 
-  refs = documented_options.flatmap(lambda opts: chain(*opts)).map(lambda o: OptionRef(o))
+  all = DocumentedOption.all.map(lambda opts: list(map(OptionRef, chain(*opts))))
+  refs = all.flatmap(sampled_from)
+
+class OptionSequence(AstNode):
+
+  def __init__(self, argless_shorts, short_with_arg):
+    self.argless_shorts = argless_shorts
+    self.short_with_arg = short_with_arg
+
+  def __repr__(self):
+    shorts = self.argless_shorts
+    if self.short_with_arg:
+      shorts.append(self.short_with_arg)
+    return f'''<OptionSequence>
+{self.indent(shorts)}'''
+
+  def __str__(self):
+    argless_shorts = ''.join(map(lambda o: o.short, self.argless_shorts))
+    short_with_arg = f'{self.short_with_arg.short} <ARG>' if self.short_with_arg else ''
+    return f'-{argless_shorts}{short_with_arg}'
+
+  def flatten_partitioned(partitioned_options):
+    return reduce(lambda mem, ls: mem + ls, partitioned_options['documented'], partitioned_options['usage'])
+
+  def sequence_possible(partitioned_options):
+    all_options = OptionSequence.flatten_partitioned(partitioned_options)
+    argless_count = OptionSequence.count_argless_shorts(all_options)
+    with_arg_count = OptionSequence.count_shorts_with_arg(all_options)
+    return argless_count >= 2 or (argless_count >= 1 and with_arg_count > 0)
+
+  def count_argless_shorts(all_options):
+    return len(list(filter(lambda o: o.short is not None and not o.has_arg, all_options)))
+
+  def count_shorts_with_arg(all_options):
+    return len(list(filter(lambda o: o.short is not None and o.has_arg, all_options)))
+
+  all_options = partitioned_options.map(lambda opts: OptionSequence.flatten_partitioned(opts))
+  all_shorts = all_options.map(lambda opts: list(filter(lambda o: o.short is not None, opts)))
+  all_argless_shorts = all_shorts.map(lambda opts: list(filter(lambda o: not o.has_arg, opts)))
+  all_shorts_with_arg = all_shorts.map(lambda opts: list(filter(lambda o: o.has_arg, opts)))
+
+  sequences = all_options.flatmap(
+    lambda opts: tuples(
+      lists(OptionSequence.all_argless_shorts.flatmap(sampled_from), min_size=1, unique=True),
+      one_of(none(), OptionSequence.all_shorts_with_arg.flatmap(sampled_from))
+    )
+    if OptionSequence.count_shorts_with_arg(opts) > 0 else
+    tuples(
+      lists(OptionSequence.all_argless_shorts.flatmap(sampled_from), min_size=1, unique=True),
+      none()
+    )
+  ).map(lambda o: OptionSequence(*o))
 
 class Command(IdentNode):
-  def __init__(self, ident):
-    self.ident = ident
-
   def __repr__(self):
     return f'<Command>: {self.ident}'
 
@@ -153,9 +201,6 @@ class Command(IdentNode):
   commands = idents('| \n[]()', starts_with=chars(illegal='-| \n[]()')).map(lambda c: Command(c))
 
 class Argument(IdentNode):
-  def __init__(self, ident):
-    self.ident = ident
-
   def __repr__(self):
     return f'<Argument>: {self.ident}'
 
@@ -222,7 +267,23 @@ class Optional(AstNode):
   def __str__(self):
     return f"[{' '.join(map(str, self.items))}]"
 
-class Usage(AstNode):
+class OptionSection(AstNode):
+  def __init__(self, options):
+    self.options = options
+
+  def __repr__(self):
+    return f"""<Options>
+{self.indent(self.options)}"""
+
+  def __str__(self):
+    lines = '\n'.join(map(lambda opt: f'  {opt}', self.options))
+    return f"""Options:
+{lines}
+"""
+
+  sections = DocumentedOption.all.map(lambda sections: list(map(OptionSection, sections)))
+
+class UsageSection(AstNode):
   def __init__(self, root):
     self.root = root
 
@@ -239,59 +300,54 @@ class Usage(AstNode):
 {lines}
 """
 
-  sections = recursive(
-    lists(one_of(
+  def legal_atoms(options):
+    legal = [
       ArgumentSeparator.separators,
       Command.commands,
       Argument.args,
-      OptionsShortcut.shortcuts
-    ), min_size=1),
+      OptionsShortcut.shortcuts,
+    ]
+    # TODO: Prevent multi...
+    if len(options['usage']) > 0:
+      legal.append(UsageOption.options)
+    if len(options['documented']) > 0:
+      legal.append(OptionRef.refs)
+    if OptionSequence.sequence_possible(options):
+      legal.append(OptionSequence.sequences)
+    return one_of(*legal)
+
+  sections = recursive(
+    lists(partitioned_options.flatmap(legal_atoms), min_size=1),
     lambda items: one_of(
       just(Choice),
       just(Sequence),
       just(Optional),
     ).flatmap(lambda N: items.map(lambda i: N(i) if type(i) is list else N([i])))
-  ).map(lambda n: Usage(n))
-
-class Options(AstNode):
-  def __init__(self, options):
-    self.options = options
-
-  def __repr__(self):
-    return f"""<Options>
-  {self.indent(self.options)}"""
-
-  def __str__(self):
-    lines = '\n'.join(map(lambda opt: f'  {opt}', self.options))
-    return f"""Options:
-{lines}
-"""
-
-  sections = documented_options.map(lambda opts: map(Options, opts))
+  ).map(lambda n: UsageSection(n))
 
 class DocoptAst(AstNode):
-  def __init__(self, usage, options):
-    self.usage = usage
-    self.options = options
+  def __init__(self, sections):
+    self.sections = sections
 
   def __repr__(self):
     return f'''<Docopt>
-  usage:
-{self.indent([self.usage], 2)}
-  options:
-{self.indent(self.options, 2)}'''
+{self.indent(self.sections, 2)}
+"{str(self)}"'''
 
   def __str__(self):
-    option_sections = '\n'.join(map(str, self.options))
-    return f'''{self.usage}
-{option_sections}
-'''
+    return "\n".join(map(str, self.sections))
 
-  asts = tuples(Usage.sections, Options.sections).map(lambda n: DocoptAst(*n))
+  def permuted_sections(sections):
+    usage, options = sections
+    return permutations([usage] + options)
 
+  asts = tuples(UsageSection.sections, OptionSection.sections).flatmap(
+    lambda s: DocoptAst.permuted_sections(s)
+  ).map(lambda n: DocoptAst(n))
 
 
 if __name__ == "__main__":
   import sys
   sys.ps1 = '>>>'
-  print(DocoptAst.asts.example())
+  ast = DocoptAst.asts.example()
+  print(repr(ast))

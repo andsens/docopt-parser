@@ -1,11 +1,14 @@
 from hypothesis.strategies import one_of, characters, just, text, from_regex, \
-  sets, tuples, none, composite, lists, sampled_from, integers, shared, booleans, \
-  fixed_dictionaries, deferred, recursive, permutations
-from collections import namedtuple
-import re
+  tuples, none, sampled_from
+
+def debug(ret, *args):
+  print(args)
+  return ret
 
 def maybe(strategy):
   return one_of(none(), strategy)
+
+control_chars = '\r\b\f\x1B\x07\0'
 
 def chars(legal=None, illegal=None):
   if (legal is None) == (illegal is None):
@@ -16,7 +19,7 @@ def chars(legal=None, illegal=None):
     else:
       return sampled_from(legal)
   else:
-    return characters(blacklist_characters=illegal)
+    return characters(blacklist_characters=illegal + control_chars)
 
 def idents(illegal, starts_with=None):
   if starts_with is not None:
