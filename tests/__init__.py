@@ -34,4 +34,5 @@ def not_re(*args):
 
 nl = chars('\n')
 indents = one_of(text(alphabet=chars(' '), min_size=1), chars('\t'))
+nl_indent = tuples(chars('\n'), indents).map(''.join)
 whitespaces = from_regex(r'\s').filter(lambda s: s != '\n')

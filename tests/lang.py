@@ -1,5 +1,5 @@
 from typing import Iterable
-from tests import chars, idents, maybe, indents, not_re
+from tests import chars, idents, maybe, not_re
 from hypothesis.strategies import one_of, just, text, from_regex, tuples, none, lists, integers, shared, booleans, \
   fixed_dictionaries, recursive, sampled_from, permutations
 from hypothesis import settings, Verbosity
@@ -8,8 +8,6 @@ from itertools import chain
 import re
 
 settings(verbosity=Verbosity.verbose)
-
-nl_indent = tuples(chars('\n'), indents).map(''.join)
 
 def maybe_s(gen):
   return maybe(gen).flatmap(lambda res: just('') if res is None else just(res))
@@ -22,7 +20,7 @@ other_text = text().filter(not_re(re_usage, re_options))
 usage_title = from_regex(re_usage, fullmatch=True)
 
 short_idents = chars(illegal='-=| \n()[],')
-long_idents = idents(illegal='=| \n()[],', starts_with=chars(illegal='-=| \n()[]'))
+long_idents = idents(illegal='=| \n()[],', starts_with=chars(illegal='-=| \n()[],'))
 
 def partition_options(sizes):
   known_shorts = []
@@ -96,30 +94,29 @@ class DocumentedOption(Option):
     arg = ' <ARG>' if self.has_arg else ''
     short = f'-{self.short}' if self.short else ''
     long = f'--{self.long}' if self.long else ''
-    ident = f'{short}, {long}' if self.short and self.long else short or long
-    return f'<Option>: {ident}{arg}'
+    idents = f'{short}, {long}' if self.short and self.long else short or long
+    return f'<Option>: {idents}{arg}'
 
   def __str__(self):
     arg = ' <ARG>' if self.has_arg else ''
     short = f'-{self.short}' if self.short else ''
     long = f'--{self.long}' if self.long else ''
-    ident = f'{short}, {long}' if self.short and self.long else short or long
-    return f'{ident}{arg}'
+    idents = f'{short}, {long}' if self.short and self.long else short or long
+    return f'{idents}{arg}'
 
   all = partitioned_options.flatmap(lambda p: just(p['documented']))
 
 class UsageOption(Option):
   def __init__(self, short, long, has_arg):
     super().__init__(short, long, has_arg)
-    self.type = '-' if short else '--'
 
   def __repr__(self):
     arg = ' <ARG>' if self.has_arg else ''
-    return f'<Option>: {self.type}{self.ident}{arg}'
+    return f'<Option>: {self.ident}{arg}'
 
   def __str__(self):
     arg = ' <ARG>' if self.has_arg else ''
-    return f'{self.type}{self.ident}{arg}'
+    return f'{self.ident}{arg}'
 
   all = partitioned_options.flatmap(lambda p: just(p['usage']))
   options = all.flatmap(sampled_from)
@@ -198,7 +195,9 @@ class Command(IdentNode):
   def __str__(self):
     return f"{self.ident}"
 
-  commands = idents('| \n[]()', starts_with=chars(illegal='-| \n[]()')).map(lambda c: Command(c))
+  commands = idents('| \n[]()', starts_with=chars(illegal='-| \n[]()<')).filter(
+    lambda s: not s.isupper()
+  ).map(lambda c: Command(c))
 
 class Argument(IdentNode):
   def __repr__(self):
@@ -208,7 +207,7 @@ class Argument(IdentNode):
     return self.ident
 
   wrapped_args = idents('\n>').map(lambda s: f'<{s}>')
-  uppercase_args = from_regex(r'[A-Z0-9][A-Z0-9-]+', fullmatch=True)
+  uppercase_args = idents('| \n[]()').filter(lambda s: s.isupper())
   args = one_of(wrapped_args, uppercase_args).map(lambda a: Argument(a))
 
 class ArgumentSeparator(AstNode):

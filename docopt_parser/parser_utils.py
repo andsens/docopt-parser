@@ -1,5 +1,5 @@
+from docopt_parser import DocoptParseError
 import sys
-from tests.docopt import DocoptLanguageError
 from parsec import ParseError, Parser, Value, one_of, regex
 
 def splat(constr):
@@ -10,7 +10,7 @@ def unsplat(constr):
 
 def flatten(arg):
   if not isinstance(arg, (tuple, list)):
-    raise DocoptLanguageError('flatten(arg): argument not a tuple or list')
+    raise DocoptParseError('flatten(arg): argument not a tuple or list')
   t = []
   for item in arg:
     if isinstance(item, (tuple, list)):
@@ -44,7 +44,7 @@ def describe_value(val):
     return val
   return char_descriptions.get(val, val)
 
-def outer_desc(message):
+def fail_with(message):
   return Parser(lambda _, index: Value.failure(index, message))
 
 def exclude(p: Parser, end: Parser):
