@@ -6,7 +6,7 @@ from hypothesis import given
 
 
 class TestParser(unittest.TestCase):
-  @given(Usage.usages)
+  @given(Usage.sections)
   def test_parse(self, s):
     assert isinstance(DocoptAst.parse(str(s)), DocoptAst)
 
