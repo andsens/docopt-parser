@@ -1,7 +1,7 @@
 from docopt_parser import DocoptParseError
 from functools import reduce
 from docopt_parser.parser_utils import char, exclude, explain_error, \
-  fail_with, flatten, join_string, lookahead, splat, string
+  fail_with, flatten, join_string, lookahead, string
 import re
 from parsec import ParseError, eof, generate, many, many1, optional, regex
 
@@ -16,6 +16,7 @@ whitespaces = many1(char(regex(r'\s'), nl)).parsecmap(join_string).desc('<whites
 eol = optional(whitespaces) + (nl | eof())
 indent = (many1(char(' ')) | char('\t')).parsecmap(join_string).desc('<indent> (spaces or tabs)')
 multiple = optional(whitespaces) >> string('...').desc('multiplier (...)')
+global_illegal = regex(r'\s') | char('|()[]') | multiple
 
 def ident(illegal, starts_with=None):
   if starts_with is None:
@@ -38,6 +39,14 @@ class AstNode(object):
       lines = repr(node).split('\n')
       lines = [lines[0]] + ['  ' * lvl + line for line in lines[1:]]
       return '\n'.join(lines)
+
+class IdentNode(AstNode):
+  def __init__(self, ident):
+    super().__init__()
+    self.ident = ident
+
+  def __hash__(self):
+    return hash(self.ident)
 
 
 class Option(AstNode):
@@ -64,14 +73,13 @@ class Option(AstNode):
 
   @generate('options')
   def opts():
-    illegal = char(' \n')
-    first = yield Long.options(illegal | char(' ,')) | Short.options(illegal | char(' ,'))
+    first = yield Long.options | Short.options
     if isinstance(first, Long):
-      opt_short = yield optional((string(', ') | char(' ')) >> Short.options(illegal))
+      opt_short = yield optional((string(', ') | char(' ')) >> Short.options)
       opt_long = first
     else:
       opt_short = first
-      opt_long = yield optional((string(', ') | char(' ')) >> Long.options(illegal))
+      opt_long = yield optional((string(', ') | char(' ')) >> Long.options)
     if opt_short is not None and opt_long is not None:
       if opt_short.arg is not None and opt_long.arg is None:
         opt_long.arg = opt_short.arg
@@ -114,9 +122,41 @@ class Option(AstNode):
     return p
 
 
-class Long(AstNode):
+class Argument(IdentNode):
+
+  illegal = global_illegal
+
+  def __init__(self, name):
+    super().__init__(name)
+    self.name = name
+
+  def __repr__(self):
+    return f'''<Argument>: {self.name}'''
+
+  def new(args):
+    return Argument(args)
+
+  wrapped_arg = (char('<') + ident(illegal | char('>')) + char('>')).desc('<arg>').parsecmap(join_string)
+
+  @generate('ARG')
+  def uppercase_arg():
+    name_p = many1(char(illegal=Argument.illegal)).parsecmap(join_string).desc('ARG')
+    name = yield lookahead(optional(name_p))
+    if name is not None and name.isupper():
+      name = yield name_p
+    else:
+      yield fail_with('Not an argument')
+    return name
+
+  arg = (wrapped_arg ^ uppercase_arg).desc('argument').parsecmap(lambda n: Argument(n))
+
+
+class Long(IdentNode):
+
+  illegal = global_illegal | char(',=')
 
   def __init__(self, name, arg):
+    super().__init__(f'--{name}')
     self.name = name
     self.arg = arg
 
@@ -124,37 +164,39 @@ class Long(AstNode):
     return f'''--{self.name}
   arg: {self.arg}'''
 
-  def usage_parser(self, illegal):
+  @property
+  def usage_parser(self):
     @generate(f'--{self.name}')
     def p():
       yield string('-' + self.name)
       if self.arg is not None:
-        yield (char(' =') >> Argument.arg(illegal)).desc('argument (=ARG)')
+        yield (char(' =') >> Argument.arg).desc('argument (=ARG)')
       return self
     return p
 
-  def usage(illegal):
-    argument = (char('=') >> Argument.arg(illegal)).desc('argument')
-    return (char('-') >> ident(illegal | char('=')) + optional(argument)) \
-        .desc('long option (--long)').parsecmap(splat(Long))
+  usage = (
+    char('-') >> ident(illegal) + optional(char('=') >> Argument.arg)
+  ).desc('long option (--long)').parsecmap(lambda n: Long(*n))
 
-  def options(illegal):
-    @generate('long option (--long)')
-    def p():
-      argument = (char(' =') >> Argument.arg(illegal)).desc('argument')
-      yield string('--')
-      name = yield ident(illegal | char('='))
-      if (yield optional(lookahead(char('=')))) is not None:
-        # Definitely an argument, make sure we fail with "argument expected"
-        arg = yield argument
-      else:
-        arg = yield optional(argument)
-      return Long(name, arg)
-    return p
+  @generate('long option (--long)')
+  def options():
+    argument = (char(' =') >> Argument.arg).desc('argument')
+    yield string('--')
+    name = yield ident(Long.illegal)
+    if (yield optional(lookahead(char('=')))) is not None:
+      # Definitely an argument, make sure we fail with "argument expected"
+      arg = yield argument
+    else:
+      arg = yield optional(argument)
+    return Long(name, arg)
 
 
-class Short(AstNode):
+class Short(IdentNode):
+
+  illegal = global_illegal | char(',=-')
+
   def __init__(self, name, arg):
+    super().__init__(f'-{name}')
     self.name = name
     self.arg = arg
 
@@ -162,58 +204,52 @@ class Short(AstNode):
     return f'''-{self.name}
   arg: {self.arg}'''
 
-  def usage_parser(self, illegal):
+  @property
+  def usage_parser(self):
     @generate(f'-{self.name}')
     def p():
-      yield string(self.name)
+      yield string(self.name).desc(f'-{self.name}')
       if self.arg is not None:
-        yield (optional(char(' =')) >> Argument.arg(illegal)).desc('argument ( ARG)')
+        yield (optional(char(' =')) >> Argument.arg).desc('argument ( ARG)')
       return self
     return p
 
-  def usage(illegal):
-    argument = (char(' =') >> Argument.arg(illegal)).desc('argument')
-    p = (char(illegal=illegal | char('=-')) + optional(argument)) \
-        .desc('short option (-a)').parsecmap(splat(Short))
-    return p
+  usage = (
+    char(illegal=illegal) + optional((char(' =') >> Argument.arg))
+  ).desc('short option (-a)').parsecmap(lambda n: Short(*n))
 
-  def options(illegal):
-    @generate('short option (-s)')
-    def p():
-      argument = (char(' =') >> Argument.arg(illegal)).desc('argument')
-      yield string('-')
-      name = yield char(illegal=illegal | char('=-'))
-      if (yield optional(lookahead(char('=')))) is not None:
-        # Definitely an argument, make sure we fail with "argument expected"
-        arg = yield argument
-      else:
-        arg = yield optional(argument)
-      return Short(name, arg)
-    return p
+  @generate('short option (-s)')
+  def options():
+    argument = (char(' =') >> Argument.arg).desc('argument')
+    yield string('-')
+    name = yield char(illegal=Short.illegal)
+    if (yield optional(lookahead(char('=')))) is not None:
+      # Definitely an argument, make sure we fail with "argument expected"
+      arg = yield argument
+    else:
+      arg = yield optional(argument)
+    return Short(name, arg)
 
 
 class Usage(object):
 
   def line(prog, options):
-    illegal = char('| \n[(')
-
     @generate('usage line')
     def p():
       yield string(prog)
-      e = yield optional(whitespaces >> expr(illegal, options))
+      e = yield optional(whitespaces >> expr(options))
       if e is None:
         e = Sequence([])
       return e
     return p
 
   def section(options):
-    illegal = char('| \n[(')
 
     @generate('usage section')
     def p():
       yield regex(r'usage:', re.I)
       yield optional(nl + indent)
-      prog = yield lookahead(optional(ident(illegal)))
+      prog = yield lookahead(optional(ident(global_illegal)))
       expressions = []
       if prog is not None:
         while True:
@@ -229,24 +265,24 @@ class Usage(object):
 
 
 either = (many(char(' ')) >> char('|') << many(char(' '))).desc('<pipe> (|)')
-def expr(illegal, options):
+def expr(options):
   @generate('expression')
   def p():
-    nodes = [(yield seq(illegal, options))]
+    nodes = [(yield seq(options))]
     while (yield optional(either)) is not None:
-      nodes.append((yield seq(illegal, options)))
+      nodes.append((yield seq(options)))
     if len(nodes) > 1:
       return Choice(nodes)
     else:
       return nodes[0]
   return p
 
-def seq(illegal, options):
+def seq(options):
   @generate('sequence')
   def p():
-    nodes = [(yield atom(illegal, options))]
+    nodes = [(yield atom(options))]
     while (yield optional(exclude(whitespaces, either))) is not None:
-      nodes.append((yield atom(illegal, options)))
+      nodes.append((yield atom(options)))
       if (yield optional(lookahead(eol))) is not None:
         yield optional(whitespaces)
         break
@@ -256,15 +292,14 @@ def seq(illegal, options):
       return nodes[0]
   return p
 
-def atom(illegal, options):
-  excl = illegal | multiple
+def atom(options):
   # Use | instead of ^ for unambiguous atoms where we *know* that
   # a given starting character *must* be this specific atom. This way
   # we can give useful error messages of what was expected
   return (
     Group.group(options) | Optional.optional(options) | OptionsShortcut.shortcut
-    | ArgumentSeparator.separator | Options.options(excl, options)
-    | (Argument.arg(excl) ^ Command.command(excl))
+    | ArgumentSeparator.separator | Options.options(options)
+    | Argument.arg | Command.command
   ).bind(Multiple.multi).desc('atom')
 
 
@@ -318,7 +353,7 @@ class Sequence(AstNode):
 
 class Group(object):
   def group(options):
-    return (char('(') >> expr(char('| \n)(['), options) << char(')'))
+    return (char('(') >> expr(options) << char(')'))
 
 
 class Optional(AstNode):
@@ -335,7 +370,7 @@ class Optional(AstNode):
   def optional(options):
     @generate('[optional]')
     def p():
-      node = yield (char('[') >> expr(char('| \n][('), options) << char(']'))
+      node = yield (char('[') >> expr(options) << char(']'))
       if isinstance(node, (Optional, Sequence)):
         return Optional(node.items)
       else:
@@ -343,16 +378,17 @@ class Optional(AstNode):
     return p
 
 
-class Command(AstNode):
+class Command(IdentNode):
+  illegal = global_illegal
+
   def __init__(self, name):
+    super().__init__(name)
     self.name = name
 
   def __repr__(self):
     return f'''<Command>: {self.name}'''
 
-  def command(illegal):
-    starts_with = char(illegal=illegal | char('-'))
-    return ident(illegal, starts_with).parsecmap(Command)
+  command = ident(illegal, starts_with=char(illegal=illegal | char('-'))).parsecmap(lambda n: Command(n))
 
 
 class ArgumentSeparator(AstNode):
@@ -363,33 +399,6 @@ class ArgumentSeparator(AstNode):
     return ArgumentSeparator()
 
   separator = (lookahead(string('--') << char('| \n)()[]') | nl | eof()) >> string('--')).parsecmap(new)
-
-
-class Argument(AstNode):
-  def __init__(self, name):
-    self.name = name
-
-  def __repr__(self):
-    return f'''<Argument>: {self.name}'''
-
-  def new(args):
-    return Argument(args)
-
-  wrapped_arg = (char('<') + ident(char('\n>')) + char('>')).desc('<arg>').parsecmap(join_string)
-
-  def uppercase_arg(illegal):
-    @generate('<arg> or ARG')
-    def p():
-      name_p = many1(char(illegal=illegal)).parsecmap(join_string).desc('ARG')
-      name = yield lookahead(optional(name_p))
-      if name is not None and not name.isupper():
-        yield fail_with('Argument is not uppercase')
-      name = yield name_p
-      return name
-    return p
-
-  def arg(illegal):
-    return (Argument.wrapped_arg ^ Argument.uppercase_arg(illegal)).desc('argument').parsecmap(Argument.new)
 
 
 class OptionsShortcut(AstNode):
@@ -419,23 +428,23 @@ class Options(AstNode):
         return o
     return list(map(find, candidates))
 
-  def options(illegal, options):
+  def options(options):
     @generate('Options (-s or --long)')
     def p():
       # Check if we should consume, the lookahead checks if this is unambiguously the
       # beginning of an option. This way we can cause atom() to fail with a useful message
-      any_option = char('-') + optional(char('-')) + char(illegal=illegal | char('-'))
+      any_option = char('-') + optional(char('-')) + char(illegal=global_illegal | char('-'))
       yield lookahead(any_option)
       yield char('-')
-      known_longs = [o.long.usage_parser(illegal) for o in options if o.long is not None]
+      known_longs = [o.long.usage_parser for o in options if o.long is not None]
       long_p = reduce(lambda mem, p: mem ^ p, known_longs, fail_with('no --long in Options:'))
-      known_shorts = [o.short.usage_parser(illegal) for o in options if o.short is not None]
+      known_shorts = [o.short.usage_parser for o in options if o.short is not None]
       short_p = reduce(lambda mem, p: mem ^ p, known_shorts, fail_with('no -s in Options:'))
 
-      opt = yield long_p | short_p | Long.usage(illegal) | Short.usage(illegal)
+      opt = yield long_p | short_p | Long.usage | Short.usage
       opts = [opt]
       while isinstance(opt, Short) and opt.arg is None:
-        opt = yield optional(short_p ^ Short.usage(illegal))
+        opt = yield optional(short_p ^ Short.usage)
         if opt is None:
           break
         else:
@@ -499,8 +508,11 @@ class DocoptAst(AstNode):
     usage = yield (DocoptAst.no_usage_text >> Usage.section(options) << DocoptAst.no_usage_text)
     return DocoptAst(usage, options_sections)
 
-  def parse(txt):
+  def parse(txt, strict=True):
     try:
-      return DocoptAst.lang.parse_strict(txt)
+      if strict:
+        return DocoptAst.lang.parse_strict(txt)
+      else:
+        return DocoptAst.lang.parse(txt)
     except ParseError as e:
       raise DocoptParseError(explain_error(e, txt)) from e

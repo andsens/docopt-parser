@@ -42,7 +42,7 @@ char_descriptions = {
 def describe_value(val):
   if len(val) > 1:
     return val
-  return char_descriptions.get(val, val)
+  return char_descriptions.get(val, hex(ord(val)))
 
 def fail_with(message):
   return Parser(lambda _, index: Value.failure(index, message))
@@ -54,7 +54,7 @@ def exclude(p: Parser, end: Parser):
   def exclude_parser(text, index):
     res = end(text, index)
     if res.status:
-      return Value.failure(index, f'something other than {describe_value(res.value)}')
+      return Value.failure(index, f'something other than "{res.value}" ({describe_value(res.value)})')
     else:
       return p(text, index)
   return exclude_parser
@@ -62,13 +62,13 @@ def exclude(p: Parser, end: Parser):
 any_char = regex(r'.|\n').desc('any char')
 def char(legal=any_char, illegal=None):
   if isinstance(legal, str):
-    desc = ' or '.join(map(describe_value, legal))
+    desc = 'any of ' + ''.join(map(describe_value, legal))
     a = one_of(legal).desc(desc)
   else:
     a = legal
   if illegal is not None:
     if isinstance(illegal, str):
-      desc = ' or '.join(map(describe_value, illegal))
+      desc = 'any of ' + ''.join(map(describe_value, illegal))
       d = one_of(illegal).desc(desc)
     else:
       d = illegal

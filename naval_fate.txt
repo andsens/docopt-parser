@@ -1,6 +1,6 @@
 Naval Fate.
 Usage:
-  prog ship new <name>... | ship [<name>] move <x> <y> [--speed=<kn>] --
+  prog ship new <name>... | ship ARG [<name>] move <x> <y> [--speed=<kn>] --
   prog ship shoot <x> <y>
   prog mine (set|remove) ((<x> <y> [[--moored|--drifting]]))
   prog -h | --help

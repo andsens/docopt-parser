@@ -11,11 +11,12 @@ log = logging.getLogger(root_name)
 
 __doc__ = pkg_doc + """
 Usage:
-  docopt-parser ast
+  docopt-parser [-S] ast
   docopt-parser -h
   docopt-parser --version
 
 Options:
+  -S         Disable strict parsing and show the partial AST
   --help -h  Show this help screen
   --version  Show the docopt.sh version
 """
@@ -24,7 +25,7 @@ Options:
 def docopt_parser(params):
   try:
     doc = sys.stdin.read()
-    ast = DocoptAst.parse(doc)
+    ast = DocoptAst.parse(doc, params['-S'])
     if params['ast']:
       sys.stdout.write(repr(ast) + '\n')
   except DocoptParseError as e:
