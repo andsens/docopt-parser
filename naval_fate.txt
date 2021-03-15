@@ -17,3 +17,6 @@ Options:
   --speed=<kn>  Speed in knots [default: 10].
   --moored      Mored (anchored) mine.
   --drifting    Drifting mine.
+
+2 Options:
+  -f, --sdfsdf

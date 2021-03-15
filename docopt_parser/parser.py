@@ -40,69 +40,6 @@ class AstNode(object):
       return '\n'.join(lines)
 
 
-class DocoptAst(AstNode):
-  def __init__(self, usage, options):
-    self.usage = usage
-    self.options = flatten(options)
-
-  def __repr__(self):
-    return f'''<Docopt>
-  usage:
-{self.indent([self.usage], 2)}
-  options:
-{self.indent(self.options, 2)}'''
-
-  @classmethod
-  def validate_unambiguous_options(cls, options):
-    shorts = [getattr(o.short, 'name') for o in options if o.short is not None]
-    longs = [getattr(o.long, 'name') for o in options if o.long is not None]
-    dup_shorts = set([n for n in shorts if shorts.count(n) > 1])
-    dup_longs = set([n for n in longs if longs.count(n) > 1])
-    messages = \
-        ['-%s is specified %d times' % (n, shorts.count(n)) for n in dup_shorts] + \
-        ['--%s is specified %d times' % (n, longs.count(n)) for n in dup_longs]
-    if len(messages):
-      raise DocoptParseError(', '.join(messages))
-
-  @classmethod
-  def option_sections(cls):
-    re_options_section = regex(r'options:', re.I)
-    no_options_text = many(char(illegal=re_options_section)).desc('Text').parsecmap(join_string)
-
-    @generate('options sections')
-    def p():
-      first_section = yield lookahead(optional(no_options_text >> re_options_section))
-      if first_section is not None:
-        sections = yield many1(no_options_text >> Option.section() << no_options_text)
-        return flatten(sections)
-      else:
-        return []
-    return p
-
-  @classmethod
-  def lang(cls):
-    no_usage_text = many(char(illegal=regex(r'usage:', re.I))).desc('Text').parsecmap(join_string)
-
-    @generate('docopt help text')
-    def p():
-      # We need all options before parsing the usage section, so we may need to consume past it
-      # before actually parsing it. So the options parsing is a lookahead. In order to fail
-      # with a proper error message while parsing the options sections, we reparse everything
-      # without the lookahead if the lookahead fails
-      options = yield lookahead(cls.option_sections()) ^ cls.option_sections()
-      cls.validate_unambiguous_options(options)
-      usage = yield (no_usage_text >> Usage.section(options) << no_usage_text)
-      return cls(usage, options)
-    return p
-
-  @classmethod
-  def parse(cls, txt):
-    try:
-      return cls.lang().parse_strict(txt)
-    except ParseError as e:
-      raise DocoptParseError(explain_error(e, txt)) from e
-
-
 class Option(AstNode):
 
   def __init__(self, short, long, doc1, default=None, doc2=None):
@@ -143,8 +80,7 @@ class Option(AstNode):
     return (opt_short, opt_long)
 
 
-  @classmethod
-  def section(cls):
+  def section():
     next_option = nl + indent + char('-')
     terminator = (nl + nl) ^ (nl + eof()) ^ next_option
     default = (
@@ -160,7 +96,7 @@ class Option(AstNode):
       yield optional(nl + indent)
       while (yield lookahead(optional(char('-')))) is not None:
         doc1 = _default = doc2 = None
-        (short, long) = yield cls.opts
+        (short, long) = yield Option.opts
         if (yield optional(lookahead(whitespaces + (eof() | nl)))) is not None:
           # Consume trailing whitespaces
           yield whitespaces
@@ -169,7 +105,7 @@ class Option(AstNode):
           doc1 = yield optional(doc)
           _default = yield optional(default)
           doc2 = yield optional(doc)
-        options.append(cls(short, long, doc1, _default, doc2))
+        options.append(Option(short, long, doc1, _default, doc2))
         if (yield lookahead(optional(next_option))) is None:
           break
         yield nl + indent
@@ -179,6 +115,7 @@ class Option(AstNode):
 
 
 class Long(AstNode):
+
   def __init__(self, name, arg):
     self.name = name
     self.arg = arg
@@ -473,8 +410,7 @@ class Options(AstNode):
     return f'''<Options>
 {self.indent(self.options)}'''
 
-  @classmethod
-  def map_references(cls, options, candidates):
+  def map_references(options, candidates):
     def find(o):
       option = next(filter(lambda opt: o in [opt.short, opt.long], options), None)
       if option is not None:
@@ -483,8 +419,7 @@ class Options(AstNode):
         return o
     return list(map(find, candidates))
 
-  @classmethod
-  def options(cls, illegal, options):
+  def options(illegal, options):
     @generate('Options (-s or --long)')
     def p():
       # Check if we should consume, the lookahead checks if this is unambiguously the
@@ -505,7 +440,7 @@ class Options(AstNode):
           break
         else:
           opts.append(opt)
-      return Options(cls.map_references(options, opts))
+      return Options(Options.map_references(options, opts))
     return p
 
 
@@ -517,3 +452,55 @@ class OptionRef(AstNode):
   def __repr__(self):
     return f'''<OptionRef>
   {self.indent(self.option.short or self.option.long)}'''
+
+
+class DocoptAst(AstNode):
+  def __init__(self, usage, options_sections):
+    self.usage = usage
+    self.options_sections = options_sections
+
+  def __repr__(self):
+    options = '\n'.join([f'''  options:
+{self.indent(section, 2)}''' for section in self.options_sections])
+    return f'''<Docopt>
+  usage:
+{self.indent([self.usage], 2)}
+{options}'''
+
+  def validate_unambiguous_options(options):
+    shorts = [getattr(o.short, 'name') for o in options if o.short is not None]
+    longs = [getattr(o.long, 'name') for o in options if o.long is not None]
+    dup_shorts = set([n for n in shorts if shorts.count(n) > 1])
+    dup_longs = set([n for n in longs if longs.count(n) > 1])
+    messages = \
+        ['-%s is specified %d times' % (n, shorts.count(n)) for n in dup_shorts] + \
+        ['--%s is specified %d times' % (n, longs.count(n)) for n in dup_longs]
+    if len(messages):
+      raise DocoptParseError(', '.join(messages))
+
+  re_options_section = regex(r'options:', re.I)
+  no_options_text = many(char(illegal=re_options_section)).desc('Text').parsecmap(join_string)
+
+  @generate
+  def options_sections():
+    sections = []
+    yield DocoptAst.no_options_text
+    while (yield lookahead(optional(DocoptAst.re_options_section))) is not None:
+      sections.append((yield Option.section() << DocoptAst.no_options_text))
+    return sections
+
+  no_usage_text = many(char(illegal=regex(r'usage:', re.I))).desc('Text').parsecmap(join_string)
+
+  @generate('docopt help text')
+  def lang():
+    options_sections = yield lookahead(DocoptAst.options_sections) ^ DocoptAst.options_sections
+    options = flatten(options_sections)
+    DocoptAst.validate_unambiguous_options(options)
+    usage = yield (DocoptAst.no_usage_text >> Usage.section(options) << DocoptAst.no_usage_text)
+    return DocoptAst(usage, options_sections)
+
+  def parse(txt):
+    try:
+      return DocoptAst.lang.parse_strict(txt)
+    except ParseError as e:
+      raise DocoptParseError(explain_error(e, txt)) from e
