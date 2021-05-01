@@ -8,7 +8,6 @@ def debug(ret, *args):
 def maybe(strategy):
   return one_of(none(), strategy)
 
-control_chars = '\r\b\f\x1B\x07\0'
 
 def chars(legal=None, illegal=None):
   if (legal is None) == (illegal is None):
@@ -19,7 +18,7 @@ def chars(legal=None, illegal=None):
     else:
       return sampled_from(legal)
   else:
-    return characters(blacklist_characters=illegal + control_chars)
+    return characters(blacklist_characters=illegal)
 
 def idents(illegal, starts_with=None):
   if starts_with is not None:

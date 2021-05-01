@@ -18,9 +18,10 @@ re_default = re.compile(r'\[default: [^\]]*\]', re.I)
 
 other_text = text().filter(not_re(re_usage, re_options))
 usage_title = from_regex(re_usage, fullmatch=True)
+non_symbol_chars = '=|()[], \t\n\r\b\f\x1B\x07\0'
 
-short_idents = chars(illegal='-=| \n()[],')
-long_idents = idents(illegal='=| \n()[],', starts_with=chars(illegal='-=| \n()[],'))
+short_idents = chars(illegal=f"{non_symbol_chars}-")
+long_idents = idents(illegal=non_symbol_chars, starts_with=chars(illegal=f"{non_symbol_chars}-"))
 
 def partition_options(sizes):
   known_shorts = []
@@ -195,7 +196,7 @@ class Command(IdentNode):
   def __str__(self):
     return f"{self.ident}"
 
-  commands = idents('| \n[]()', starts_with=chars(illegal='-| \n[]()<')).filter(
+  commands = idents(non_symbol_chars, starts_with=chars(illegal=f'{non_symbol_chars}-<')).filter(
     lambda s: not s.isupper()
   ).map(lambda c: Command(c))
 
@@ -206,8 +207,8 @@ class Argument(IdentNode):
   def __str__(self):
     return self.ident
 
-  wrapped_args = idents('\n>').map(lambda s: f'<{s}>')
-  uppercase_args = idents('| \n[]()').filter(lambda s: s.isupper())
+  wrapped_args = idents(f'{non_symbol_chars}>').map(lambda s: f'<{s}>')
+  uppercase_args = idents(non_symbol_chars).filter(lambda s: s.isupper())
   args = one_of(wrapped_args, uppercase_args).map(lambda a: Argument(a))
 
 class ArgumentSeparator(AstNode):

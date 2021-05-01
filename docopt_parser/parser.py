@@ -12,11 +12,11 @@ from parsec import ParseError, eof, generate, many, many1, optional, regex
 # Indents are optional in both usage: & options:
 
 nl = char('\n')
-whitespaces = many1(char(regex(r'\s'), nl)).parsecmap(join_string).desc('<whitespace>')
+whitespaces = many1(char(' \t', nl)).parsecmap(join_string).desc('<whitespace>')
 eol = optional(whitespaces) + (nl | eof())
 indent = (many1(char(' ')) | char('\t')).parsecmap(join_string).desc('<indent> (spaces or tabs)')
 multiple = optional(whitespaces) >> string('...').desc('multiplier (...)')
-global_illegal = regex(r'\s') | char('|()[]') | multiple
+non_symbol_chars = char('=|()[], \t\n\r\b\f\x1B\x07\0') | multiple
 
 def ident(illegal, starts_with=None):
   if starts_with is None:
@@ -124,7 +124,7 @@ class Option(AstNode):
 
 class Argument(IdentNode):
 
-  illegal = global_illegal
+  illegal = non_symbol_chars
 
   def __init__(self, name):
     super().__init__(name)
@@ -153,7 +153,7 @@ class Argument(IdentNode):
 
 class Long(IdentNode):
 
-  illegal = global_illegal | char(',=')
+  illegal = non_symbol_chars | char(',=')
 
   def __init__(self, name, arg):
     super().__init__(f'--{name}')
@@ -193,7 +193,7 @@ class Long(IdentNode):
 
 class Short(IdentNode):
 
-  illegal = global_illegal | char(',=-')
+  illegal = non_symbol_chars | char(',=-')
 
   def __init__(self, name, arg):
     super().__init__(f'-{name}')
@@ -249,7 +249,7 @@ class Usage(object):
     def p():
       yield regex(r'usage:', re.I)
       yield optional(nl + indent)
-      prog = yield lookahead(optional(ident(global_illegal)))
+      prog = yield lookahead(optional(ident(non_symbol_chars)))
       expressions = []
       if prog is not None:
         while True:
@@ -379,7 +379,7 @@ class Optional(AstNode):
 
 
 class Command(IdentNode):
-  illegal = global_illegal
+  illegal = non_symbol_chars
 
   def __init__(self, name):
     super().__init__(name)
@@ -433,7 +433,7 @@ class Options(AstNode):
     def p():
       # Check if we should consume, the lookahead checks if this is unambiguously the
       # beginning of an option. This way we can cause atom() to fail with a useful message
-      any_option = char('-') + optional(char('-')) + char(illegal=global_illegal | char('-'))
+      any_option = char('-') + optional(char('-')) + char(illegal=non_symbol_chars | char('-'))
       yield lookahead(any_option)
       yield char('-')
       known_longs = [o.long.usage_parser for o in options if o.long is not None]
