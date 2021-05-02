@@ -100,8 +100,7 @@ class Option(AstNode):
     def p():
       options = []
       yield regex(r'options:', re.I)
-      # TODO: nl + indent is not optional
-      yield optional(nl + indent)
+      yield nl + indent
       while (yield lookahead(optional(char('-')))) is not None:
         doc1 = _default = doc2 = None
         (short, long) = yield Option.opts
