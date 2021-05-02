@@ -9,7 +9,6 @@ from parsec import ParseError, eof, generate, many, many1, optional, regex
 # TODO:
 # Missing the repeated options parser, where e.g. -AA or --opt --opt becomes a counter
 # Handle options that are not referenced from usage
-# Indents are optional in both usage: & options:
 
 nl = char('\n')
 whitespaces = many1(char(' \t', nl)).parsecmap(join_string).desc('<whitespace>')
@@ -89,7 +88,7 @@ class Option(AstNode):
 
 
   def section():
-    next_option = nl + indent + char('-')
+    next_option = nl + optional(indent) + char('-')
     terminator = (nl + nl) ^ (nl + eof()) ^ next_option
     default = (
       regex(r'\[default: ', re.IGNORECASE) >> many(char(illegal='\n]')) << char(']')
@@ -100,7 +99,7 @@ class Option(AstNode):
     def p():
       options = []
       yield regex(r'options:', re.I)
-      yield nl + indent
+      yield nl + optional(indent)
       while (yield lookahead(optional(char('-')))) is not None:
         doc1 = _default = doc2 = None
         (short, long) = yield Option.opts
@@ -115,7 +114,7 @@ class Option(AstNode):
         options.append(Option(short, long, doc1, _default, doc2))
         if (yield lookahead(optional(next_option))) is None:
           break
-        yield nl + indent
+        yield nl + optional(indent)
       yield eof() | nl
       return options
     return p

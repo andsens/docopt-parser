@@ -62,13 +62,19 @@ def exclude(p: Parser, end: Parser):
 any_char = regex(r'.|\n').desc('any char')
 def char(legal=any_char, illegal=None):
   if isinstance(legal, str):
-    desc = 'any of ' + ''.join(map(describe_value, legal))
+    desc = ''
+    if len(legal) > 1:
+      desc = 'any of '
+    desc += ''.join(map(describe_value, legal))
     a = one_of(legal).desc(desc)
   else:
     a = legal
   if illegal is not None:
     if isinstance(illegal, str):
-      desc = 'any of ' + ''.join(map(describe_value, illegal))
+      desc = ''
+      if len(illegal) > 1:
+        desc = 'any of '
+      desc += ''.join(map(describe_value, illegal))
       d = one_of(illegal).desc(desc)
     else:
       d = illegal
