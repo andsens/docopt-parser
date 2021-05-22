@@ -46,7 +46,7 @@ char_descriptions = {
 def describe_value(val):
   if len(val) > 1:
     return val
-  return char_descriptions.get(val, hex(ord(val)))
+  return char_descriptions.get(val, f'"{val}" ({hex(ord(val))})')
 
 def fail_with(message):
   return Parser(lambda _, index: Value.failure(index, message))
@@ -123,7 +123,8 @@ def explain_error(e: ParseError, text: str):
 
 nl = char('\n')
 whitespaces = many1(char(' \t', nl)).parsecmap(join_string).desc('<whitespace>')
-eol = optional(whitespaces) + (nl | eof())
+eol = (optional(whitespaces) + (nl | eof())).desc('<end of line>')
 indent = (many1(char(' ')) | char('\t')).parsecmap(join_string).desc('<indent> (spaces or tabs)')
+either = char('|').desc('<pipe> (|)')
 multiple = optional(whitespaces) >> string('...').desc('multiplier (...)')
 non_symbol_chars = char('=|()[], \t\n\r\b\f\x1B\x07\0') | multiple

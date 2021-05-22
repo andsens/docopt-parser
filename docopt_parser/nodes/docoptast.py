@@ -33,30 +33,40 @@ class DocoptAst(AstNode):
   re_options_section = regex(r'options:', re.I)
   no_options_text = many(char(illegal=re_options_section)).desc('Text').parsecmap(join_string)
 
-  @generate
-  def options_sections():
-    sections = []
-    yield DocoptAst.no_options_text
-    while (yield lookahead(optional(DocoptAst.re_options_section))) is not None:
-      sections.append((yield Option.section() << DocoptAst.no_options_text))
-    return sections
-
   no_usage_text = many(char(illegal=regex(r'usage:', re.I))).desc('Text').parsecmap(join_string)
 
-  @generate('docopt help text')
-  def lang():
-    options_sections = yield lookahead(DocoptAst.options_sections) ^ DocoptAst.options_sections
-    options = flatten(options_sections)
-    DocoptAst.validate_unambiguous_options(options)
-    usage = yield (DocoptAst.no_usage_text >> Usage.section(options) << DocoptAst.no_usage_text)
-    # DocoptAst.validate_conflicting(options)
-    return DocoptAst(usage, options_sections)
+  def lang(strict=True):
+    @generate('options: sections')
+    def options_sections():
+      sections = []
+      yield DocoptAst.no_options_text
+      while (yield lookahead(optional(DocoptAst.re_options_section))) is not None:
+        sections.append((yield Option.section(strict) << DocoptAst.no_options_text))
+      return sections
 
-  def parse(txt, strict=True):
+    @generate('docopt help text')
+    def p():
+      # Parse all options sections before parsing the usage section so that we can reference
+      # the options while building the usage AST.
+      # The lookahead() allows us to parse without consuming the usage section,
+      # but any errors will point at the start of the text. So when one occurs we
+      # parse again in order to fail properly.
+      opt_sections = yield lookahead(options_sections) ^ options_sections
+      options = flatten(opt_sections)
+      DocoptAst.validate_unambiguous_options(options)
+      usage = yield (DocoptAst.no_usage_text >> Usage.section(strict, options) << DocoptAst.no_usage_text)
+      # DocoptAst.validate_conflicting(options)
+      return DocoptAst(usage, opt_sections)
+    return p
+
+  def parse(txt):
     try:
-      if strict:
-        return DocoptAst.lang.parse_strict(txt)
-      else:
-        return DocoptAst.lang.parse(txt)
+      return DocoptAst.lang(True).parse_strict(txt)
+    except ParseError as e:
+      raise DocoptParseError(explain_error(e, txt)) from e
+
+  def parse_partial(txt):
+    try:
+      return DocoptAst.lang(False).parse_partial(txt)
     except ParseError as e:
       raise DocoptParseError(explain_error(e, txt)) from e

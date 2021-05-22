@@ -1,19 +1,21 @@
 from ..astnode import AstNode
 from parsec import optional, generate
-from .. import exclude, whitespaces, lookahead, eol
+from .. import exclude, either, whitespaces, eol
 
 def seq(options):
   from .atom import atom
-  from .choice import either
 
   @generate('sequence')
   def p():
     nodes = [(yield atom(options))]
-    while (yield optional(exclude(whitespaces, either))) is not None:
+    while (yield optional(exclude(whitespaces, whitespaces >> either ^ eol))) is not None:
       nodes.append((yield atom(options)))
-      if (yield optional(lookahead(eol))) is not None:
-        yield optional(whitespaces)
-        break
+      # TODO: whitespace consumption duplicated in usage.lin
+      # if (yield optional(lookahead(eol))) is not None:
+      #   yield optional(whitespaces)
+      #   break
+    # Consume any trailing whitespaces
+    yield optional(whitespaces)
     if len(nodes) > 1:
       return Sequence(nodes)
     else:

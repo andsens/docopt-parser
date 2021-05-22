@@ -44,7 +44,7 @@ class Option(AstNode):
     return (opt_short, opt_long)
 
 
-  def section():
+  def section(strict):
     next_option = nl + optional(indent) + char('-')
     terminator = (nl + nl) ^ (nl + eof()) ^ next_option
     default = (
@@ -72,6 +72,10 @@ class Option(AstNode):
         if (yield lookahead(optional(next_option))) is None:
           break
         yield nl + optional(indent)
-      yield eof() | nl
+      if strict:
+        yield eof() | nl
+      else:
+        # Do not enforce section termination when parsing non-strictly
+        yield optional(eof() | nl)
       return options
     return p

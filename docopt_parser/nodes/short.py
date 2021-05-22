@@ -18,15 +18,30 @@ class Short(IdentNode):
 
   @property
   def usage_parser(self):
+    return self._usage_parser(expect_dash=True)
+
+  @property
+  def nodash_usage_parser(self):
+    return self._usage_parser(expect_dash=False)
+
+  def _usage_parser(self, expect_dash=True):
     @generate(f'-{self.name}')
     def p():
-      yield string(self.name).desc(f'-{self.name}')
+      if expect_dash:
+        yield string('-' + self.name).desc(f'-{self.name}')
+      else:
+        yield string(self.name).desc(f'-{self.name}')
       if self.arg is not None:
-        yield (optional(char(' =')) >> Argument.arg).desc('argument ( ARG)')
+        yield (optional(char(' =')) >> Argument.arg).desc(f'argument ({self.arg.name})')
       return self
     return p
 
   usage = (
+    char('-') >> char(illegal=illegal) + optional((char(' =') >> Argument.arg))
+  ).desc('short option (-a)').parsecmap(lambda n: Short(*n))
+
+  # Usage parser without the leading "-" to allow parsing "-abc" style option specs
+  nodash_usage = (
     char(illegal=illegal) + optional((char(' =') >> Argument.arg))
   ).desc('short option (-a)').parsecmap(lambda n: Short(*n))
 

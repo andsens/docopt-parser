@@ -20,14 +20,14 @@ class Long(IdentNode):
   def usage_parser(self):
     @generate(f'--{self.name}')
     def p():
-      yield string('-' + self.name)
+      yield string('--' + self.name)
       if self.arg is not None:
-        yield (char(' =') >> Argument.arg).desc('argument (=ARG)')
+        yield (char(' =') >> Argument.arg).desc(f'argument ({self.arg.name})')
       return self
     return p
 
   usage = (
-    char('-') >> ident(illegal) + optional(char('=') >> Argument.arg)
+    char('--') >> ident(illegal) + optional(char('=') >> Argument.arg)
   ).desc('long option (--long)').parsecmap(lambda n: Long(*n))
 
   @generate('long option (--long)')

@@ -1,16 +1,15 @@
-from parsec import many, generate, optional
-from .. import char
+from parsec import generate, optional
+from .. import either, whitespaces
 from ..astnode import AstNode
 
 
-either = (many(char(' ')) >> char('|') << many(char(' '))).desc('<pipe> (|)')
 def expr(options):
   from .sequence import seq
 
   @generate('expression')
   def p():
     nodes = [(yield seq(options))]
-    while (yield optional(either)) is not None:
+    while (yield optional(either << optional(whitespaces))) is not None:
       nodes.append((yield seq(options)))
     if len(nodes) > 1:
       return Choice(nodes)

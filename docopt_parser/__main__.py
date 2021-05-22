@@ -25,13 +25,19 @@ Options:
 def docopt_parser(params):
   try:
     doc = sys.stdin.read()
-    ast = DocoptAst.parse(doc, params['-S'])
-    if params['ast']:
-      sys.stdout.write(repr(ast) + '\n')
+    if params['-S']:
+      ast, parsed_doc = DocoptAst.parse_partial(doc)
+      if params['ast']:
+        sys.stdout.write(repr(ast) + '\n')
+      if parsed_doc != doc:
+        ast = DocoptAst.parse(doc)
+    else:
+      ast = DocoptAst.parse(doc)
+      if params['ast']:
+        sys.stdout.write(repr(ast) + '\n')
   except DocoptParseError as e:
     log.error(str(e))
     sys.exit(e.exit_code)
-
 
 
 def setup_logging():

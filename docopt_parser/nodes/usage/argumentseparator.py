@@ -8,4 +8,5 @@ class ArgumentSeparator(AstNode):
   def new(args):
     return ArgumentSeparator()
 
+  # Make sure the "--" is not an option by checking that it's not follow by a valid option identifier
   separator = (lookahead(string('--') << char('| \n)()[]') | nl | eof()) >> string('--')).parsecmap(new)
