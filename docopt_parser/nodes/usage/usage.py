@@ -1,6 +1,6 @@
-from parsec import generate, optional, regex, eof
+from parsec import generate, optional, regex, eof, many
 from .sequence import Sequence
-from .. import string, whitespaces, lookahead, nl, non_symbol_chars, indent, eol
+from .. import string, whitespaces, lookahead, nl, non_symbol_chars, indent, eol, char
 from ..identnode import ident
 import re
 from .choice import expr, Choice
@@ -31,8 +31,8 @@ class Usage(object):
           if (yield optional(nl + indent)) is None:
             break
       if strict:
-        yield (nl + nl) | whitespaces + eof()
+        yield (nl + nl) ^ many(char(' \t') | nl) + eof()
       else:
-        yield optional((nl + nl) | whitespaces + eof())
+        yield optional((nl + nl) ^ many(char(' \t') | nl) + eof())
       return Choice(expressions)
     return p

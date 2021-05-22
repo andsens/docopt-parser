@@ -5,12 +5,12 @@ def atom(options):
   from .optional import Optional
   from .optionsshortcut import OptionsShortcut
   from .argumentseparator import ArgumentSeparator
-  from .options import Options
+  from .optionlist import OptionList
   from ..argument import Argument
   from .command import Command
   from .multiple import Multiple
   return (
     Group.group(options) | Optional.optional(options) | OptionsShortcut.shortcut
-    | ArgumentSeparator.separator | Options.options(options)
+    | ArgumentSeparator.separator | OptionList.options(options)
     | Argument.arg | Command.command
   ).bind(Multiple.multi).desc('any element (cmd, ARG, options, --option, (group), [optional], --)')
