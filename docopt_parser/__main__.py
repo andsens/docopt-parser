@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from docopt_parser.parser import DocoptAst
+from .nodes.docoptast import DocoptAst
 import sys
 import os
 import docopt

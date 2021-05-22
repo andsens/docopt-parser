@@ -1,6 +1,10 @@
 from docopt_parser import DocoptParseError
+from parsec import ParseError, Parser, Value, one_of, eof, many1, optional, regex
 import sys
-from parsec import ParseError, Parser, Value, one_of, regex
+
+# TODO:
+# Missing the repeated options parser, where e.g. -AA or --opt --opt becomes a counter
+# Handle options that are not referenced from usage
 
 def splat(constr):
   return lambda args: constr(*args)
@@ -116,3 +120,10 @@ def explain_error(e: ParseError, text: str):
   col = ' ' * col
   msg = str(e)
   return f'\n{prev_line}{line}\n{col}^\n{msg}'
+
+nl = char('\n')
+whitespaces = many1(char(' \t', nl)).parsecmap(join_string).desc('<whitespace>')
+eol = optional(whitespaces) + (nl | eof())
+indent = (many1(char(' ')) | char('\t')).parsecmap(join_string).desc('<indent> (spaces or tabs)')
+multiple = optional(whitespaces) >> string('...').desc('multiplier (...)')
+non_symbol_chars = char('=|()[], \t\n\r\b\f\x1B\x07\0') | multiple

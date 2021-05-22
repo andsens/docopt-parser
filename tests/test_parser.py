@@ -1,5 +1,5 @@
 from tests.lang import DocoptAst as TestingAst
-from docopt_parser.parser import DocoptAst as ParserAst
+from docopt_parser.nodes.docoptast import DocoptAst as ParserAst
 import unittest
 from hypothesis import given
 
