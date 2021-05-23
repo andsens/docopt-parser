@@ -7,17 +7,18 @@ from .usage.usage import Usage
 import re
 
 class DocoptAst(AstNode):
-  def __init__(self, usage, options_sections):
+  def __init__(self, usage, options):
     self.usage = usage
-    self.options_sections = options_sections
+    self.options = options
 
   def __repr__(self):
-    options = '\n'.join([f'''  options:
-{self.indent(section, 2)}''' for section in self.options_sections])
+#     options = '\n'.join([f'''  options:
+# {self.indent(section, 2)}''' for section in self.options_sections])
     return f'''<Docopt>
   usage:
 {self.indent([self.usage], 2)}
-{options}'''
+  options:
+{self.indent(self.options, 2)}'''
 
   def validate_unambiguous_options(options):
     shorts = [getattr(o.short, 'name') for o in options if o.short is not None]
@@ -51,12 +52,11 @@ class DocoptAst(AstNode):
       # The lookahead() allows us to parse without consuming the usage section,
       # but any errors will point at the start of the text. So when one occurs we
       # parse again in order to fail properly.
-      opt_sections = yield lookahead(options_sections) ^ options_sections
-      options = flatten(opt_sections)
+      options = flatten((yield lookahead(options_sections) ^ options_sections))
       DocoptAst.validate_unambiguous_options(options)
       usage = yield (DocoptAst.no_usage_text >> Usage.section(strict, options) << DocoptAst.no_usage_text)
       # DocoptAst.validate_conflicting(options)
-      return DocoptAst(usage, opt_sections)
+      return DocoptAst(usage, options)
     return p
 
   def parse(txt):

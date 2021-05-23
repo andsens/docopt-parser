@@ -1,18 +1,10 @@
-from ..astnode import AstNode
 from .optionref import OptionRef
 from parsec import generate, optional
 from ..short import Short
 from ..long import Long
 from functools import reduce
 
-class OptionList(AstNode):
-  def __init__(self, options):
-    self.options = options
-
-  def __repr__(self):
-    return f'''<Options>
-{self.indent(self.options)}'''
-
+class OptionList(object):
   def map_references(options, candidates):
     def find(o):
       option = next(filter(lambda opt: o in [opt.short, opt.long], options), None)
@@ -45,5 +37,5 @@ class OptionList(AstNode):
           break
         else:
           opts.append(opt)
-      return OptionList(OptionList.map_references(options, opts))
+      return OptionList.map_references(options, opts)
     return p
