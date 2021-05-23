@@ -13,9 +13,9 @@ def seq(options):
   from .multiple import Multiple
 
   atoms = (
-    Group.group(options) | Optional.optional(options) | OptionsShortcut.shortcut
-    | ArgumentSeparator.separator | option_list(options)
-    | Argument.arg | Command.command
+    Group.group(options) | Optional.optional(options)
+    | OptionsShortcut.shortcut | option_list(options)
+    | Argument.arg | Command.command | ArgumentSeparator.separator
   ).desc('any element (cmd, ARG, options, --option, (group), [optional], --)')
 
   @generate('sequence')

@@ -1,5 +1,5 @@
 from .identnode import IdentNode, ident
-from . import non_symbol_chars, char, string, lookahead
+from . import non_symbol_chars, char, string, lookahead, unit
 from parsec import generate, optional
 from .argument import Argument
 
@@ -27,7 +27,7 @@ class Long(IdentNode):
     return p
 
   inline_spec_usage = (
-    string('--') >> ident(illegal) + optional(char('=') >> Argument.arg)
+    unit(string('--') >> ident(illegal)) + optional(char('=') >> Argument.arg)
   ).desc('long option (--long)').parsecmap(lambda n: Long(*n))
 
   @generate('long option (--long)')
