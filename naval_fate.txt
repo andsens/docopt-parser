@@ -6,7 +6,7 @@ Usage:
   prog -h | --help
   prog --version
   prog [-hv] -y
-  prog -k F
+  prog -k F -c=T
   prog [options]
   prog [a b c (f|g)]
   prog -abc=F...

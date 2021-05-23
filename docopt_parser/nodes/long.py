@@ -17,16 +17,16 @@ class Long(IdentNode):
   arg: {self.arg}'''
 
   @property
-  def usage_parser(self):
+  def usage_ref(self):
     @generate(f'--{self.name}')
     def p():
       yield string('--' + self.name)
       if self.arg is not None:
-        yield (char(' =') >> Argument.arg).desc(f'argument ({self.arg.name})')
-      return self
+        return self, (yield (char(' =') >> Argument.arg).desc(f'argument ({self.arg.name})'))
+      return self, None
     return p
 
-  usage = (
+  inline_spec_usage = (
     string('--') >> ident(illegal) + optional(char('=') >> Argument.arg)
   ).desc('long option (--long)').parsecmap(lambda n: Long(*n))
 

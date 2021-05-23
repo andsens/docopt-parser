@@ -16,35 +16,27 @@ class Short(IdentNode):
     return f'''-{self.name}
   arg: {self.arg}'''
 
-  @property
-  def usage_parser(self):
-    return self._usage_parser(expect_dash=True)
-
-  @property
-  def nodash_usage_parser(self):
-    return self._usage_parser(expect_dash=False)
-
-  def _usage_parser(self, expect_dash=True):
+  def _usage_ref(self, shorts_list):
     @generate(f'-{self.name}')
     def p():
-      if expect_dash:
-        yield string('-' + self.name).desc(f'-{self.name}')
-      else:
+      if shorts_list:
         yield string(self.name).desc(f'-{self.name}')
+      else:
+        yield string('-' + self.name).desc(f'-{self.name}')
       if self.arg is not None:
-        yield (optional(char(' =')) >> Argument.arg).desc(f'argument ({self.arg.name})')
-      return self
+        return self, (yield (optional(char(' =')) >> Argument.arg).desc(f'argument ({self.arg.name})'))
+      return self, None
     return p
 
   # The reference implementation only allows inline specifying long options with arguments.
   # Since supporting short options as well does not introduce any ambiguity I chose to implement it.
   # TODO: Emit a warning that when this additional feature is used
-  usage = (
+  inline_spec_usage = (
     char('-') >> char(illegal=illegal) + optional((char('=') >> Argument.arg))
   ).desc('short option (-a)').parsecmap(lambda n: Short(*n))
 
   # Usage parser without the leading "-" to allow parsing "-abc" style option specs
-  nodash_usage = (
+  shorts_list_inline_spec_usage = (
     char(illegal=illegal) + optional((char(' =') >> Argument.arg))
   ).desc('short option (-a)').parsecmap(lambda n: Short(*n))
 

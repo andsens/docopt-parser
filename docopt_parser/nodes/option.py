@@ -1,3 +1,4 @@
+from .usage.optionref import OptionRef
 from .astnode import AstNode
 from parsec import generate, eof, regex, many1, many
 import re
@@ -26,6 +27,49 @@ class Option(AstNode):
   arg?:    {self.expects_arg}
   default: {self.default}
   doc:     {self.doc}'''
+
+  # usage_ref: Parse references to this option in the usage section
+  # shorts_list=True modifies the parser to parse references from the "-abc" short option list syntax
+  @property
+  def usage_ref(self):
+    return self._usage_ref(shorts_list=False)
+
+  @property
+  def shorts_list_usage(self):
+    return self._usage_ref(shorts_list=True)
+
+  def _usage_ref(self, shorts_list):
+    def to_ref(tup):
+      ref, arg = tup
+      return OptionRef(self, ref, arg)
+    if self.short is None:
+      if shorts_list:
+        return None
+      return self.long.usage_ref.parsecmap(to_ref)
+    if self.long is None or shorts_list:
+      return self.short._usage_ref(shorts_list).parsecmap(to_ref)
+    return (
+      self.short._usage_ref(shorts_list)
+      | self.long.usage_ref
+    ).parsecmap(to_ref)
+
+  # inline_spec_usage: Parses an option that is specified inline in the usage section and adds it to the options list
+  def inline_spec_usage(options, shorts_list):
+
+    @generate('inline option spec')
+    def p():
+      if shorts_list:
+        opt = yield Short.shorts_list_inline_spec_usage
+      else:
+        opt = yield (Short.inline_spec_usage | Long.inline_spec_usage)
+      if isinstance(opt, Short):
+        option = Option(opt, None, None, None, None)
+      else:
+        option = Option(None, opt, None, None, None)
+      ref = OptionRef(option, opt, opt.arg)
+      options.append(option)
+      return ref
+    return p
 
   @generate('options')
   def opts():

@@ -7,7 +7,7 @@ def seq(options):
   from .optional import Optional
   from .optionsshortcut import OptionsShortcut
   from .argumentseparator import ArgumentSeparator
-  from .optionlist import OptionList
+  from .optionlist import option_list
   from ..argument import Argument
   from .command import Command
   from .multiple import Multiple
@@ -18,7 +18,7 @@ def seq(options):
     while True:
       atom = yield (
         Group.group(options) | Optional.optional(options) | OptionsShortcut.shortcut
-        | ArgumentSeparator.separator | OptionList.options(options)
+        | ArgumentSeparator.separator | option_list(options)
         | Argument.arg | Command.command
       ).desc('any element (cmd, ARG, options, --option, (group), [optional], --)')
       if isinstance(atom, list):
