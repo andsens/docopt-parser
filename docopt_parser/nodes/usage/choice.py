@@ -9,7 +9,7 @@ def expr(options):
   @generate('expression')
   def p():
     nodes = [(yield seq(options))]
-    while (yield optional(either << optional(whitespaces))) is not None:
+    while (yield optional(either << whitespaces)) is not None:
       nodes.append((yield seq(options)))
     if len(nodes) > 1:
       return Choice(nodes)

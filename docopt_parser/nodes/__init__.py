@@ -122,9 +122,10 @@ def explain_error(e: ParseError, text: str):
   return f'\n{prev_line}{line}\n{col}^\n{msg}'
 
 nl = char('\n')
-whitespaces = many1(char(' \t', nl)).parsecmap(join_string).desc('<whitespace>')
-eol = (optional(whitespaces) + (nl | eof())).desc('<end of line>')
+whitespaces1 = many1(char(' \t', nl)).parsecmap(join_string).desc('<whitespace>')
+whitespaces = optional(whitespaces1)
+eol = (whitespaces + (nl | eof())).desc('<end of line>')
 indent = (many1(char(' ')) | char('\t')).parsecmap(join_string).desc('<indent> (spaces or tabs)')
 either = char('|').desc('<pipe> (|)')
-multiple = optional(whitespaces) >> string('...').desc('multiplier (...)')
+multiple = string('...').desc('multiplier (...)')
 non_symbol_chars = char('=|()[], \t\n\r\b\f\x1B\x07\0') | multiple

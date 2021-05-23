@@ -1,6 +1,6 @@
 from parsec import generate, optional, regex, eof, many
 from .sequence import Sequence
-from .. import string, whitespaces, lookahead, nl, non_symbol_chars, indent, eol, char
+from .. import string, whitespaces1, whitespaces, lookahead, nl, non_symbol_chars, indent, eol, char
 from ..identnode import ident
 import re
 from .choice import expr, Choice
@@ -11,9 +11,9 @@ class Usage(object):
     def p():
       yield string(prog)
       if (yield optional(lookahead(eol))) is None:
-        e = yield whitespaces >> expr(options)
+        e = yield whitespaces1 >> expr(options)
       else:
-        yield optional(whitespaces)
+        yield whitespaces
         e = Sequence([])
       return e
     return p

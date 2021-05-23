@@ -4,7 +4,7 @@ from parsec import generate, eof, regex, many1, many
 import re
 from .long import Long
 from .short import Short
-from . import optional, string, char, nl, indent, lookahead, whitespaces, fail_with, join_string
+from . import optional, string, char, nl, indent, lookahead, whitespaces1, fail_with, join_string
 
 class Option(AstNode):
 
@@ -104,9 +104,9 @@ class Option(AstNode):
       while (yield lookahead(optional(char('-')))) is not None:
         doc1 = _default = doc2 = None
         (short, long) = yield Option.opts
-        if (yield optional(lookahead(whitespaces + (eof() | nl)))) is not None:
+        if (yield optional(lookahead(whitespaces1 + (eof() | nl)))) is not None:
           # Consume trailing whitespaces
-          yield whitespaces
+          yield whitespaces1
         elif (yield optional(lookahead(char(illegal='\n')))) is not None:
           yield (char(' ') + many1(char(' '))) ^ fail_with('at least 2 spaces')
           doc1 = yield optional(doc)

@@ -1,6 +1,6 @@
 from ..astnode import AstNode
 from parsec import optional, generate, eof
-from .. import lookahead, either, whitespaces, nl
+from .. import lookahead, either, whitespaces, nl, multiple
 
 def seq(options):
   from .group import Group
@@ -12,24 +12,28 @@ def seq(options):
   from .command import Command
   from .multiple import Multiple
 
+  atoms = (
+    Group.group(options) | Optional.optional(options) | OptionsShortcut.shortcut
+    | ArgumentSeparator.separator | option_list(options)
+    | Argument.arg | Command.command
+  ).desc('any element (cmd, ARG, options, --option, (group), [optional], --)')
+
   @generate('sequence')
   def p():
     nodes = []
     while True:
-      atom = yield (
-        Group.group(options) | Optional.optional(options) | OptionsShortcut.shortcut
-        | ArgumentSeparator.separator | option_list(options)
-        | Argument.arg | Command.command
-      ).desc('any element (cmd, ARG, options, --option, (group), [optional], --)')
+      atom = yield atoms
       if isinstance(atom, list):
         # We're dealing with an optionlist, append all children to the sequence
-        # The "..." only affects the last option in the list
-        atom[-1] = yield Multiple.multi(atom[-1])
         nodes.extend(atom)
       else:
-        atom = yield Multiple.multi(atom)
         nodes.append(atom)
-      if (yield optional(whitespaces)) is None:
+      ws = yield whitespaces
+      multi = yield optional(multiple)
+      if multi == '...':
+        nodes[-1] = Multiple(nodes[-1])
+        ws = yield whitespaces
+      if ws is None:
         break
       if (yield lookahead(optional(either | nl | eof()))) is not None:
         break
