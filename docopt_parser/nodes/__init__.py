@@ -99,6 +99,18 @@ def lookahead(p: Parser):
       return Value.failure(index, res.expected)
   return lookahead_parser
 
+def unit(p: Parser):
+  '''Converts a parser into a single unit, only consumes input if the parser succeeds
+  '''
+  @Parser
+  def lookahead_parser(text, index):
+    res = p(text, index)
+    if res.status:
+      return Value.success(res.index, res.value)
+    else:
+      return Value.failure(index, res.expected)
+  return lookahead_parser
+
 def string(s):
     '''Parser a string.'''
     @Parser
