@@ -12,8 +12,6 @@ class DocoptAst(AstNode):
     self.options = options
 
   def __repr__(self):
-#     options = '\n'.join([f'''  options:
-# {self.indent(section, 2)}''' for section in self.options_sections])
     return f'''<Docopt>
   usage:
 {self.indent([self.usage], 2)}

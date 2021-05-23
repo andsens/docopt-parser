@@ -7,7 +7,7 @@ from . import optional, string, char, nl, indent, lookahead, whitespaces, fail_w
 
 class Option(AstNode):
 
-  def __init__(self, short, long, doc1, default=None, doc2=None):
+  def __init__(self, short, long, doc1, default, doc2):
     super().__init__()
     self.short = short
     self.long = long

@@ -36,8 +36,11 @@ class Short(IdentNode):
       return self
     return p
 
+  # The reference implementation only allows inline specifying long options with arguments.
+  # Since supporting short options as well does not introduce any ambiguity I chose to implement it.
+  # TODO: Emit a warning that when this additional feature is used
   usage = (
-    char('-') >> char(illegal=illegal) + optional((char(' =') >> Argument.arg))
+    char('-') >> char(illegal=illegal) + optional((char('=') >> Argument.arg))
   ).desc('short option (-a)').parsecmap(lambda n: Short(*n))
 
   # Usage parser without the leading "-" to allow parsing "-abc" style option specs
