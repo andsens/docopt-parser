@@ -1,5 +1,5 @@
 from .identnode import IdentNode
-from . import non_symbol_chars, char, string, lookahead
+from . import non_symbol_chars, char, string, lookahead, unit
 from parsec import generate, optional
 from .argument import Argument
 
@@ -32,12 +32,12 @@ class Short(IdentNode):
   # Since supporting short options as well does not introduce any ambiguity I chose to implement it.
   # TODO: Emit a warning that when this additional feature is used
   inline_spec_usage = (
-    char('-') >> char(illegal=illegal) + optional((char('=') >> Argument.arg))
+    unit(char('-') >> char(illegal=illegal)) + optional((char('=') >> Argument.arg))
   ).desc('short option (-a)').parsecmap(lambda n: Short(*n))
 
   # Usage parser without the leading "-" to allow parsing "-abc" style option specs
   shorts_list_inline_spec_usage = (
-    char(illegal=illegal) + optional((char(' =') >> Argument.arg))
+    char(illegal=illegal) + optional((char('=') >> Argument.arg))
   ).desc('short option (-a)').parsecmap(lambda n: Short(*n))
 
   @generate('short option (-s)')
