@@ -27,7 +27,7 @@ class Long(IdentNode):
     return p
 
   usage = (
-    char('--') >> ident(illegal) + optional(char('=') >> Argument.arg)
+    string('--') >> ident(illegal) + optional(char('=') >> Argument.arg)
   ).desc('long option (--long)').parsecmap(lambda n: Long(*n))
 
   @generate('long option (--long)')
