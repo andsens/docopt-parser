@@ -1,6 +1,6 @@
-from ..astnode import AstNode
+from .astnode import AstNode
 from parsec import generate
-from .. import char
+from . import char
 from .choice import expr
 from .sequence import Sequence
 

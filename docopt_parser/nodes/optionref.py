@@ -1,4 +1,4 @@
-from ..astnode import AstNode
+from .astnode import AstNode
 
 class OptionRef(AstNode):
   def __init__(self, option, ref, arg):
@@ -9,4 +9,4 @@ class OptionRef(AstNode):
   def __repr__(self):
     return f'''<OptionRef>
   {self.indent(self.ref)}
-  RefArg: {self.arg}'''
+  refarg: {self.arg}'''

@@ -1,11 +1,26 @@
-from .usage.optionref import OptionRef
+from .optionref import OptionRef
 from .astnode import AstNode
-from parsec import generate, eof, regex, many1, many
-import re
-from .long import Long
-from .short import Short
-from . import optional, string, char, nl, indent, lookahead, whitespaces, eol, fail_with, join_string
+from parsec import generate
+from .long import inline_long_option_spec
+from .short import Short, inline_short_option_spec, shorts_list_inline_short_option_spec
 from enum import Enum
+
+# inline_option_spec: Parses an option that is specified inline in the usage section and adds it to the options list
+def inline_option_spec(options, shorts_list):
+  @generate('inline option spec')
+  def p():
+    if shorts_list:
+      opt = yield shorts_list_inline_short_option_spec
+    else:
+      opt = yield (inline_short_option_spec | inline_long_option_spec)
+    if isinstance(opt, Short):
+      option = Option(opt, None, SpecSource.USAGE, None, None, None)
+    else:
+      option = Option(None, opt, SpecSource.USAGE, None, None, None)
+    ref = OptionRef(option, opt, opt.arg)
+    options.append(option)
+    return ref
+  return p
 
 class SpecSource(Enum):
   USAGE = 'usage'
@@ -59,74 +74,3 @@ class Option(AstNode):
       self.short._usage_ref(shorts_list)
       | self.long.usage_ref
     ).parsecmap(to_ref)
-
-  # inline_spec_usage: Parses an option that is specified inline in the usage section and adds it to the options list
-  def inline_spec_usage(options, shorts_list):
-
-    @generate('inline option spec')
-    def p():
-      if shorts_list:
-        opt = yield Short.shorts_list_inline_spec_usage
-      else:
-        opt = yield (Short.inline_spec_usage | Long.inline_spec_usage)
-      if isinstance(opt, Short):
-        option = Option(opt, None, SpecSource.USAGE, None, None, None)
-      else:
-        option = Option(None, opt, SpecSource.USAGE, None, None, None)
-      ref = OptionRef(option, opt, opt.arg)
-      options.append(option)
-      return ref
-    return p
-
-  @generate('options')
-  def opts():
-    first = yield Long.options | Short.options
-    if isinstance(first, Long):
-      opt_short = yield optional((string(', ') | char(' ')) >> Short.options)
-      opt_long = first
-    else:
-      opt_short = first
-      opt_long = yield optional((string(', ') | char(' ')) >> Long.options)
-    if opt_short is not None and opt_long is not None:
-      if opt_short.arg is not None and opt_long.arg is None:
-        opt_long.arg = opt_short.arg
-      if opt_short.arg is None and opt_long.arg is not None:
-        opt_short.arg = opt_long.arg
-    return (opt_short, opt_long)
-
-
-  def section(strict):
-    next_option = nl + optional(indent) + char('-')
-    terminator = (nl + nl) ^ (nl + eof()) ^ next_option
-    default = (
-      regex(r'\[default: ', re.IGNORECASE) >> many(char(illegal='\n]')) << char(']')
-    ).desc('[default: ]').parsecmap(join_string)
-    doc = many1(char(illegal=default ^ terminator)).desc('option documentation').parsecmap(join_string)
-
-    @generate('options section')
-    def p():
-      options = []
-      yield regex(r'options:', re.I)
-      yield nl + optional(indent)
-      while (yield lookahead(optional(char('-')))) is not None:
-        doc1 = _default = doc2 = None
-        (short, long) = yield Option.opts
-        if (yield optional(lookahead(eol))) is not None:
-          # Consume trailing whitespaces
-          yield whitespaces
-        elif (yield optional(lookahead(char(illegal='\n')))) is not None:
-          yield (char(' ') + many1(char(' '))) ^ fail_with('at least 2 spaces')
-          doc1 = yield optional(doc)
-          _default = yield optional(default)
-          doc2 = yield optional(doc)
-        options.append(Option(short, long, SpecSource.OPTIONS, doc1, _default, doc2))
-        if (yield lookahead(optional(next_option))) is None:
-          break
-        yield nl + optional(indent)
-      if strict:
-        yield eof() | nl
-      else:
-        # Do not enforce section termination when parsing non-strictly
-        yield optional(eof() | nl)
-      return options
-    return p

@@ -1,6 +1,6 @@
 from parsec import generate
-from ..option import SpecSource
-from .. import string
+from .option import SpecSource
+from . import string
 
 def options_shortcut(options):
   @generate('options shortcut')

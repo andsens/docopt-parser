@@ -1,6 +1,4 @@
-from docopt_parser import DocoptParseError
-from parsec import ParseError, Parser, Value, one_of, eof, many1, optional, regex
-import sys
+from parsec import Parser, Value, one_of, eof, many1, optional, regex
 
 # TODO:
 # Missing the repeated options parser, where e.g. -AA or --opt --opt becomes a counter
@@ -14,6 +12,7 @@ def unsplat(constr):
 
 def flatten(arg):
   if not isinstance(arg, (tuple, list)):
+    from .. import DocoptParseError
     raise DocoptParseError('flatten(arg): argument not a tuple or list')
   t = []
   for item in arg:
@@ -24,6 +23,7 @@ def flatten(arg):
   return type(arg)(t)
 
 def debug(arg):
+  import sys
   sys.stderr.write('{}\n'.format(arg))
   return arg
 
@@ -119,17 +119,6 @@ def string(s):
         else:
             return Value.failure(index, s)
     return string_parser
-
-def explain_error(e: ParseError, text: str):
-  line_no, col = e.loc_info(e.text, e.index)
-  lines = text.split('\n')
-  prev_line = ''
-  if line_no > 0:
-    prev_line = lines[line_no - 1] + '\n'
-  line = lines[line_no]
-  col = ' ' * col
-  msg = str(e)
-  return f'\n{prev_line}{line}\n{col}^\n{msg}'
 
 nl = char('\n')
 whitespaces1 = many1(char(' \t', nl)).parsecmap(join_string).desc('<whitespace>')

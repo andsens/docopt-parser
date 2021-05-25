@@ -1,6 +1,6 @@
 from parsec import generate, optional
-from .. import either, whitespaces
-from ..astnode import AstNode
+from . import either, whitespaces
+from .astnode import AstNode
 
 
 def expr(options):

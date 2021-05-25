@@ -1,6 +1,6 @@
 from tests.lang import DocoptAst as DocoptAstGenerator
 from docopt_parser.nodes.astnode import AstNode
-from docopt_parser.nodes.docoptast import parse_strict
+from docopt_parser import parse_strict
 import unittest
 from hypothesis import given, settings
 

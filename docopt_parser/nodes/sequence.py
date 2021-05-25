@@ -1,14 +1,14 @@
-from ..astnode import AstNode
+from .astnode import AstNode
 from parsec import optional, generate, eof
-from .. import lookahead, either, whitespaces, nl, multiple
+from . import lookahead, either, whitespaces, nl, multiple
 
 def seq(options):
   from .group import group
   from .optional import optional as _optional
-  from .optionsshortcut import options_shortcut
+  from .options_shortcut import options_shortcut
   from .argumentseparator import arg_separator
   from .optionlist import option_list
-  from ..argument import argument
+  from .argument import argument
   from .command import command
   from .multiple import Multiple
 

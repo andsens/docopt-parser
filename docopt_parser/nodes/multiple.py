@@ -1,4 +1,4 @@
-from ..astnode import AstNode
+from .astnode import AstNode
 
 class Multiple(AstNode):
   def __init__(self, item):
