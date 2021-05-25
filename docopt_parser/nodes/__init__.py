@@ -138,4 +138,4 @@ eol = (whitespaces + (nl | eof())).desc('<end of line>')
 indent = (many1(char(' ')) | char('\t')).parsecmap(join_string).desc('<indent> (spaces or tabs)')
 either = char('|').desc('<pipe> (|)')
 multiple = string('...').desc('multiplier (...)')
-non_symbol_chars = char('=|()[], \t\n\r\b\f\x1B\x07\0') | multiple
+non_symbol_chars = char('=|()[], \t\n\r\b\f\x1B\x07\0') | eof() | multiple
