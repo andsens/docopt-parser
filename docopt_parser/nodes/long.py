@@ -20,7 +20,7 @@ class Long(IdentNode):
   def usage_ref(self):
     @generate(f'--{self.name}')
     def p():
-      yield string('--' + self.name)
+      yield unit(string('--' + self.name) << lookahead(Long.illegal))
       if self.arg is not None:
         return self, (yield (char(' =') >> Argument.arg).desc(f'argument ({self.arg.name})'))
       return self, None
