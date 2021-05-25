@@ -10,9 +10,6 @@ class Argument(IdentNode):
   def __repr__(self):
     return f'''<Argument>: {self.name}'''
 
-  def new(args):
-    return Argument(args)
-
 illegal = non_symbol_chars
 
 wrapped_arg = (char('<') + ident(illegal | char('>')) + char('>')).desc('<arg>').parsecmap(join_string)
