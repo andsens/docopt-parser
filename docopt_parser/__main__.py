@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from .nodes.docoptast import DocoptAst
+from .nodes.docoptast import parse_strict, parse_partial
 import sys
 import os
 import docopt
@@ -26,13 +26,13 @@ def docopt_parser(params):
   try:
     doc = sys.stdin.read()
     if params['-S']:
-      ast, parsed_doc = DocoptAst.parse_partial(doc)
+      ast, parsed_doc = parse_partial(doc)
       if params['ast']:
         sys.stdout.write(repr(ast) + '\n')
       if parsed_doc != doc:
-        ast = DocoptAst.parse(doc)
+        ast = parse_strict(doc)
     else:
-      ast = DocoptAst.parse(doc)
+      ast = parse_strict(doc)
       if params['ast']:
         sys.stdout.write(repr(ast) + '\n')
   except DocoptParseError as e:

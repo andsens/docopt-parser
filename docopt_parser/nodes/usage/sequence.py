@@ -5,7 +5,7 @@ from .. import lookahead, either, whitespaces, nl, multiple
 def seq(options):
   from .group import Group
   from .optional import Optional
-  from .optionsshortcut import OptionsShortcut
+  from .optionsshortcut import options_shortcut
   from .argumentseparator import ArgumentSeparator
   from .optionlist import option_list
   from ..argument import Argument
@@ -14,7 +14,7 @@ def seq(options):
 
   atoms = (
     Group.group(options) | Optional.optional(options)
-    | OptionsShortcut.shortcut | option_list(options)
+    | options_shortcut(options) | option_list(options)
     | Argument.arg | Command.command | ArgumentSeparator.separator
   ).desc('any element (cmd, ARG, options, --option, (group), [optional], --)')
 
@@ -24,10 +24,11 @@ def seq(options):
     while True:
       atom = yield atoms
       if isinstance(atom, list):
-        # We're dealing with an optionlist, append all children to the sequence
+        # We're dealing with an optionlist or shortcut, append all children to the sequence
         nodes.extend(atom)
       else:
-        nodes.append(atom)
+        if atom is not None:
+          nodes.append(atom)
       ws = yield whitespaces
       multi = yield optional(multiple)
       if multi == '...':
@@ -40,7 +41,7 @@ def seq(options):
     if len(nodes) > 1:
       return Sequence(nodes)
     else:
-      return nodes[0]
+      return nodes[0] if len(nodes) else None
   return p
 
 

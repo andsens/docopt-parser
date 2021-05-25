@@ -8,13 +8,17 @@ def expr(options):
 
   @generate('expression')
   def p():
-    nodes = [(yield seq(options))]
-    while (yield optional(either << whitespaces)) is not None:
-      nodes.append((yield seq(options)))
+    nodes = []
+    while True:
+      sequence = yield seq(options)
+      if sequence is not None:
+        nodes.append(sequence)
+      if (yield optional(either << whitespaces)) is None:
+        break
     if len(nodes) > 1:
       return Choice(nodes)
     else:
-      return nodes[0]
+      return nodes[0] if len(nodes) else None
   return p
 
 

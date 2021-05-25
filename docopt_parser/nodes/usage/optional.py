@@ -19,8 +19,11 @@ class Optional(AstNode):
     @generate('[optional]')
     def p():
       node = yield (char('[') >> expr(options) << char(']'))
+      # Unnest [[optional]], or [sequence]
       if isinstance(node, (Optional, Sequence)):
         return Optional(node.items)
+      elif node is None:
+        return None
       else:
         return Optional([node])
     return p

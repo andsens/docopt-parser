@@ -24,15 +24,20 @@ class Usage(object):
       yield regex(r'usage:', re.I)
       yield optional(nl + indent)
       prog = yield lookahead(optional(ident(non_symbol_chars)))
-      expressions = []
+      lines = []
       if prog is not None:
         while True:
-          expressions.append((yield Usage.line(prog, options)))
+          line = yield Usage.line(prog, options)
+          if line is not None:
+            lines.append(line)
           if (yield optional(nl + indent)) is None:
             break
       if strict:
         yield (nl + nl) ^ many(char(' \t') | nl) + eof()
       else:
         yield optional((nl + nl) ^ many(char(' \t') | nl) + eof())
-      return Choice(expressions)
+      if len(lines) > 1:
+        return Choice(lines)
+      else:
+        return lines[0] if len(lines) else Choice([])
     return p

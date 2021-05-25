@@ -1,11 +1,10 @@
-from ..astnode import AstNode
+from parsec import generate
+from ..option import SpecSource
 from .. import string
 
-class OptionsShortcut(AstNode):
-  def __repr__(self):
-    return '<OptionsShortcut>'
-
-  def new(args):
-    return OptionsShortcut()
-
-  shortcut = string('options').parsecmap(new)
+def options_shortcut(options):
+  @generate('options shortcut')
+  def p():
+    yield string('options')
+    return list(filter(lambda o: o.source == SpecSource.OPTIONS, options))
+  return p
