@@ -48,21 +48,6 @@ def describe_value(val):
     return val
   return char_descriptions.get(val, f'"{val}" ({hex(ord(val))})')
 
-def fail_with(message):
-  return Parser(lambda _, index: Value.failure(index, message))
-
-def exclude(p: Parser, end: Parser):
-  '''Fails parser p if parser end matches
-  '''
-  @Parser
-  def exclude_parser(text, index):
-    res = end(text, index)
-    if res.status:
-      return Value.failure(index, f'something other than {describe_value(res.value)}')
-    else:
-      return p(text, index)
-  return exclude_parser
-
 any_char = regex(r'.|\n').desc('any char')
 def char(legal=any_char, illegal=None):
   if isinstance(legal, str):
@@ -87,9 +72,22 @@ def char(legal=any_char, illegal=None):
   else:
     return a
 
+def fail_with(message):
+  return Parser(lambda _, index: Value.failure(index, message))
+
+def exclude(p: Parser, excl: Parser):
+  '''Fails parser p if parser excl matches'''
+  @Parser
+  def exclude_parser(text, index):
+    res = excl(text, index)
+    if res.status:
+      return Value.failure(index, f'something other than {describe_value(res.value)}')
+    else:
+      return p(text, index)
+  return exclude_parser
+
 def lookahead(p: Parser):
-  '''Parses without consuming
-  '''
+  '''Parses without consuming'''
   @Parser
   def lookahead_parser(text, index):
     res = p(text, index)
@@ -100,19 +98,19 @@ def lookahead(p: Parser):
   return lookahead_parser
 
 def unit(p: Parser):
-  '''Converts a parser into a single unit, only consumes input if the parser succeeds
-  '''
+  '''Converts a parser into a single unit
+  Only consumes input if the parser succeeds'''
   @Parser
-  def lookahead_parser(text, index):
+  def unit_parser(text, index):
     res = p(text, index)
     if res.status:
       return Value.success(res.index, res.value)
     else:
       return Value.failure(index, res.expected)
-  return lookahead_parser
+  return unit_parser
 
 def string(s):
-    '''Parser a string.'''
+    '''Parses a string.'''
     @Parser
     def string_parser(text, index=0):
         slen = len(s)
