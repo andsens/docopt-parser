@@ -5,13 +5,19 @@ import re
 from .long import Long
 from .short import Short
 from . import optional, string, char, nl, indent, lookahead, whitespaces, eol, fail_with, join_string
+from enum import Enum
+
+class SpecSource(Enum):
+  USAGE = 'usage'
+  OPTIONS = 'options'
 
 class Option(AstNode):
 
-  def __init__(self, short, long, doc1, default, doc2):
+  def __init__(self, short, long, source, doc1, default, doc2):
     super().__init__()
     self.short = short
     self.long = long
+    self.source = source
     self.expects_arg = any([o.arg for o in [short, long] if o is not None])
     self.default = default
     self.doc = ''.join(t for t in [
@@ -23,7 +29,8 @@ class Option(AstNode):
   def __repr__(self):
     return f'''<Option>
   short: {self.indent(self.short) if self.short else 'None'}
-  long: {self.indent(self.long) if self.long else 'None'}
+  long:  {self.indent(self.long) if self.long else 'None'}
+  source:  {self.source.value}
   arg?:    {self.expects_arg}
   default: {self.default}
   doc:     {self.doc}'''
@@ -63,9 +70,9 @@ class Option(AstNode):
       else:
         opt = yield (Short.inline_spec_usage | Long.inline_spec_usage)
       if isinstance(opt, Short):
-        option = Option(opt, None, None, None, None)
+        option = Option(opt, None, SpecSource.USAGE, None, None, None)
       else:
-        option = Option(None, opt, None, None, None)
+        option = Option(None, opt, SpecSource.USAGE, None, None, None)
       ref = OptionRef(option, opt, opt.arg)
       options.append(option)
       return ref
@@ -112,7 +119,7 @@ class Option(AstNode):
           doc1 = yield optional(doc)
           _default = yield optional(default)
           doc2 = yield optional(doc)
-        options.append(Option(short, long, doc1, _default, doc2))
+        options.append(Option(short, long, SpecSource.OPTIONS, doc1, _default, doc2))
         if (yield lookahead(optional(next_option))) is None:
           break
         yield nl + optional(indent)
