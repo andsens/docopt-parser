@@ -20,6 +20,8 @@ class Long(IdentNode):
   def usage_ref(self):
     @generate(f'--{self.name}')
     def p():
+      # The lookahead is to ensure that we don't consume a prefix of another option
+      # e.g. --ab matching --abc
       yield unit(string('--' + self.name) << lookahead(Long.illegal))
       if self.arg is not None:
         return self, (yield (char(' =') >> Argument.arg).desc(f'argument ({self.arg.name})'))
