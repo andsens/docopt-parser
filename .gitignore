@@ -7,3 +7,4 @@ __pycache__/
 /docopt-parser.code-workspace
 /docopt_parser/version.py
 /.hypothesis
+/docopt.py
