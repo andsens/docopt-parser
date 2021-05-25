@@ -17,23 +17,22 @@ def expr(options):
         break
     if len(nodes) > 1:
       return Choice(nodes)
+    elif len(nodes) == 1:
+      return nodes[0]
     else:
-      return nodes[0] if len(nodes) else None
+      return None
   return p
 
 
 class Choice(AstNode):
   def __init__(self, items):
-    if len(items) > 1:
-      new_items = []
-      for item in items:
-        if isinstance(item, Choice):
-          new_items += item.items
-        else:
-          new_items.append(item)
-      self.items = new_items
-    else:
-      self.items = items
+    self.items = []
+    for item in items:
+      # Flatten the list, "a | (b | c)" is the same as "a | b | c"
+      if isinstance(item, Choice):
+        self.items += item.items
+      else:
+        self.items.append(item)
 
   def __repr__(self):
     return f'''<Choice>

@@ -7,7 +7,7 @@ illegal = non_symbol_chars | char(',=-')
 
 # The reference implementation only allows inline specifying long options with arguments.
 # Since supporting short options as well does not introduce any ambiguity I chose to implement it.
-# TODO: Emit a warning that when this additional feature is used
+# TODO: Emit a warning when this additional feature is used
 inline_short_option_spec = (
   unit(char('-') >> char(illegal=illegal)) + optional((char('=') >> argument))
 ).desc('short option (-a)').parsecmap(lambda n: Short(*n))

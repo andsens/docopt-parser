@@ -40,24 +40,22 @@ def seq(options):
         break
     if len(nodes) > 1:
       return Sequence(nodes)
+    elif len(nodes) == 1:
+      return nodes[0]
     else:
-      return nodes[0] if len(nodes) else None
+      return None
   return p
 
 
 class Sequence(AstNode):
   def __init__(self, items):
-    self.items = items
-    if len(items) > 1:
-      new_items = []
-      for item in items:
-        if isinstance(item, Sequence):
-          new_items += item.items
-        else:
-          new_items.append(item)
-      self.items = new_items
-    else:
-      self.items = items
+    self.items = []
+    for item in items:
+      # Flatten the list
+      if isinstance(item, Sequence):
+        self.items += item.items
+      else:
+        self.items.append(item)
 
   def __repr__(self):
     return f'''<Sequence>

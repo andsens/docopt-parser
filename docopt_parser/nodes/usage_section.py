@@ -29,8 +29,10 @@ def section(strict, options):
       yield optional((nl + nl) ^ many(char(' \t') | nl) + eof())
     if len(lines) > 1:
       return Choice(lines)
+    elif len(lines) == 1:
+      return lines[0]
     else:
-      return lines[0] if len(lines) else Choice([])
+      return None
   return p
 
 def usage_line(prog, options):

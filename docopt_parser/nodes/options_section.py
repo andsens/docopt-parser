@@ -34,7 +34,6 @@ def validate_unambiguous_options(options):
     from .. import DocoptParseError
     raise DocoptParseError(', '.join(messages))
 
-
 @generate('short option (-s)')
 def option_line_short():
   argspec = (char(' =') >> argument).desc('argument')
