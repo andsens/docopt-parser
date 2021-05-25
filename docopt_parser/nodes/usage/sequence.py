@@ -3,19 +3,19 @@ from parsec import optional, generate, eof
 from .. import lookahead, either, whitespaces, nl, multiple
 
 def seq(options):
-  from .group import Group
-  from .optional import Optional
+  from .group import group
+  from .optional import optional as _optional
   from .optionsshortcut import options_shortcut
-  from .argumentseparator import ArgumentSeparator
+  from .argumentseparator import arg_separator
   from .optionlist import option_list
-  from ..argument import Argument
-  from .command import Command
+  from ..argument import argument
+  from .command import command
   from .multiple import Multiple
 
   atoms = (
-    Group.group(options) | Optional.optional(options)
+    group(options) | _optional(options)
     | options_shortcut(options) | option_list(options)
-    | Argument.arg | Command.command | ArgumentSeparator.separator
+    | argument | command | arg_separator
   ).desc('any element (cmd, ARG, options, --option, (group), [optional], --)')
 
   @generate('sequence')

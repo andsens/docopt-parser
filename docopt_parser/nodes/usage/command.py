@@ -11,4 +11,4 @@ class Command(IdentNode):
   def __repr__(self):
     return f'''<Command>: {self.name}'''
 
-  command = ident(illegal, starts_with=char(illegal=illegal | char('-'))).parsecmap(lambda n: Command(n))
+command = ident(Command.illegal, starts_with=char(illegal=Command.illegal | char('-'))).parsecmap(lambda n: Command(n))

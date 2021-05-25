@@ -16,16 +16,16 @@ class Argument(IdentNode):
   def new(args):
     return Argument(args)
 
-  wrapped_arg = (char('<') + ident(illegal | char('>')) + char('>')).desc('<arg>').parsecmap(join_string)
+wrapped_arg = (char('<') + ident(Argument.illegal | char('>')) + char('>')).desc('<arg>').parsecmap(join_string)
 
-  @generate('ARG')
-  def uppercase_arg():
-    name_p = many1(char(illegal=Argument.illegal)).parsecmap(join_string).desc('ARG')
-    name = yield lookahead(optional(name_p))
-    if name is not None and name.isupper():
-      name = yield name_p
-    else:
-      yield fail_with('Not an argument')
-    return name
+@generate('ARG')
+def uppercase_arg():
+  name_p = many1(char(illegal=Argument.illegal)).parsecmap(join_string).desc('ARG')
+  name = yield lookahead(optional(name_p))
+  if name is not None and name.isupper():
+    name = yield name_p
+  else:
+    yield fail_with('Not an argument')
+  return name
 
-  arg = (wrapped_arg ^ uppercase_arg).desc('argument').parsecmap(lambda n: Argument(n))
+argument = (wrapped_arg ^ uppercase_arg).desc('argument').parsecmap(lambda n: Argument(n))

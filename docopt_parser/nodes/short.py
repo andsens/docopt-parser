@@ -1,7 +1,7 @@
 from .identnode import IdentNode
 from . import non_symbol_chars, char, string, lookahead, unit
 from parsec import generate, optional
-from .argument import Argument
+from .argument import argument
 
 class Short(IdentNode):
 
@@ -24,7 +24,7 @@ class Short(IdentNode):
       else:
         yield string('-' + self.name).desc(f'-{self.name}')
       if self.arg is not None:
-        return self, (yield (optional(char(' =')) >> Argument.arg).desc(f'argument ({self.arg.name})'))
+        return self, (yield (optional(char(' =')) >> argument).desc(f'argument ({self.arg.name})'))
       return self, None
     return p
 
@@ -32,22 +32,22 @@ class Short(IdentNode):
   # Since supporting short options as well does not introduce any ambiguity I chose to implement it.
   # TODO: Emit a warning that when this additional feature is used
   inline_spec_usage = (
-    unit(char('-') >> char(illegal=illegal)) + optional((char('=') >> Argument.arg))
+    unit(char('-') >> char(illegal=illegal)) + optional((char('=') >> argument))
   ).desc('short option (-a)').parsecmap(lambda n: Short(*n))
 
   # Usage parser without the leading "-" to allow parsing "-abc" style option specs
   shorts_list_inline_spec_usage = (
-    char(illegal=illegal) + optional((char('=') >> Argument.arg))
+    char(illegal=illegal) + optional((char('=') >> argument))
   ).desc('short option (-a)').parsecmap(lambda n: Short(*n))
 
   @generate('short option (-s)')
   def options():
-    argument = (char(' =') >> Argument.arg).desc('argument')
+    argspec = (char(' =') >> argument).desc('argument')
     yield string('-')
     name = yield char(illegal=Short.illegal)
     if (yield optional(lookahead(char('=')))) is not None:
       # Definitely an argument, make sure we fail with "argument expected"
-      arg = yield argument
+      arg = yield argspec
     else:
-      arg = yield optional(argument)
+      arg = yield optional(argspec)
     return Short(name, arg)

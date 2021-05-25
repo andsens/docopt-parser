@@ -24,9 +24,11 @@ def option_sections(strict=True):
   @generate('options: sections')
   def p():
     opts = []
-    yield no_options_text
-    while (yield lookahead(optional(re_options_section))) is not None:
-      opts.extend((yield Option.section(strict) << no_options_text))
+    while True:
+      yield no_options_text
+      if (yield lookahead(optional(re_options_section))) is None:
+        break
+      opts.extend((yield Option.section(strict)))
     validate_unambiguous_options(opts)
     return opts
   return p
