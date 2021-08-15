@@ -1,7 +1,7 @@
 import re
 from parsec import eof, generate, many, many1, optional, regex
 from . import char, eol, fail_with, indent, join_string, lookahead, nl, whitespaces, string
-from .option import Option, SpecSource
+from .option import Option
 from .argument import argument
 from .short import Short, illegal as short_illegal
 from .long import Long, illegal as long_illegal
@@ -98,7 +98,7 @@ def section(strict):
         doc1 = yield optional(doc)
         _default = yield optional(default)
         doc2 = yield optional(doc)
-      options.append(Option(short, long, SpecSource.OPTIONS, doc1, _default, doc2))
+      options.append(Option(short, long, True, doc1, _default, doc2))
       if (yield lookahead(optional(next_option))) is None:
         break
       yield nl + optional(indent)

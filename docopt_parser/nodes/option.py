@@ -3,7 +3,6 @@ from .astnode import AstNode
 from parsec import generate
 from .long import inline_long_option_spec
 from .short import Short, inline_short_option_spec, shorts_list_inline_short_option_spec
-from enum import Enum
 
 # inline_option_spec: Parses an option that is specified inline in the usage section and adds it to the options list
 def inline_option_spec(options, shorts_list):
@@ -14,25 +13,21 @@ def inline_option_spec(options, shorts_list):
     else:
       opt = yield (inline_short_option_spec | inline_long_option_spec)
     if isinstance(opt, Short):
-      option = Option(opt, None, SpecSource.USAGE, None, None, None)
+      option = Option(opt, None, False, None, None, None)
     else:
-      option = Option(None, opt, SpecSource.USAGE, None, None, None)
+      option = Option(None, opt, False, None, None, None)
     ref = OptionRef(option, opt, opt.arg)
     options.append(option)
     return ref
   return p
 
-class SpecSource(Enum):
-  USAGE = 'usage'
-  OPTIONS = 'options'
-
 class Option(AstNode):
 
-  def __init__(self, short, long, source, doc1, default, doc2):
+  def __init__(self, short, long, shortcut, doc1, default, doc2):
     super().__init__()
     self.short = short
     self.long = long
-    self.source = source
+    self.shortcut = shortcut
     self.expects_arg = any([o.arg for o in [short, long] if o is not None])
     self.default = default
     self.doc = ''.join(t for t in [
@@ -45,10 +40,10 @@ class Option(AstNode):
     return f'''<Option>
   short: {self.indent(self.short) if self.short else 'None'}
   long:  {self.indent(self.long) if self.long else 'None'}
-  source:  {self.source.value}
-  arg?:    {self.expects_arg}
-  default: {self.default}
-  doc:     {self.doc}'''
+  shortcut: {self.shortcut}
+  arg?:     {self.expects_arg}
+  default:  {self.default}
+  doc:      {self.doc}'''
 
   # usage_ref: Parse references to this option in the usage section
   # shorts_list=True modifies the parser to parse references from the "-abc" short option list syntax
@@ -62,6 +57,9 @@ class Option(AstNode):
 
   def _usage_ref(self, shorts_list):
     def to_ref(tup):
+      # Once an option has been referenced from the usage section directly
+      # it is no longer accessible via the "options" shortcut
+      self.shortcut = False
       ref, arg = tup
       return OptionRef(self, ref, arg)
     if self.short is None:
