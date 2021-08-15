@@ -22,5 +22,5 @@ class Optional(AstNode):
     self.items = items
 
   def __repr__(self):
-    return f'''<Optional>
+    return f'''<Optional>{self.repeatable_suffix}
 {self.indent(self.items)}'''

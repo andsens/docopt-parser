@@ -9,6 +9,6 @@ class Command(IdentNode):
     self.name = name
 
   def __repr__(self):
-    return f'''<Command>: {self.name}'''
+    return f'''<Command>{self.repeatable_suffix}: {self.name}'''
 
 command = ident(illegal, starts_with=char(illegal=illegal | char('-'))).parsecmap(lambda n: Command(n))

@@ -18,5 +18,5 @@ class OptionsShortcut(Optional):
     return list(filter(lambda o: o.shortcut, self.options))
 
   def __repr__(self):
-    return f'''<OptionsShortcut>
+    return f'''<OptionsShortcut>{self.repeatable_suffix}
 {self.indent(self.items)}'''

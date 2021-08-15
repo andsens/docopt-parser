@@ -7,6 +7,6 @@ class OptionRef(AstNode):
     self.arg = arg
 
   def __repr__(self):
-    return f'''<OptionRef>
+    return f'''<OptionRef>{self.repeatable_suffix}
   {self.indent(self.ref)}
   refarg: {self.arg}'''

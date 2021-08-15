@@ -5,4 +5,4 @@ arg_separator = unit(string('--') << lookahead(non_symbol_chars)).parsecmap(lamb
 
 class ArgumentSeparator(AstNode):
   def __repr__(self):
-    return '<ArgumentSeparator>'
+    return f'<ArgumentSeparator>{self.repeatable_suffix}'

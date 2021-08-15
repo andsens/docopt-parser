@@ -35,5 +35,5 @@ class Choice(AstNode):
         self.items.append(item)
 
   def __repr__(self):
-    return f'''<Choice>
+    return f'''<Choice>{self.repeatable_suffix}
 {self.indent(self.items)}'''

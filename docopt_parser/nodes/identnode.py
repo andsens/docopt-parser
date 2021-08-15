@@ -14,7 +14,6 @@ def ident(illegal, starts_with=None):
 
 class IdentNode(AstNode):
   def __init__(self, ident):
-    super().__init__()
     self.ident = ident
 
   def __hash__(self):

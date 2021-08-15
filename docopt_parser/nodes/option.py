@@ -37,7 +37,7 @@ class Option(AstNode):
     ])
 
   def __repr__(self):
-    return f'''<Option>
+    return f'''<Option>{self.repeatable_suffix}
   short: {self.indent(self.short) if self.short else 'None'}
   long:  {self.indent(self.long) if self.long else 'None'}
   shortcut: {self.shortcut}

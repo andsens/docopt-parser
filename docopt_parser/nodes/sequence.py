@@ -1,6 +1,6 @@
 from .astnode import AstNode
 from parsec import optional, generate, eof
-from . import lookahead, either, whitespaces, nl, multiple
+from . import lookahead, either, whitespaces, nl, repeatable
 
 def seq(options):
   from .group import group
@@ -10,7 +10,6 @@ def seq(options):
   from .optionlist import option_list
   from .argument import argument
   from .command import command
-  from .multiple import Multiple
 
   atoms = (
     group(options) | _optional(options)
@@ -30,9 +29,9 @@ def seq(options):
         if atom is not None:
           nodes.append(atom)
       ws = yield whitespaces
-      multi = yield optional(multiple)
+      multi = yield optional(repeatable)
       if multi == '...':
-        nodes[-1] = Multiple(nodes[-1])
+        nodes[-1].repeatable = True
         ws = yield whitespaces
       if ws is None:
         break
@@ -58,5 +57,5 @@ class Sequence(AstNode):
         self.items.append(item)
 
   def __repr__(self):
-    return f'''<Sequence>
+    return f'''<Sequence>{self.repeatable_suffix}
 {self.indent(self.items)}'''
