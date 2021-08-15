@@ -1,5 +1,5 @@
 from .optionref import OptionRef
-from .astnode import AstNode
+from .identnode import IdentNode
 from parsec import generate
 from .long import inline_long_option_spec
 from .short import Short, inline_short_option_spec, shorts_list_inline_short_option_spec
@@ -17,23 +17,23 @@ def inline_option_spec(options, shorts_list):
     else:
       option = Option(None, opt, False, None, None, None)
     ref = OptionRef(option, opt, opt.arg)
-    options.append(option)
+    options.add(option)
     return ref
   return p
 
-class Option(AstNode):
+class Option(IdentNode):
 
   def __init__(self, short, long, shortcut, doc1, default, doc2):
-    super().__init__()
+    super().__init__(long.ident if long else short.ident)
     self.short = short
     self.long = long
     self.shortcut = shortcut
     self.expects_arg = any([o.arg for o in [short, long] if o is not None])
     self.default = default
     self.doc = ''.join(t for t in [
-      '' if doc1 is None else doc1,
-      '' if default is None else f'[default: {default}]',
-      '' if doc2 is None else doc2,
+      doc1 or '',
+      default or f'[default: {default}]',
+      doc2 or '',
     ])
 
   def __repr__(self):

@@ -1,7 +1,8 @@
-from .astnode import AstNode
+from .identnode import IdentNode
 
-class OptionRef(AstNode):
+class OptionRef(IdentNode):
   def __init__(self, option, ref, arg):
+    super().__init__(option.ident)
     self.option = option
     self.ref = ref
     self.arg = arg

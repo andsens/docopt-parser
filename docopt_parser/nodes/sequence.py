@@ -48,13 +48,14 @@ def seq(options):
 
 class Sequence(AstNode):
   def __init__(self, items):
-    self.items = []
+    _items = []
     for item in items:
       # Flatten the list
       if isinstance(item, Sequence):
-        self.items += item.items
+        _items += item.items
       else:
-        self.items.append(item)
+        _items.append(item)
+    super().__init__(_items)
 
   def __repr__(self):
     return f'''<Sequence>{self.repeatable_suffix}

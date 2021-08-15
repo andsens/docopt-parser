@@ -4,6 +4,11 @@ from . import string, whitespaces1, whitespaces, lookahead, nl, non_symbol_chars
 from .identnode import ident
 import re
 from .choice import expr, Choice
+from .option import Option
+from .optionref import OptionRef
+import logging
+
+log = logging.getLogger(__name__)
 
 no_usage_text = many(char(illegal=regex(r'usage:', re.I))).desc('Text').parsecmap(join_string)
 def usage_section(options, strict=True):
@@ -28,11 +33,13 @@ def section(strict, options):
     else:
       yield optional((nl + nl) ^ many(char(' \t') | nl) + eof())
     if len(lines) > 1:
-      return Choice(lines)
+      root = Choice(lines)
     elif len(lines) == 1:
-      return lines[0]
+      root = lines[0]
     else:
-      return None
+      root = None
+    validate_ununused_options(root, options)
+    return root
   return p
 
 def usage_line(prog, options):
@@ -46,3 +53,20 @@ def usage_line(prog, options):
       e = Sequence([])
     return e
   return p
+
+def validate_ununused_options(node, all_options):
+  if node is None:
+    return
+
+  def get_opts(options, node):
+    if isinstance(node, Option):
+      options.add(node)
+    if isinstance(node, OptionRef):
+      options.add(node.ref)
+    return options
+  used_options = node.reduce(get_opts, set())
+  unused_options = all_options - used_options
+  if len(unused_options) > 0:
+    unused_list = '\n'.join(map(lambda o: f'* {o.ident}', unused_options))
+    log.warn(f'''{len(unused_options)} options are not referenced from the usage section:
+{unused_list}''')

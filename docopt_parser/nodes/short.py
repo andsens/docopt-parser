@@ -26,7 +26,7 @@ class Short(IdentNode):
     self.arg = arg
 
   def __repr__(self):
-    return f'''-{self.name}
+    return f'''-{self.name}{self.repeatable_suffix}
   arg: {self.arg}'''
 
   def _usage_ref(self, shorts_list):

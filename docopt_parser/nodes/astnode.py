@@ -1,16 +1,18 @@
+from .astleaf import AstLeaf
 
-class AstNode(object):
-  repeatable = False
+class AstNode(AstLeaf):
+  def __init__(self, items):
+    self.items = items
 
-  def indent(self, node, lvl=1):
-    if isinstance(node, list):
-      lines = '\n'.join(map(repr, node)).split('\n')
-      return '\n'.join(['  ' * lvl + line for line in lines])
+  def reduce(self, function, initializer):
+    items = iter(self.items)
+    if initializer is None:
+      value = next(items)
     else:
-      lines = repr(node).split('\n')
-      lines = [lines[0]] + ['  ' * lvl + line for line in lines[1:]]
-      return '\n'.join(lines)
-
-  @property
-  def repeatable_suffix(self):
-    return ' (repeatable)' if self.repeatable else ''
+      value = initializer
+    for item in items:
+      if isinstance(item, AstNode):
+        value = function(value, item.reduce(function, value))
+      else:
+        value = function(value, item)
+    return value

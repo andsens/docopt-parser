@@ -19,7 +19,7 @@ def options_sections(strict=True):
         break
       options.extend((yield section(strict)))
     validate_unambiguous_options(options)
-    return options
+    return set(options)
   return p
 
 def validate_unambiguous_options(options):

@@ -26,13 +26,14 @@ def expr(options):
 
 class Choice(AstNode):
   def __init__(self, items):
-    self.items = []
+    _items = []
     for item in items:
       # Flatten the list, "a | (b | c)" is the same as "a | b | c"
       if isinstance(item, Choice):
-        self.items += item.items
+        _items += item.items
       else:
-        self.items.append(item)
+        _items.append(item)
+    super().__init__(_items)
 
   def __repr__(self):
     return f'''<Choice>{self.repeatable_suffix}

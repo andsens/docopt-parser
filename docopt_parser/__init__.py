@@ -27,7 +27,6 @@ def parse_strict(txt):
   try:
     options = options_sections(strict=True).parse_strict(txt)
     usage = usage_section(options, strict=True).parse_strict(txt)
-    # TODO: Warn about unreferenced options
     # TODO: Mark multi elements as such
     return usage
   except ParseError as e:

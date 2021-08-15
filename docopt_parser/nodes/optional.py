@@ -19,7 +19,7 @@ def optional(options):
 
 class Optional(AstNode):
   def __init__(self, items):
-    self.items = items
+    super().__init__(items)
 
   def __repr__(self):
     return f'''<Optional>{self.repeatable_suffix}
