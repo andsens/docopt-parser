@@ -20,3 +20,12 @@ class OptionsShortcut(Optional):
   def __repr__(self):
     return f'''<OptionsShortcut>{self.repeatable_suffix}
 {self.indent(self.items)}'''
+
+  @property
+  def multiple(self):
+    return all(map(lambda i: i.multuple, self.items))
+
+  @multiple.setter
+  def multiple(self, value):
+    for item in self.items:
+      item.multiple = value

@@ -11,3 +11,11 @@ class OptionRef(IdentNode):
     return f'''<OptionRef>{self.repeatable_suffix}
   {self.indent(self.ref)}
   refarg: {self.arg}'''
+
+  @property
+  def multiple(self):
+    return self.option.multiple
+
+  @multiple.setter
+  def multiple(self, value):
+    self.option.multiple = value

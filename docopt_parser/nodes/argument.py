@@ -3,12 +3,14 @@ from parsec import generate, many1, optional
 from . import non_symbol_chars, char, join_string, lookahead, fail_with
 
 class Argument(IdentNode):
+  multiple = False
+
   def __init__(self, name):
     super().__init__(name)
     self.name = name
 
   def __repr__(self):
-    return f'''<Argument>: {self.name}'''
+    return f'''<Argument{self.multiple_suffix}>: {self.name}'''
 
 illegal = non_symbol_chars
 

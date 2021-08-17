@@ -22,6 +22,7 @@ def inline_option_spec(options, shorts_list):
   return p
 
 class Option(IdentNode):
+  multiple = False
 
   def __init__(self, short, long, shortcut, doc1, default, doc2):
     super().__init__(long.ident if long else short.ident)
@@ -37,7 +38,7 @@ class Option(IdentNode):
     ])
 
   def __repr__(self):
-    return f'''<Option>{self.repeatable_suffix}
+    return f'''<Option{self.multiple_suffix}>{self.repeatable_suffix}
   short: {self.indent(self.short) if self.short else 'None'}
   long:  {self.indent(self.long) if self.long else 'None'}
   shortcut: {self.shortcut}

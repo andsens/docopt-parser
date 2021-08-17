@@ -14,3 +14,7 @@ class AstLeaf(object):
   @property
   def repeatable_suffix(self):
     return ' (repeatable)' if self.repeatable else ''
+
+  @property
+  def multiple_suffix(self):
+    return '*' if hasattr(self, 'multiple') and self.multiple else ''
