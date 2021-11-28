@@ -8,3 +8,6 @@ class ArgumentSeparator(AstLeaf):
 
   def __repr__(self):
     return f'<ArgumentSeparator{self.multiple_suffix}>{self.repeatable_suffix}'
+
+  def __iter__(self):
+    yield '--'

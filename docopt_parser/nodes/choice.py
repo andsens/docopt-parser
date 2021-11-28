@@ -3,25 +3,22 @@ from . import either, whitespaces
 from .astnode import AstNode
 
 
-def expr(options):
+@generate('expression')
+def expr():
   from .sequence import seq
-
-  @generate('expression')
-  def p():
-    nodes = []
-    while True:
-      sequence = yield seq(options)
-      if sequence is not None:
-        nodes.append(sequence)
-      if (yield optional(either << whitespaces)) is None:
-        break
-    if len(nodes) > 1:
-      return Choice(nodes)
-    elif len(nodes) == 1:
-      return nodes[0]
-    else:
-      return None
-  return p
+  nodes = []
+  while True:
+    sequence = yield seq
+    if sequence is not None:
+      nodes.append(sequence)
+    if (yield optional(either << whitespaces)) is None:
+      break
+  if len(nodes) > 1:
+    return Choice(nodes)
+  elif len(nodes) == 1:
+    return nodes[0]
+  else:
+    return None
 
 
 class Choice(AstNode):
@@ -38,3 +35,8 @@ class Choice(AstNode):
   def __repr__(self):
     return f'''<Choice>{self.repeatable_suffix}
 {self.indent(self.items)}'''
+
+  def __iter__(self):
+    yield 'repeatable', self.repeatable
+    yield 'type', 'choice'
+    yield 'items', list(map(dict, self.items))

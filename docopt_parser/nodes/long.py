@@ -1,6 +1,6 @@
 from .identnode import IdentNode, ident
-from . import non_symbol_chars, char, string, lookahead, unit
-from parsec import generate, optional
+from . import non_symbol_chars, char, string, unit
+from parsec import optional
 from .argument import argument
 
 
@@ -21,14 +21,7 @@ class Long(IdentNode):
     return f'''--{self.name}{self.repeatable_suffix}
   arg: {self.arg}'''
 
-  @property
-  def usage_ref(self):
-    @generate(f'--{self.name}')
-    def p():
-      # The lookahead is to ensure that we don't consume a prefix of another option
-      # e.g. --ab matching --abc
-      yield unit(string('--' + self.name) << lookahead(illegal))
-      if self.arg is not None:
-        return self, (yield (char(' =') >> argument).desc(f'argument ({self.arg.name})'))
-      return self, None
-    return p
+  def __iter__(self):
+    yield 'name', self.name
+    yield 'repeatable', self.repeatable
+    yield 'arg', dict(self.arg) if self.arg else None

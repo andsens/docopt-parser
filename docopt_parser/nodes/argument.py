@@ -12,6 +12,11 @@ class Argument(IdentNode):
   def __repr__(self):
     return f'''<Argument{self.multiple_suffix}>: {self.name}'''
 
+  def __iter__(self):
+    yield 'name', self.name
+    yield 'multiple', self.multiple
+
+
 illegal = non_symbol_chars
 
 wrapped_arg = (char('<') + ident(illegal | char('>')) + char('>')).desc('<arg>').parsecmap(join_string)

@@ -12,6 +12,12 @@ class OptionRef(IdentNode):
   {self.indent(self.ref)}
   refarg: {self.arg}'''
 
+  def __iter__(self):
+    yield 'type', 'optionref'
+    yield 'repeatable', self.repeatable
+    yield 'arg', self.arg
+    yield 'ref', self.ref
+
   @property
   def multiple(self):
     return self.option.multiple

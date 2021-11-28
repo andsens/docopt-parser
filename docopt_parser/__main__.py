@@ -4,6 +4,7 @@ import os
 import docopt
 import logging
 import termcolor
+import yaml
 from docopt_parser import DocoptParseError, parse_strict, parse_partial, \
   __doc__ as pkg_doc, __name__ as root_name, __version__
 
@@ -11,12 +12,13 @@ log = logging.getLogger(root_name)
 
 __doc__ = pkg_doc + """
 Usage:
-  docopt-parser [-S] ast
+  docopt-parser [-Sy] ast
   docopt-parser -h
   docopt-parser --version
 
 Options:
   -S         Disable strict parsing and show the partial AST
+  -y --yaml  Output the AST in YAML format
   --help -h  Show this help screen
   --version  Show the docopt.sh version
 """
@@ -28,13 +30,13 @@ def docopt_parser(params):
     if params['-S']:
       ast, parsed_doc = parse_partial(doc)
       if params['ast']:
-        sys.stdout.write(repr(ast) + '\n')
+        sys.stdout.write(yaml.dump(dict(ast), sort_keys=False) if params['--yaml'] else repr(ast) + '\n')
       if parsed_doc != doc:
         ast = parse_strict(doc)
     else:
       ast = parse_strict(doc)
       if params['ast']:
-        sys.stdout.write(repr(ast) + '\n')
+        sys.stdout.write(yaml.dump(dict(ast), sort_keys=False) if params['--yaml'] else repr(ast) + '\n')
   except DocoptParseError as e:
     log.error(str(e))
     sys.exit(e.exit_code)

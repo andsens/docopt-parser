@@ -1,17 +1,11 @@
-from parsec import generate
 from .optional import Optional
 from . import string
 
-def options_shortcut(options):
-  @generate('options shortcut')
-  def p():
-    yield string('options')
-    return OptionsShortcut(options)
-  return p
+options_shortcut = string('options').desc('options shortcut').parsecmap(lambda s: OptionsShortcut())
 
 class OptionsShortcut(Optional):
-  def __init__(self, options):
-    self.options = options
+  def __init__(self):
+    self.options = []
 
   @property
   def items(self):
@@ -20,6 +14,11 @@ class OptionsShortcut(Optional):
   def __repr__(self):
     return f'''<OptionsShortcut>{self.repeatable_suffix}
 {self.indent(self.items)}'''
+
+  def __iter__(self):
+    yield 'type', 'optionsshortcut'
+    yield 'repeatable', self.repeatable
+    yield 'items', self.items
 
   @property
   def multiple(self):

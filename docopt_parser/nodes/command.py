@@ -13,4 +13,8 @@ class Command(IdentNode):
   def __repr__(self):
     return f'''<Command{self.multiple_suffix}>{self.repeatable_suffix}: {self.name}'''
 
+  def __iter__(self):
+    yield 'name', self.name
+    yield 'multiple', self.multiple
+
 command = ident(illegal, starts_with=char(illegal=illegal | char('-'))).parsecmap(lambda n: Command(n))

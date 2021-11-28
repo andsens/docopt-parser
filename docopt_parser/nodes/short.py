@@ -1,6 +1,6 @@
 from .identnode import IdentNode
-from . import non_symbol_chars, char, string, unit
-from parsec import generate, optional
+from . import non_symbol_chars, char, unit
+from parsec import optional
 from .argument import argument
 
 illegal = non_symbol_chars | char(',=-')
@@ -13,7 +13,7 @@ inline_short_option_spec = (
 ).desc('short option (-a)').parsecmap(lambda n: Short(*n))
 
 # Usage parser without the leading "-" to allow parsing "-abc" style option specs
-shorts_list_inline_short_option_spec = (
+inline_shortlist_short_option_spec = (
   char(illegal=illegal) + optional((char('=') >> argument))
 ).desc('short option (-a)').parsecmap(lambda n: Short(*n))
 
@@ -29,14 +29,7 @@ class Short(IdentNode):
     return f'''-{self.name}{self.repeatable_suffix}
   arg: {self.arg}'''
 
-  def _usage_ref(self, shorts_list):
-    @generate(f'-{self.name}')
-    def p():
-      if shorts_list:
-        yield string(self.name).desc(f'-{self.name}')
-      else:
-        yield string('-' + self.name).desc(f'-{self.name}')
-      if self.arg is not None:
-        return self, (yield (optional(char(' =')) >> argument).desc(f'argument ({self.arg.name})'))
-      return self, None
-    return p
+  def __iter__(self):
+    yield 'name', self.name
+    yield 'repeatable', self.repeatable
+    yield 'arg', dict(self.arg) if self.arg else None

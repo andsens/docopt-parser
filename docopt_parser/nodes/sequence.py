@@ -2,7 +2,8 @@ from .astnode import AstNode
 from parsec import optional, generate, eof
 from . import lookahead, either, whitespaces, nl, repeatable
 
-def seq(options):
+@generate('sequence')
+def seq():
   from .group import group
   from .optional import optional as _optional
   from .options_shortcut import options_shortcut
@@ -12,38 +13,35 @@ def seq(options):
   from .command import command
 
   atoms = (
-    group(options) | _optional(options)
-    | options_shortcut(options) | option_list(options)
-    | argument | command | arg_separator
+    group | _optional
+    | options_shortcut | arg_separator | option_list
+    | argument | command
   ).desc('any element (cmd, ARG, options, --option, (group), [optional], --)')
 
-  @generate('sequence')
-  def p():
-    nodes = []
-    while True:
-      atom = yield atoms
-      if isinstance(atom, list):
-        # We're dealing with an optionlist or shortcut, append all children to the sequence
-        nodes.extend(atom)
-      else:
-        if atom is not None:
-          nodes.append(atom)
-      ws = yield whitespaces
-      multi = yield optional(repeatable)
-      if multi == '...':
-        nodes[-1].repeatable = True
-        ws = yield whitespaces
-      if ws is None:
-        break
-      if (yield lookahead(optional(either | nl | eof()))) is not None:
-        break
-    if len(nodes) > 1:
-      return Sequence(nodes)
-    elif len(nodes) == 1:
-      return nodes[0]
+  nodes = []
+  while True:
+    atom = yield atoms
+    if isinstance(atom, list):
+      # We're dealing with an optionlist or shortcut, append all children to the sequence
+      nodes.extend(atom)
     else:
-      return None
-  return p
+      if atom is not None:
+        nodes.append(atom)
+    ws = yield whitespaces
+    multi = yield optional(repeatable)
+    if multi == '...':
+      nodes[-1].repeatable = True
+      ws = yield whitespaces
+    if ws is None:
+      break
+    if (yield lookahead(optional(either | nl | eof()))) is not None:
+      break
+  if len(nodes) > 1:
+    return Sequence(nodes)
+  elif len(nodes) == 1:
+    return nodes[0]
+  else:
+    return None
 
 
 class Sequence(AstNode):
@@ -60,3 +58,8 @@ class Sequence(AstNode):
   def __repr__(self):
     return f'''<Sequence>{self.repeatable_suffix}
 {self.indent(self.items)}'''
+
+  def __iter__(self):
+    yield 'type', 'sequence'
+    yield 'repeatable', self.repeatable
+    yield 'items', list(map(dict, self.items))

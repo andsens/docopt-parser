@@ -1,0 +1,13 @@
+---
+Parses just fine because of https://github.com/docopt/docopt/blob/20b9c4ffec71d17cee9fd963238c8ec240905b65/docopt.py#L473
+Usage:
+  )prog(
+---
+Parses just fine because of https://github.com/docopt/docopt/blob/20b9c4ffec71d17cee9fd963238c8ec240905b65/docopt.py#L473
+Usage:
+  prog a ) | ( prog b
+---
+"$ prog -aaa" returns {a: 1}
+Usage:
+  prog -a...
+  prog -a

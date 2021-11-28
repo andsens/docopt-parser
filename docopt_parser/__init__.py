@@ -2,8 +2,7 @@
 docopt-parser - A parsing library for the docopt helptext
 """
 from parsec import ParseError
-from .nodes.usage_section import usage_section
-from .nodes.options_section import options_sections
+from .nodes.doc import doc
 
 __all__ = ['docopt_parser']
 try:
@@ -25,8 +24,7 @@ def explain_error(e: ParseError, text: str):
 
 def parse_strict(txt):
   try:
-    options = options_sections(strict=True).parse_strict(txt)
-    usage = usage_section(options, strict=True).parse_strict(txt)
+    usage = doc(strict=True).parse_strict(txt)
     # TODO: Mark multi elements as such
     return usage
   except ParseError as e:
@@ -34,8 +32,7 @@ def parse_strict(txt):
 
 def parse_partial(txt):
   try:
-    options, _ = options_sections(strict=False).parse_partial(txt)
-    usage, parsed_doc = usage_section(options, strict=False).parse_partial(txt)
+    usage, parsed_doc = doc(strict=False).parse_partial(txt)
     return usage, parsed_doc
   except ParseError as e:
     raise DocoptParseError(explain_error(e, txt)) from e
