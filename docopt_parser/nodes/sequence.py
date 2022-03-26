@@ -1,9 +1,11 @@
+from typing import Generator, Iterator, Union
+from .astleaf import AstLeaf
 from .astnode import AstNode
-from parsec import optional, generate, eof
+from parsec import Parser, optional, generate, eof
 from . import lookahead, either, whitespaces, nl, repeatable
 
 @generate('sequence')
-def seq():
+def seq() -> Generator[Parser, Parser, Union[AstLeaf, None]]:
   from .group import group
   from .optional import optional as _optional
   from .options_shortcut import options_shortcut
@@ -45,7 +47,7 @@ def seq():
 
 
 class Sequence(AstNode):
-  def __init__(self, items):
+  def __init__(self, items: list[AstLeaf]):
     _items = []
     for item in items:
       # Flatten the list
@@ -55,11 +57,11 @@ class Sequence(AstNode):
         _items.append(item)
     super().__init__(_items)
 
-  def __repr__(self):
+  def __repr__(self) -> str:
     return f'''<Sequence>{self.repeatable_suffix}
 {self.indent(self.items)}'''
 
-  def __iter__(self):
+  def __iter__(self) -> Iterator[tuple[str, Union[str, bool, list[dict]]]]:
     yield 'type', 'sequence'
     yield 'repeatable', self.repeatable
     yield 'items', list(map(dict, self.items))

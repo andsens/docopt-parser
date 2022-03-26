@@ -1,3 +1,4 @@
+from typing import Iterator, Union
 from .identnode import IdentNode
 from . import non_symbol_chars, char, unit
 from parsec import optional
@@ -19,17 +20,18 @@ inline_shortlist_short_option_spec = (
 
 
 class Short(IdentNode):
+  arg: str
 
-  def __init__(self, name, arg):
+  def __init__(self, name: str, arg: str):
     super().__init__(f'-{name}')
     self.name = name
     self.arg = arg
 
-  def __repr__(self):
+  def __repr__(self) -> str:
     return f'''-{self.name}{self.repeatable_suffix}
   arg: {self.arg}'''
 
-  def __iter__(self):
+  def __iter__(self) -> Iterator[tuple[str, Union[str, bool]]]:
     yield 'name', self.name
     yield 'repeatable', self.repeatable
     yield 'arg', dict(self.arg) if self.arg else None

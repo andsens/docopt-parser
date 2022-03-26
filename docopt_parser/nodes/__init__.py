@@ -1,3 +1,4 @@
+from typing import TypeVar, Union
 from parsec import Parser, Value, one_of, eof, many1, optional, regex
 
 # TODO:
@@ -10,7 +11,7 @@ def splat(constr):
 def unsplat(constr):
   return lambda *args: constr(args)
 
-def flatten(arg):
+def flatten(arg: Union[tuple, list]) -> Union[tuple, list]:
   if not isinstance(arg, (tuple, list)):
     from .. import DocoptParseError
     raise DocoptParseError('flatten(arg): argument not a tuple or list')
@@ -22,12 +23,13 @@ def flatten(arg):
       t.append(item)
   return type(arg)(t)
 
-def debug(arg):
+T = TypeVar('T')
+def debug(arg: T) -> T:
   import sys
   sys.stderr.write('{}\n'.format(arg))
   return arg
 
-def join_string(res):
+def join_string(res: Union[list, tuple, str]) -> str:
   flat = ''
   if isinstance(res, list) or isinstance(res, tuple):
     for item in res:
@@ -43,13 +45,13 @@ char_descriptions = {
   '|': '<pipe> (|)'
 }
 
-def describe_value(val):
+def describe_value(val: str) -> str:
   if len(val) > 1:
     return val
   return char_descriptions.get(val, f'"{val}" ({hex(ord(val))})')
 
 any_char = regex(r'.|\n').desc('any char')
-def char(legal=any_char, illegal=None):
+def char(legal: Union[str, Parser] = any_char, illegal: Union[str, Parser, None] = None) -> Parser:
   if isinstance(legal, str):
     desc = ''
     if len(legal) > 1:
@@ -72,10 +74,10 @@ def char(legal=any_char, illegal=None):
   else:
     return a
 
-def fail_with(message):
+def fail_with(message: str) -> Parser:
   return Parser(lambda _, index: Value.failure(index, message))
 
-def exclude(p: Parser, excl: Parser):
+def exclude(p: Parser, excl: Parser) -> Parser:
   '''Fails parser p if parser excl matches'''
   @Parser
   def exclude_parser(text, index):
@@ -86,7 +88,7 @@ def exclude(p: Parser, excl: Parser):
       return p(text, index)
   return exclude_parser
 
-def lookahead(p: Parser):
+def lookahead(p: Parser) -> Parser:
   '''Parses without consuming'''
   @Parser
   def lookahead_parser(text, index):
@@ -97,7 +99,7 @@ def lookahead(p: Parser):
       return Value.failure(index, res.expected)
   return lookahead_parser
 
-def unit(p: Parser):
+def unit(p: Parser) -> Parser:
   '''Converts a parser into a single unit
   Only consumes input if the parser succeeds'''
   @Parser
@@ -109,7 +111,7 @@ def unit(p: Parser):
       return Value.failure(index, res.expected)
   return unit_parser
 
-def string(s):
+def string(s: str) -> Parser:
     '''Parses a string.'''
     @Parser
     def string_parser(text, index=0):

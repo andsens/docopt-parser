@@ -8,13 +8,14 @@
     // Update 'VARIANT' to pick a Python version. Rebuild the container
     // if it already exists to update. Available variants: 3, 3.6, 3.7, 3.8
     "args": {
-      "VARIANT": "3"
+      "VARIANT": "3.10"
     }
   },
   // Set *default* container specific settings.json values on container create.
   "settings": {
-    "python.pythonPath": "/usr/local/bin/python3.8",
+    "python.pythonPath": "/usr/local/bin/python3.10",
     "python.linting.enabled": true,
+    "python.linting.flake8Path": "/usr/local/py-utils/bin/flake8",
     "python.linting.flake8Enabled": true,
     "python.linting.flake8Args": [
       "--config=.flake8"
@@ -34,7 +35,7 @@
     "asciidoctor.asciidoctor-vscode",
     "me-dutour-mathieu.vscode-github-actions"
   ],
-  "postCreateCommand": "pip --disable-pip-version-check --no-cache-dir install flit && FLIT_ROOT_INSTALL=1 flit install --deps develop",
+  "postCreateCommand": "pip --disable-pip-version-check --no-cache-dir install poetry && poetry install",
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
   // Uncomment to connect as a non-root user. See https://aka.ms/vscode-remote/containers/non-root.

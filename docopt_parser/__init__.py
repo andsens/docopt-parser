@@ -2,7 +2,7 @@
 docopt-parser - A parsing library for the docopt helptext
 """
 from parsec import ParseError
-from .nodes.doc import doc
+from .nodes.doc import Doc, doc
 
 __all__ = ['docopt_parser']
 try:
@@ -11,7 +11,7 @@ try:
 except ImportError:
   __version__ = '0.0.0-dev'
 
-def explain_error(e: ParseError, text: str):
+def explain_error(e: ParseError, text: str) -> str:
   line_no, col = e.loc_info(e.text, e.index)
   lines = text.split('\n')
   prev_line = ''
@@ -22,7 +22,7 @@ def explain_error(e: ParseError, text: str):
   msg = str(e)
   return f'\n{prev_line}{line}\n{col}^\n{msg}'
 
-def parse_strict(txt):
+def parse_strict(txt: str) -> Doc:
   try:
     usage = doc(strict=True).parse_strict(txt)
     # TODO: Mark multi elements as such
@@ -30,7 +30,7 @@ def parse_strict(txt):
   except ParseError as e:
     raise DocoptParseError(explain_error(e, txt)) from e
 
-def parse_partial(txt):
+def parse_partial(txt: str) -> Doc:
   try:
     usage, parsed_doc = doc(strict=False).parse_partial(txt)
     return usage, parsed_doc
@@ -39,6 +39,6 @@ def parse_partial(txt):
 
 
 class DocoptParseError(Exception):
-  def __init__(self, message, exit_code=1):
+  def __init__(self, message: str, exit_code=1):
     self.message = message
     self.exit_code = exit_code

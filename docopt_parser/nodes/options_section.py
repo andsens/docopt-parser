@@ -1,5 +1,6 @@
 import re
-from parsec import eof, generate, many, many1, optional, regex
+from typing import Generator, Iterator, Union
+from parsec import Parser, eof, generate, many, many1, optional, regex
 from . import char, eol, fail_with, indent, join_string, lookahead, nl, whitespaces, string
 from .astnode import AstNode
 from .option import Option
@@ -17,7 +18,7 @@ doc = many1(char(illegal=default ^ terminator)).desc('option documentation').par
 
 def section(strict):
   @generate('options section')
-  def p():
+  def p() -> Generator[Parser, Parser, OptionsSection]:
     options = []
     title = yield regex(r'[^\n]*options:', re.I)
     yield nl + optional(indent)
@@ -45,20 +46,22 @@ def section(strict):
   return p
 
 class OptionsSection(AstNode):
-  def __init__(self, title, items):
+  title: str
+
+  def __init__(self, title: str, items: str):
     self.title = title
     super().__init__(items)
 
-  def __repr__(self):
+  def __repr__(self) -> str:
     return f'''<OptionsSection> {self.title}
 {self.indent(self.items)}'''
 
-  def __iter__(self):
+  def __iter__(self) -> Iterator[tuple[str, Union[str, list[dict]]]]:
     yield 'title', self.title
     yield 'items', list(map(dict, self.items))
 
 @generate('short option (-s)')
-def option_line_short():
+def option_line_short() -> Generator[Parser, Parser, Short]:
   argspec = (char(' =') >> argument).desc('argument')
   yield char('-')
   name = yield char(illegal=short_illegal)
@@ -70,7 +73,7 @@ def option_line_short():
   return Short(name, arg)
 
 @generate('long option (--long)')
-def option_line_long():
+def option_line_long() -> Generator[Parser, Parser, Long]:
   argspec = (char(' =') >> argument).desc('argument')
   yield string('--')
   name = yield ident(long_illegal)
@@ -82,7 +85,7 @@ def option_line_long():
   return Long(name, arg)
 
 @generate('options')
-def option_line_opts():
+def option_line_opts() -> Generator[Parser, Parser, Union[tuple[Short, Long], tuple[Short, None], tuple[None, Long]]]:
   first = yield option_line_long | option_line_short
   if isinstance(first, Long):
     opt_short = yield optional((string(', ') | char(' ')) >> option_line_short)

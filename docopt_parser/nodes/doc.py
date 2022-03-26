@@ -1,7 +1,8 @@
+from typing import Generator, Iterator, Union
 from .command import Command
 from .argument import Argument
 from .argumentseparator import ArgumentSeparator
-from parsec import regex, many, many1, generate
+from parsec import Parser, regex, many, many1, generate
 from . import char, join_string, flatten
 import re
 from .astnode import AstNode
@@ -15,37 +16,33 @@ log = logging.getLogger(__name__)
 
 other_documentation = many1(char(illegal=regex(r'[^\n]*(options:|usage:)', re.I))).desc('Text').parsecmap(join_string)
 
-def doc(strict):
+def doc(strict: bool):
   @generate('docopt')
-  def p():
+  def p() -> Generator[Parser, Parser, Doc]:
     items = list(filter(lambda part: part != [], (yield (
       many(options_section(strict) | other_documentation)
       + usage_section(strict)
       + many(options_section(strict) | other_documentation)
     ).parsecmap(flatten))))
-    # if isinstance(section, UsageSection):
-    #   if usage is not None:
-    #     raise section.error('')
-    #   else:
-    #     usage = section
+    root = Doc(items)
     # merge_identical_leaves(root)
     # validate_ununused_options(root)
     # mark_multiple(root)
     # validate_unambiguous_options(options)
-    return Doc(items)
+    return root
   return p
 
 class Doc(AstNode):
-  def __init__(self, items):
+  def __init__(self, items: list[UsageSection, OptionsSection, str]):
     super().__init__(items)
-    self.doc = next(filter(lambda n: isinstance(n, UsageSection), self.items), None)
+    self.usage = next(filter(lambda n: isinstance(n, UsageSection), self.items), None)
     self.options = list(filter(lambda n: isinstance(n, OptionsSection), self.items))
 
-  def __repr__(self):
+  def __repr__(self) -> str:
     return f'''{self.indent(self.items, lvl=0)}'''
 
-  def __iter__(self):
-    yield 'usage', dict(self.doc)
+  def __iter__(self) -> Iterator[tuple[str, Union[str, list[dict]]]]:
+    yield 'usage', dict(self.usage)
     yield 'options', list(map(dict, self.options))
 
 
@@ -72,15 +69,16 @@ def merge_identical_leaves(node, known_leaves=set()):
       elif isinstance(item, AstNode):
         merge_identical_leaves(item, known_leaves)
 
-def validate_ununused_options(node, all_options):
-  def get_opts(options, node):
+def validate_ununused_options(root):
+  def get_opts(memo, node):
     if isinstance(node, Option):
-      options.add(node)
+      memo.add(node)
     if isinstance(node, OptionRef):
-      options.add(node.ref)
-    return options
-  used_options = node.reduce(get_opts, set()) if node else set()
-  unused_options = all_options - used_options
+      memo.add(node.ref)
+    return memo
+  usage_options = root.usage.reduce(get_opts, set())
+  options_section_options = root.options.reduce(get_opts, set())
+  unused_options = options_section_options - usage_options
   if len(unused_options) > 0:
     unused_list = '\n'.join(map(lambda o: f'* {o.ident}', unused_options))
     log.warn(f'''{len(unused_options)} options are not referenced from the usage section:

@@ -1,7 +1,8 @@
+from typing import Iterator, Union
 from .identnode import IdentNode, ident
 from . import non_symbol_chars, char, string, unit
 from parsec import optional
-from .argument import argument
+from .argument import Argument, argument
 
 
 illegal = non_symbol_chars | char(',=')
@@ -11,17 +12,18 @@ inline_long_option_spec = (
 ).desc('long option (--long)').parsecmap(lambda n: Long(*n))
 
 class Long(IdentNode):
+  arg: Argument
 
-  def __init__(self, name, arg):
+  def __init__(self, name: str, arg: Argument):
     super().__init__(f'--{name}')
     self.name = name
     self.arg = arg
 
-  def __repr__(self):
+  def __repr__(self) -> str:
     return f'''--{self.name}{self.repeatable_suffix}
   arg: {self.arg}'''
 
-  def __iter__(self):
+  def __iter__(self) -> Iterator[tuple[str, Union[str, bool, dict]]]:
     yield 'name', self.name
     yield 'repeatable', self.repeatable
     yield 'arg', dict(self.arg) if self.arg else None
