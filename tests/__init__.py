@@ -8,7 +8,6 @@ def debug(ret, *args):
 def maybe(strategy):
   return one_of(none(), strategy)
 
-
 def chars(legal=None, illegal=None):
   if (legal is None) == (illegal is None):
     raise Exception('char(): legal and illegal parameters are mutually exclusive')
