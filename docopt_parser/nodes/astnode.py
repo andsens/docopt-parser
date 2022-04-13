@@ -8,15 +8,9 @@ class AstNode(AstLeaf):
   def __init__(self, items: Iterable[AstLeaf]):
     self.items = items
 
-  def reduce(self, function: Callable[[T], T], initializer: T) -> T:
-    items = iter(self.items)
-    if initializer is None:
-      value = next(items)
-    else:
-      value = initializer
-    for item in items:
+  def reduce(self, function: Callable[[T], T], memo: T = None) -> T:
+    for item in iter(self.items):
+      memo = function(memo, item)
       if isinstance(item, AstNode):
-        value = function(value, item.reduce(function, value))
-      else:
-        value = function(value, item)
-    return value
+        memo = item.reduce(function, memo)
+    return memo
