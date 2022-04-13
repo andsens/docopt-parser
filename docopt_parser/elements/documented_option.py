@@ -1,31 +1,31 @@
 from typing import Iterator, Union
-from .long import Long
-from .short import Short
-from .identnode import IdentNode
-from ..marked import Mark, Marked, MarkedTuple
 
-class Option(IdentNode):
+from docopt_parser import elements, base, marked
+
+class DocumentedOption(base.IdentNode):
   multiple = False
-  short: Union[Short, None]
-  long: Union[Long, None]
+  short: Union[elements.Short, None]
+  long: Union[elements.Long, None]
   shortcut: bool
   expects_arg: bool
-  __default: Union[Marked, None]
-  __doc: Union[Marked, None]
-  mark: Mark
+  __default: Union[marked.Marked, None]
+  __doc: Union[marked.Marked, None]
+  mark: marked.Mark
 
   def __init__(self,
-               short: Union[Short, None], long: Union[Long, None], shortcut: bool,
-               default: Union[MarkedTuple, None], doc: Union[MarkedTuple, None]):
+               short: Union[elements.Short, None], long: Union[elements.Long, None], shortcut: bool,
+               default: Union[marked.MarkedTuple, None], doc: Union[marked.MarkedTuple, None]):
     super().__init__(long.ident if long else short.ident)
     self.short = short
     self.long = long
     self.shortcut = shortcut
     self.expects_arg = any([o.arg for o in [short, long] if o is not None])
-    self.__default = Marked(default) if default else None
-    self.__doc = Marked(doc) if doc else None
+    self.__default = marked.Marked(default) if default else None
+    self.__doc = marked.Marked(doc) if doc else None
     elements = [getattr(self.short, 'mark', None), getattr(self.long, 'mark', None), self.__default, self.__doc]
-    self.mark = Mark(min([e.start for e in elements if e is not None]), max([e.end for e in elements if e is not None]))
+    self.mark = marked.Mark(
+      min([e.start for e in elements if e is not None]), max([e.end for e in elements if e is not None])
+    )
 
   @property
   def default(self) -> Union[str, None]:

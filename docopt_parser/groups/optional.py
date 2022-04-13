@@ -1,13 +1,10 @@
 from typing import Generator, Iterator, Union
-from .astleaf import AstLeaf
-from .astnode import AstNode
 from parsec import Parser, generate
-from . import char
-from .choice import expr
-from .sequence import Sequence
 
-class Optional(AstNode):
-  def __init__(self, items: AstLeaf):
+from docopt_parser import base, groups, parsers
+
+class Optional(base.AstNode):
+  def __init__(self, items: base.AstLeaf):
     super().__init__(items)
 
   def __repr__(self):
@@ -21,9 +18,9 @@ class Optional(AstNode):
 
 @generate('[optional]')
 def optional() -> Generator[Parser, Parser, Union[Optional, None]]:
-  node = yield (char('[') >> expr << char(']'))
+  node = yield (parsers.char('[') >> groups.choice << parsers.char(']'))
   # Unnest [[optional]], or [sequence]
-  if isinstance(node, (Optional, Sequence)):
+  if isinstance(node, (Optional, groups.Sequence)):
     return Optional(node.items)
   elif node is None:
     return None

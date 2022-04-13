@@ -1,23 +1,15 @@
 from typing import Generator, Iterator, Union
-from .astleaf import AstLeaf
-from .astnode import AstNode
 from parsec import Parser, optional, generate, eof
-from . import lookahead, either, whitespaces, nl, repeatable
+
+from docopt_parser import base, elements, groups, parsers
 
 @generate('sequence')
-def seq() -> Generator[Parser, Parser, Union[AstLeaf, None]]:
-  from .group import group
-  from .optional import optional as _optional
-  from .options_shortcut import options_shortcut
-  from .argumentseparator import arg_separator
-  from .optionlist import option_list
-  from .argument import argument
-  from .command import command
+def sequence() -> Generator[Parser, Parser, Union[base.AstLeaf, None]]:
 
   atoms = (
-    group | _optional
-    | options_shortcut | arg_separator | option_list
-    | argument | command
+    groups.group | groups.optional
+    | elements.options_shortcut | elements.arg_separator | groups.option_list
+    | elements.argument | elements.command
   ).desc('any element (cmd, ARG, options, --option, (group), [optional], --)')
 
   nodes = []
@@ -29,14 +21,14 @@ def seq() -> Generator[Parser, Parser, Union[AstLeaf, None]]:
     else:
       if atom is not None:
         nodes.append(atom)
-    ws = yield whitespaces
-    multi = yield optional(repeatable)
+    ws = yield parsers.whitespaces
+    multi = yield optional(parsers.repeatable)
     if multi == '...':
       nodes[-1].repeatable = True
-      ws = yield whitespaces
+      ws = yield parsers.whitespaces
     if ws is None:
       break
-    if (yield lookahead(optional(either | nl | eof()))) is not None:
+    if (yield parsers.lookahead(optional(parsers.either | parsers.nl | eof()))) is not None:
       break
   if len(nodes) > 1:
     return Sequence(nodes)
@@ -46,8 +38,8 @@ def seq() -> Generator[Parser, Parser, Union[AstLeaf, None]]:
     return None
 
 
-class Sequence(AstNode):
-  def __init__(self, items: list[AstLeaf]):
+class Sequence(base.AstNode):
+  def __init__(self, items: list[base.AstLeaf]):
     _items = []
     for item in items:
       # Flatten the list

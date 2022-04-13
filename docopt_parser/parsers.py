@@ -1,55 +1,7 @@
-from typing import TypeVar, Union
+from typing import Union
 from parsec import Parser, Value, one_of, eof, many1, optional, regex
 
-# TODO:
-# Missing the repeated options parser, where e.g. -AA or --opt --opt becomes a counter
-# Handle options that are not referenced from usage
-
-
-def splat(constr):
-  return lambda args: constr(*args)
-
-def unsplat(constr):
-  return lambda *args: constr(args)
-
-def flatten(arg: Union[tuple, list]) -> Union[tuple, list]:
-  if not isinstance(arg, (tuple, list)):
-    from .. import DocoptParseError
-    raise DocoptParseError('flatten(arg): argument not a tuple or list')
-  t = []
-  for item in arg:
-    if isinstance(item, (tuple, list)):
-      t += [elm for elm in item]
-    else:
-      t.append(item)
-  return type(arg)(t)
-
-T = TypeVar('T')
-def debug(arg: T) -> T:
-  import sys
-  sys.stderr.write('{}\n'.format(arg))
-  return arg
-
-def join_string(res: Union[list, tuple, str]) -> str:
-  flat = ''
-  if isinstance(res, list) or isinstance(res, tuple):
-    for item in res:
-      flat += join_string(item)
-    return flat
-  else:
-    return res
-
-char_descriptions = {
-  ' ': '<space>',
-  '\n': '<newline>',
-  '\t': '<tab>',
-  '|': '<pipe> (|)'
-}
-
-def describe_value(val: str) -> str:
-  if len(val) > 1:
-    return val
-  return char_descriptions.get(val, f'"{val}" ({hex(ord(val))})')
+from docopt_parser import helpers
 
 any_char = regex(r'.|\n').desc('any char')
 def char(legal: Union[str, Parser] = any_char, illegal: Union[str, Parser, None] = None) -> Parser:
@@ -57,7 +9,7 @@ def char(legal: Union[str, Parser] = any_char, illegal: Union[str, Parser, None]
     desc = ''
     if len(legal) > 1:
       desc = 'any of '
-    desc += ''.join(map(describe_value, legal))
+    desc += ''.join(map(helpers.describe_value, legal))
     a = one_of(legal).desc(desc)
   else:
     a = legal
@@ -66,7 +18,7 @@ def char(legal: Union[str, Parser] = any_char, illegal: Union[str, Parser, None]
       desc = ''
       if len(illegal) > 1:
         desc = 'any of '
-      desc += ''.join(map(describe_value, illegal))
+      desc += ''.join(map(helpers.describe_value, illegal))
       d = one_of(illegal).desc(desc)
     else:
       d = illegal
@@ -84,7 +36,7 @@ def exclude(p: Parser, excl: Parser) -> Parser:
   def exclude_parser(text, index):
     res = excl(text, index)
     if res.status:
-      return Value.failure(index, f'something other than {describe_value(res.value)}')
+      return Value.failure(index, f'something other than {helpers.describe_value(res.value)}')
     else:
       return p(text, index)
   return exclude_parser
@@ -124,10 +76,10 @@ def string(s: str) -> Parser:
     return string_parser
 
 nl = char('\n')
-whitespaces1 = many1(char(' \t', nl)).parsecmap(join_string).desc('<whitespace>')
+whitespaces1 = many1(char(' \t', nl)).parsecmap(helpers.join_string).desc('<whitespace>')
 whitespaces = optional(whitespaces1)
 eol = (whitespaces + (nl | eof())).desc('<end of line>')
-indent = (many1(char(' ')) | char('\t')).parsecmap(join_string).desc('<indent> (spaces or tabs)')
+indent = (many1(char(' ')) | char('\t')).parsecmap(helpers.join_string).desc('<indent> (spaces or tabs)')
 either = char('|').desc('<pipe> (|)')
 repeatable = string('...').desc('repeatable (...)')
 non_symbol_chars = char('=|()[], \t\n\r\b\f\x1B\x07\0') | eof() | repeatable

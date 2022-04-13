@@ -1,20 +1,17 @@
 from typing import Generator, Iterable, Iterator, Union
 from parsec import Parser, generate, optional
 
-from docopt_parser.nodes.astleaf import AstLeaf
-from . import either, whitespaces
-from .astnode import AstNode
-
+from docopt_parser import base, parsers
 
 @generate('expression')
-def expr() -> Generator[Parser, Parser, Union[AstLeaf, None]]:
-  from .sequence import seq
+def choice() -> Generator[Parser, Parser, Union[base.AstLeaf, None]]:
+  from .sequence import sequence
   nodes = []
   while True:
-    sequence = yield seq
-    if sequence is not None:
-      nodes.append(sequence)
-    if (yield optional(either << whitespaces)) is None:
+    _sequence = yield sequence
+    if _sequence is not None:
+      nodes.append(_sequence)
+    if (yield optional(parsers.either << parsers.whitespaces)) is None:
       break
   if len(nodes) > 1:
     return Choice(nodes)
@@ -24,8 +21,8 @@ def expr() -> Generator[Parser, Parser, Union[AstLeaf, None]]:
     return None
 
 
-class Choice(AstNode):
-  def __init__(self, items: Iterable[AstLeaf]):
+class Choice(base.AstNode):
+  def __init__(self, items: Iterable[base.AstLeaf]):
     _items = []
     for item in items:
       # Flatten the list, "a | (b | c)" is the same as "a | b | c"

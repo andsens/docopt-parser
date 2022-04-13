@@ -1,18 +1,21 @@
 from typing import Iterator, Union
-from .option import Option
-from .optional import Optional
-from . import string
 
-options_shortcut = string('options').desc('options shortcut').parsecmap(lambda s: OptionsShortcut())
+from docopt_parser import elements, groups, parsers, marked
 
-class OptionsShortcut(Optional):
-  options: list[Option]
+options_shortcut = parsers.string('options').mark().desc('options shortcut').parsecmap(lambda n: OptionsShortcut(n))
 
-  def __init__(self):
+class OptionsShortcut(groups.Optional):
+  __name: marked.Marked
+  options: list[elements.DocumentedOption]
+  mark: marked.Mark
+
+  def __init__(self, name: marked.MarkedTuple):
     self.options = []
+    self.__name = marked.Marked(name)
+    self.mark = marked.Mark(self.__name.start, self.__name.end)
 
   @property
-  def items(self) -> list[Option]:
+  def items(self) -> list[elements.DocumentedOption]:
     return list(filter(lambda o: o.shortcut, self.options))
 
   def __repr__(self) -> str:

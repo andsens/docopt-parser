@@ -1,19 +1,19 @@
 from typing import Union
-from .astleaf import AstLeaf
-from . import char, flatten, join_string, fail_with
 from parsec import Parser, many
+
+from docopt_parser import helpers, parsers, base
 
 
 def ident(illegal: Union[str, Parser, None], starts_with: Union[Parser, None] = None) -> Parser:
   if starts_with is None:
-    starts_with = char(illegal=illegal)
+    starts_with = parsers.char(illegal=illegal)
   return (
     starts_with
-    + many(char(illegal=illegal))
-  ).parsecmap(flatten).parsecmap(join_string) ^ fail_with('identifier')
+    + many(parsers.char(illegal=illegal))
+  ).parsecmap(helpers.flatten).parsecmap(helpers.join_string) ^ parsers.fail_with('identifier')
 
 
-class IdentNode(AstLeaf):
+class IdentNode(base.AstLeaf):
   ident: str
 
   def __init__(self, ident: str):

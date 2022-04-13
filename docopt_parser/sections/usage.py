@@ -1,37 +1,29 @@
 from typing import Generator, Iterator, Union
 from parsec import Parser, generate, optional, regex, eof, many
-
-from docopt_parser.nodes.astleaf import AstLeaf
-from .sequence import Sequence
-from . import string, whitespaces1, whitespaces, lookahead, nl, non_symbol_chars, indent, eol, char
-from .identnode import ident
 import re
-from .choice import expr, Choice
-from .astnode import AstNode
-import logging
 
-log = logging.getLogger(__name__)
+from docopt_parser import base, groups, parsers
 
-def section(strict):
+def usage_section(strict):
   @generate('usage section')
   def p() -> Generator[Parser, Parser, UsageSection]:
     yield regex(r'usage:', re.I)
-    yield optional(nl + indent)
-    prog = yield lookahead(optional(ident(non_symbol_chars)))
+    yield optional(parsers.nl + parsers.indent)
+    prog = yield parsers.lookahead(optional(base.ident(parsers.non_symbol_chars)))
     lines = []
     if prog is not None:
       while True:
         line = yield usage_line(prog)
         if line is not None:
           lines.append(line)
-        if (yield optional(nl + indent)) is None:
+        if (yield optional(parsers.nl + parsers.indent)) is None:
           break
     if strict:
-      yield (nl + nl) ^ many(char(' \t') | nl) + eof()
+      yield (parsers.nl + parsers.nl) ^ many(parsers.char(' \t') | parsers.nl) + eof()
     else:
-      yield optional((nl + nl) ^ many(char(' \t') | nl) + eof())
+      yield optional((parsers.nl + parsers.nl) ^ many(parsers.char(' \t') | parsers.nl) + eof())
     if len(lines) > 1:
-      root = Choice(lines)
+      root = groups.Choice(lines)
     elif len(lines) == 1:
       root = lines[0]
     else:
@@ -39,10 +31,10 @@ def section(strict):
     return UsageSection(root)
   return p
 
-class UsageSection(AstNode):
-  root: AstLeaf
+class UsageSection(base.AstNode):
+  root: base.AstLeaf
 
-  def __init__(self, root: AstLeaf):
+  def __init__(self, root: base.AstLeaf):
     super().__init__([root])
     self.root = root
 
@@ -56,12 +48,12 @@ class UsageSection(AstNode):
 
 def usage_line(prog: str):
   @generate('usage line')
-  def p() -> Generator[Parser, Parser, Union[str, AstLeaf]]:
-    yield string(prog)
-    if (yield optional(lookahead(eol))) is None:
-      e = yield whitespaces1 >> expr
+  def p() -> Generator[Parser, Parser, Union[str, base.AstLeaf]]:
+    yield parsers.string(prog)
+    if (yield optional(parsers.lookahead(parsers.eol))) is None:
+      e = yield parsers.whitespaces1 >> groups.choice
     else:
-      yield whitespaces
-      e = Sequence([])
+      yield parsers.whitespaces
+      e = groups.Sequence([])
     return e
   return p

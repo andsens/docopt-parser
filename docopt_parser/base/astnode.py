@@ -1,11 +1,12 @@
 from typing import Callable, Iterable, TypeVar
-from .astleaf import AstLeaf
+
+from docopt_parser import base
 
 T = TypeVar('T')
-class AstNode(AstLeaf):
-  items: Iterable[AstLeaf]
+class AstNode(base.AstLeaf):
+  items: Iterable[base.AstLeaf]
 
-  def __init__(self, items: Iterable[AstLeaf]):
+  def __init__(self, items: Iterable[base.AstLeaf]):
     self.items = items
 
   def reduce(self, function: Callable[[T], T], memo: T = None) -> T:
