@@ -50,9 +50,9 @@ class UsageSection(AstNode):
     return f'''<UsageSection>
 {self.indent(self.items)}'''
 
-  def __iter__(self) -> Iterator[AstLeaf]:
-    for item in self.root:
-      yield item
+  def __iter__(self) -> Iterator[tuple[str, Union[str, list[dict]]]]:
+    yield 'type', 'usagesection'
+    yield 'items', list(map(dict, self.items))
 
 def usage_line(prog: str):
   @generate('usage line')

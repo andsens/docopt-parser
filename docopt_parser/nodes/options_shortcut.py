@@ -19,10 +19,10 @@ class OptionsShortcut(Optional):
     return f'''<OptionsShortcut>{self.repeatable_suffix}
 {self.indent(self.items)}'''
 
-  def __iter__(self) -> Iterator[tuple[Union[str, bool, list[Option]]]]:
+  def __iter__(self) -> Iterator[tuple[str, Union[str, bool, list[dict]]]]:
     yield 'type', 'optionsshortcut'
     yield 'repeatable', self.repeatable
-    yield 'items', self.items
+    yield 'items', list(map(dict, self.items))
 
   @property
   def multiple(self) -> bool:

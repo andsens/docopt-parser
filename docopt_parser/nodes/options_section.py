@@ -47,8 +47,9 @@ def section(strict):
 
 class OptionsSection(AstNode):
   title: str
+  items: list[Option]
 
-  def __init__(self, title: str, items: str):
+  def __init__(self, title: str, items: list[Option]):
     self.title = title
     super().__init__(items)
 
