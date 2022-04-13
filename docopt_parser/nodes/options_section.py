@@ -1,6 +1,7 @@
 import re
 from typing import Generator, Iterator, Union
 from parsec import Parser, eof, generate, many, many1, optional, regex
+from ..marked import Mark, Marked, MarkedTuple
 from . import char, eol, fail_with, indent, join_string, lookahead, nl, whitespaces, string
 from .astnode import AstNode
 from .option import Option
@@ -20,20 +21,19 @@ def section(strict):
   @generate('options section')
   def p() -> Generator[Parser, Parser, OptionsSection]:
     options = []
-    title = yield regex(r'[^\n]*options:', re.I)
+    title = yield regex(r'[^\n]*options:', re.I).mark()
     yield nl + optional(indent)
     while (yield lookahead(optional(char('-')))) is not None:
-      doc1 = _default = doc2 = None
+      _doc = _default = None
       (short, long) = yield option_line_opts
       if (yield optional(lookahead(eol))) is not None:
         # Consume trailing whitespaces
         yield whitespaces
       elif (yield optional(lookahead(char(illegal='\n')))) is not None:
         yield (char(' ') + many1(char(' '))) ^ fail_with('at least 2 spaces')
-        doc1 = yield optional(doc)
-        _default = yield optional(default)
-        doc2 = yield optional(doc)
-      options.append(Option(short, long, True, doc1, _default, doc2))
+        _default = yield lookahead(optional(doc) >> optional(default).mark() << optional(doc))
+        _doc = yield optional(doc).mark()
+      options.append(Option(short, long, True, _default, _doc))
       if (yield lookahead(optional(next_option))) is None:
         break
       yield nl + optional(indent)
@@ -46,12 +46,18 @@ def section(strict):
   return p
 
 class OptionsSection(AstNode):
-  title: str
+  __title: Marked
   items: list[Option]
+  mark: Mark
 
-  def __init__(self, title: str, items: list[Option]):
-    self.title = title
+  def __init__(self, __title: MarkedTuple, items: list[Option]):
     super().__init__(items)
+    self.__title = Marked(__title)
+    self.mark = Mark(self.__title.start, max([e.mark.end for e in self.items]))
+
+  @property
+  def title(self) -> str:
+    return self.__title.txt
 
   def __repr__(self) -> str:
     return f'''<OptionsSection> {self.title}
@@ -64,8 +70,7 @@ class OptionsSection(AstNode):
 @generate('short option (-s)')
 def option_line_short() -> Generator[Parser, Parser, Short]:
   argspec = (char(' =') >> argument).desc('argument')
-  yield char('-')
-  name = yield char(illegal=short_illegal)
+  name = yield (char('-') >> char(illegal=short_illegal)).mark()
   if (yield optional(lookahead(char('=')))) is not None:
     # Definitely an argument, make sure we fail with "argument expected"
     arg = yield argspec
@@ -76,8 +81,7 @@ def option_line_short() -> Generator[Parser, Parser, Short]:
 @generate('long option (--long)')
 def option_line_long() -> Generator[Parser, Parser, Long]:
   argspec = (char(' =') >> argument).desc('argument')
-  yield string('--')
-  name = yield ident(long_illegal)
+  name = yield (string('--') >> ident(long_illegal)).mark()
   if (yield optional(lookahead(char('=')))) is not None:
     # Definitely an argument, make sure we fail with "argument expected"
     arg = yield argspec

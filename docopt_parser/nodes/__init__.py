@@ -5,6 +5,7 @@ from parsec import Parser, Value, one_of, eof, many1, optional, regex
 # Missing the repeated options parser, where e.g. -AA or --opt --opt becomes a counter
 # Handle options that are not referenced from usage
 
+
 def splat(constr):
   return lambda args: constr(*args)
 

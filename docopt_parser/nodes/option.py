@@ -2,6 +2,7 @@ from typing import Iterator, Union
 from .long import Long
 from .short import Short
 from .identnode import IdentNode
+from ..marked import Mark, Marked, MarkedTuple
 
 class Option(IdentNode):
   multiple = False
@@ -9,23 +10,30 @@ class Option(IdentNode):
   long: Union[Long, None]
   shortcut: bool
   expects_arg: bool
-  default: Union[str, None]
-  doc: str
+  __default: Union[Marked, None]
+  __doc: Union[Marked, None]
+  mark: Mark
 
   def __init__(self,
                short: Union[Short, None], long: Union[Long, None], shortcut: bool,
-               doc1: Union[str, None], default: Union[str, None], doc2: Union[str, None]):
+               default: Union[MarkedTuple, None], doc: Union[MarkedTuple, None]):
     super().__init__(long.ident if long else short.ident)
     self.short = short
     self.long = long
     self.shortcut = shortcut
     self.expects_arg = any([o.arg for o in [short, long] if o is not None])
-    self.default = default
-    self.doc = ''.join(t for t in [
-      doc1 or '',
-      default or f'[default: {default}]',
-      doc2 or '',
-    ])
+    self.__default = Marked(default) if default else None
+    self.__doc = Marked(doc) if doc else None
+    elements = [getattr(self.short, 'mark', None), getattr(self.long, 'mark', None), self.__default, self.__doc]
+    self.mark = Mark(min([e.start for e in elements if e is not None]), max([e.end for e in elements if e is not None]))
+
+  @property
+  def default(self) -> Union[str, None]:
+    return self.__default.txt if self.__default else None
+
+  @property
+  def doc(self) -> Union[str, None]:
+    return self.__doc.txt if self.__doc else None
 
   def __repr__(self) -> str:
     return f'''<Option{self.multiple_suffix}>{self.repeatable_suffix}

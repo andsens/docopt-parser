@@ -8,7 +8,7 @@ import re
 
 
 class TestParser(unittest.TestCase):
-  @pytest.mark.filterwarnings(r'ignore:\d+ options are not referenced from the usage section:')
+  @pytest.mark.filterwarnings('ignore:(.|\n)*this option is not referenced from the usage section.')
   @settings(max_examples=500)
   @given(DocoptAstGenerator.asts)
   def test_parse(self, s):
@@ -18,9 +18,7 @@ class TestParser(unittest.TestCase):
 
 
 def test_unused_options():
-  with pytest.warns(UserWarning, match=re.escape('''2 options are not referenced from the usage section:
-* --sdfsdf
-* -k''')):
+  with pytest.warns(UserWarning, match=re.escape('''<--- this option is not referenced from the usage section.''')):
     parse_strict('''Usage:
   prog cmd [options]
 
