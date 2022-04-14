@@ -9,7 +9,6 @@ wget -O- https://github.com/koalaman/shellcheck/releases/download/v0.7.1/shellch
 
 pip --disable-pip-version-check --no-cache-dir install --user poetry
 
-mkdir "$HOME/.config"
 mkdir "$HOME/.config/pypoetry"
 cp .devcontainer/poetry-config.toml "$HOME/.config/pypoetry/config.toml"
 
