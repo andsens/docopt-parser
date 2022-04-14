@@ -1,5 +1,5 @@
 from typing import Generator, Iterator, Union
-from parsec import Parser, optional, generate, eof
+from parsec import Parser, optional, generate, eof, lookahead
 
 from docopt_parser import base, elements, groups, parsers
 
@@ -28,7 +28,7 @@ def sequence() -> Generator[Parser, Parser, Union[base.AstLeaf, None]]:
       ws = yield parsers.whitespaces
     if ws is None:
       break
-    if (yield parsers.lookahead(optional(parsers.either | parsers.nl | eof()))) is not None:
+    if (yield lookahead(optional(parsers.either | parsers.nl | eof()))) is not None:
       break
   if len(nodes) > 1:
     return Sequence(nodes)

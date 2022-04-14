@@ -1,5 +1,5 @@
 from typing import Iterator, Union
-from parsec import optional
+from parsec import optional, unit
 
 from docopt_parser import base, elements, parsers, marked
 
@@ -9,7 +9,7 @@ illegal = parsers.non_symbol_chars | parsers.char(',=-')
 # Since supporting short options as well does not introduce any ambiguity I chose to implement it.
 # TODO: Emit a warning when this additional feature is used
 inline_short_option_spec = (
-  parsers.unit(parsers.char('-') >> parsers.char(illegal=illegal)).mark()
+  unit(parsers.char('-') >> parsers.char(illegal=illegal)).mark()
   + optional((parsers.char('=') >> elements.argument))
 ).desc('short option (-a)').parsecmap(lambda n: Short(*n))
 

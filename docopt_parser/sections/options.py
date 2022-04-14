@@ -1,6 +1,6 @@
 import re
 from typing import Generator, Iterator, Union
-from parsec import Parser, eof, generate, many, many1, optional, regex
+from parsec import Parser, eof, generate, many, many1, optional, regex, lookahead, fail_with
 
 from docopt_parser import base, elements, parsers, helpers, marked
 
@@ -17,18 +17,18 @@ def options_section(strict):
     options = []
     title = yield regex(r'[^\n]*options:', re.I).mark()
     yield parsers.nl + optional(parsers.indent)
-    while (yield parsers.lookahead(optional(parsers.char('-')))) is not None:
+    while (yield lookahead(optional(parsers.char('-')))) is not None:
       _doc = _default = None
       (short, long) = yield option_line_opts
-      if (yield optional(parsers.lookahead(parsers.eol))) is not None:
+      if (yield optional(lookahead(parsers.eol))) is not None:
         # Consume trailing whitespaces
         yield parsers.whitespaces
-      elif (yield optional(parsers.lookahead(parsers.char(illegal='\n')))) is not None:
-        yield (parsers.char(' ') + many1(parsers.char(' '))) ^ parsers.fail_with('at least 2 spaces')
-        _default = yield parsers.lookahead(optional(doc) >> optional(default).mark() << optional(doc))
+      elif (yield optional(lookahead(parsers.char(illegal='\n')))) is not None:
+        yield (parsers.char(' ') + many1(parsers.char(' '))) ^ fail_with('at least 2 spaces')
+        _default = yield lookahead(optional(doc) >> optional(default).mark() << optional(doc))
         _doc = yield optional(doc).mark()
       options.append(elements.DocumentedOption(short, long, True, _default, _doc))
-      if (yield parsers.lookahead(optional(next_option))) is None:
+      if (yield lookahead(optional(next_option))) is None:
         break
       yield parsers.nl + optional(parsers.indent)
     if strict:
@@ -65,7 +65,7 @@ class OptionsSection(base.AstNode):
 def option_line_short() -> Generator[Parser, Parser, elements.Short]:
   argspec = (parsers.char(' =') >> elements.argument).desc('argument')
   name = yield (parsers.char('-') >> parsers.char(illegal=elements.short_illegal)).mark()
-  if (yield optional(parsers.lookahead(parsers.char('=')))) is not None:
+  if (yield optional(lookahead(parsers.char('=')))) is not None:
     # Definitely an argument, make sure we fail with "argument expected"
     arg = yield argspec
   else:
@@ -76,7 +76,7 @@ def option_line_short() -> Generator[Parser, Parser, elements.Short]:
 def option_line_long() -> Generator[Parser, Parser, elements.Long]:
   argspec = (parsers.char(' =') >> elements.argument).desc('argument')
   name = yield (parsers.string('--') >> base.ident(elements.long_illegal)).mark()
-  if (yield optional(parsers.lookahead(parsers.char('=')))) is not None:
+  if (yield optional(lookahead(parsers.char('=')))) is not None:
     # Definitely an argument, make sure we fail with "argument expected"
     arg = yield argspec
   else:

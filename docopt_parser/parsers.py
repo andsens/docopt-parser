@@ -1,5 +1,5 @@
 from typing import Union
-from parsec import Parser, Value, one_of, eof, many1, optional, regex
+from parsec import Parser, Value, one_of, eof, many1, optional, regex, exclude
 
 from docopt_parser import helpers
 
@@ -26,43 +26,6 @@ def char(legal: Union[str, Parser] = any_char, illegal: Union[str, Parser, None]
     return exclude(a, d)
   else:
     return a
-
-def fail_with(message: str) -> Parser:
-  return Parser(lambda _, index: Value.failure(index, message))
-
-def exclude(p: Parser, excl: Parser) -> Parser:
-  '''Fails parser p if parser excl matches'''
-  @Parser
-  def exclude_parser(text, index):
-    res = excl(text, index)
-    if res.status:
-      return Value.failure(index, f'something other than {helpers.describe_value(res.value)}')
-    else:
-      return p(text, index)
-  return exclude_parser
-
-def lookahead(p: Parser) -> Parser:
-  '''Parses without consuming'''
-  @Parser
-  def lookahead_parser(text, index):
-    res = p(text, index)
-    if res.status:
-      return Value.success(index, res.value)
-    else:
-      return Value.failure(index, res.expected)
-  return lookahead_parser
-
-def unit(p: Parser) -> Parser:
-  '''Converts a parser into a single unit
-  Only consumes input if the parser succeeds'''
-  @Parser
-  def unit_parser(text, index):
-    res = p(text, index)
-    if res.status:
-      return Value.success(res.index, res.value)
-    else:
-      return Value.failure(index, res.expected)
-  return unit_parser
 
 def string(s: str) -> Parser:
     '''Parses a string.'''

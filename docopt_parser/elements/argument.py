@@ -1,5 +1,5 @@
 from typing import Generator, Iterator, Union
-from parsec import Parser, generate, many1, optional
+from parsec import Parser, generate, many1, optional, lookahead, fail_with
 
 from docopt_parser import base, helpers, parsers, marked
 
@@ -33,11 +33,11 @@ wrapped_arg = (parsers.char('<') + base.ident(illegal | parsers.char('>')) + par
 @generate('ARG')
 def uppercase_arg() -> Generator[Parser, Parser, str]:
   name_p = many1(parsers.char(illegal=illegal)).parsecmap(helpers.join_string).desc('ARG')
-  name = yield parsers.lookahead(optional(name_p))
+  name = yield lookahead(optional(name_p))
   if name is not None and name.isupper():
     name = yield name_p
   else:
-    yield parsers.fail_with('Not an argument')
+    yield fail_with('Not an argument')
   return name
 
 argument = (wrapped_arg ^ uppercase_arg).mark().desc('argument').parsecmap(lambda n: Argument(n))

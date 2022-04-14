@@ -1,5 +1,5 @@
 from typing import Generator, Iterator, Union
-from parsec import Parser, generate, optional, regex, eof, many
+from parsec import Parser, generate, optional, regex, eof, many, lookahead
 import re
 
 from docopt_parser import base, groups, parsers
@@ -9,7 +9,7 @@ def usage_section(strict):
   def p() -> Generator[Parser, Parser, UsageSection]:
     yield regex(r'usage:', re.I)
     yield optional(parsers.nl + parsers.indent)
-    prog = yield parsers.lookahead(optional(base.ident(parsers.non_symbol_chars)))
+    prog = yield lookahead(optional(base.ident(parsers.non_symbol_chars)))
     lines = []
     if prog is not None:
       while True:
@@ -50,7 +50,7 @@ def usage_line(prog: str):
   @generate('usage line')
   def p() -> Generator[Parser, Parser, Union[str, base.AstLeaf]]:
     yield parsers.string(prog)
-    if (yield optional(parsers.lookahead(parsers.eol))) is None:
+    if (yield optional(lookahead(parsers.eol))) is None:
       e = yield parsers.whitespaces1 >> groups.choice
     else:
       yield parsers.whitespaces

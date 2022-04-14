@@ -1,5 +1,5 @@
 from typing import Union
-from parsec import Parser, many
+from parsec import Parser, many, fail_with
 
 from docopt_parser import helpers, parsers, base
 
@@ -10,7 +10,7 @@ def ident(illegal: Union[str, Parser, None], starts_with: Union[Parser, None] = 
   return (
     starts_with
     + many(parsers.char(illegal=illegal))
-  ).parsecmap(helpers.flatten).parsecmap(helpers.join_string) ^ parsers.fail_with('identifier')
+  ).parsecmap(helpers.flatten).parsecmap(helpers.join_string) ^ fail_with('identifier')
 
 
 class IdentNode(base.AstLeaf):
