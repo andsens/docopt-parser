@@ -1,10 +1,6 @@
 """
 docopt-parser - A parsing library for the docopt helptext
 """
-# from . import base, groups, sections, doc, helpers, parsers, marked, post_processors
-
-# __all__ = ['base', 'groups', 'sections', 'doc', 'helpers', 'parsers', 'marked', 'post_processors', 'doc']
-
 from docopt_parser.doc import parse, DocoptParseError
 
 __all__ = ['parse', 'DocoptParseError']
