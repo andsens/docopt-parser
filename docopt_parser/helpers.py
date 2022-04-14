@@ -1,37 +1,49 @@
-from typing import TypeVar, Union
+from typing import Generator, List, TypeVar, Iterable, Any, cast, overload
+from parsec import Parser
 
-def splat(constr):
-  return lambda args: constr(*args)
-
-def unsplat(constr):
-  return lambda *args: constr(args)
-
-def flatten(arg: Union[tuple, list]) -> Union[tuple, list]:
-  if not isinstance(arg, (tuple, list)):
-    from .. import DocoptParseError
-    raise DocoptParseError('flatten(arg): argument not a tuple or list')
-  t = []
-  for item in arg:
-    if isinstance(item, (tuple, list)):
-      t += [elm for elm in item]
-    else:
-      t.append(item)
-  return type(arg)(t)
+from docopt_parser import marked
 
 T = TypeVar('T')
+GeneratorParser = Generator["Parser[Any]", Any, T]
+
 def debug(arg: T) -> T:
   import sys
   sys.stderr.write('{}\n'.format(arg))
   return arg
 
-def join_string(res: Union[list, tuple, str]) -> str:
-  flat = ''
-  if isinstance(res, list) or isinstance(res, tuple):
-    for item in res:
-      flat += join_string(item)
-    return flat
+Nested = T | Iterable["Nested[T]"]
+@overload
+def join_string(elm: Nested[str]) -> str:
+  pass
+@overload
+def join_string(elm: Nested[str | None]) -> str | None:
+  pass
+@overload
+def join_string(elm: marked.MarkedTuple[Nested[str]]) -> marked.MarkedTuple[str]:
+  pass
+@overload
+def join_string(elm: marked.MarkedTuple[Nested[str | None]]) -> marked.MarkedTuple[str | None]:
+  pass
+
+def join_string(elm: marked.MarkedTuple[Nested[str | None]] | Nested[str | None]) -> \
+  marked.MarkedTuple[str | None] | str | None:
+  if marked.is_marked_tuple(elm):
+    return marked.unwrappedMarked(_join_string, cast(marked.MarkedTuple[str | None], elm))
   else:
-    return res
+    return _join_string(cast(str | None, elm))
+
+def _join_string(elm: Nested[str | None]) -> str | None:
+  if elm is None or isinstance(elm, (str)):
+    return elm
+  else:
+    flat: List[str | None] = []
+    for item in elm:
+      flat.append(join_string(item))
+    filtered = list(e for e in flat if e is not None)
+    if len(filtered) > 0:
+      return ''.join(filtered)
+    else:
+      return None
 
 char_descriptions = {
   ' ': '<space>',

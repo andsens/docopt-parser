@@ -1,10 +1,10 @@
-from typing import Union
-from parsec import Parser, Value, one_of, eof, many1, optional, regex, exclude
+from typing import Any, cast
+from parsec import Parser, Value, one_of, eof, many1, optional, regex, exclude  # type: ignore
 
 from docopt_parser import helpers
 
 any_char = regex(r'.|\n').desc('any char')
-def char(legal: Union[str, Parser] = any_char, illegal: Union[str, Parser, None] = None) -> Parser:
+def char(legal: "str | Parser[str]" = any_char, illegal: "Parser[Any] | str | None" = None) -> "Parser[str]":
   if isinstance(legal, str):
     desc = ''
     if len(legal) > 1:
@@ -27,16 +27,16 @@ def char(legal: Union[str, Parser] = any_char, illegal: Union[str, Parser, None]
   else:
     return a
 
-def string(s: str) -> Parser:
-    '''Parses a string.'''
-    @Parser
-    def string_parser(text, index=0):
-        slen = len(s)
-        if text[index:index + slen] == s:
-            return Value.success(index + slen, s)
-        else:
-            return Value.failure(index, s)
-    return string_parser
+def string(s: str) -> "Parser[str]":
+  '''Parses a string.'''
+  @Parser
+  def string_parser(text: str, index: int = 0) -> Value[str]:
+    slen = len(s)
+    if text[index:index + slen] == s:
+      return Value.success(index + slen, s)
+    else:
+      return cast(Value[str], Value.failure(index, s))
+  return string_parser
 
 nl = char('\n')
 whitespaces1 = many1(char(' \t', nl)).parsecmap(helpers.join_string).desc('<whitespace>')

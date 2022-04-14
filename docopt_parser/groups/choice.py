@@ -1,12 +1,14 @@
-from typing import Generator, Iterable, Iterator, Union
-from parsec import Parser, generate, optional
+from typing import Iterable, List
+from parsec import generate, optional
 
 from docopt_parser import base, parsers
+from docopt_parser.base.astleaf import AstLeaf
+from docopt_parser.helpers import GeneratorParser
 
 @generate('expression')
-def choice() -> Generator[Parser, Parser, Union[base.AstLeaf, None]]:
+def choice() -> GeneratorParser[AstLeaf | None]:
   from .sequence import sequence
-  nodes = []
+  nodes: List[base.AstLeaf] = []
   while True:
     _sequence = yield sequence
     if _sequence is not None:
@@ -23,7 +25,7 @@ def choice() -> Generator[Parser, Parser, Union[base.AstLeaf, None]]:
 
 class Choice(base.AstNode):
   def __init__(self, items: Iterable[base.AstLeaf]):
-    _items = []
+    _items: List[base.AstLeaf] = []
     for item in items:
       # Flatten the list, "a | (b | c)" is the same as "a | b | c"
       if isinstance(item, Choice):
@@ -36,7 +38,7 @@ class Choice(base.AstNode):
     return f'''<Choice>{self.repeatable_suffix}
 {self.indent(self.items)}'''
 
-  def __iter__(self) -> Iterator[tuple[str, Union[bool, str, list[dict]]]]:
+  def __iter__(self) -> base.DictGenerator:
     yield 'repeatable', self.repeatable
     yield 'type', 'choice'
-    yield 'items', list(map(dict, self.items))
+    yield 'items', [dict(item) for item in self.items]

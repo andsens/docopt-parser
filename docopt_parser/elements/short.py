@@ -1,4 +1,3 @@
-from typing import Iterator, Union
 from parsec import optional, unit
 
 from docopt_parser import base, elements, parsers, marked
@@ -20,11 +19,11 @@ inline_shortlist_short_option_spec = (
 
 
 class Short(base.IdentNode):
-  __name: marked.Marked
-  arg: Union[elements.Argument, None]
+  __name: marked.Marked[str]
+  arg: elements.Argument | None
   mark: marked.Mark
 
-  def __init__(self, name: marked.MarkedTuple, arg: Union[elements.Argument, None]):
+  def __init__(self, name: marked.MarkedTuple[str], arg: elements.Argument | None):
     super().__init__(f'-{name[1]}')
     self.__name = marked.Marked(name)
     self.arg = arg
@@ -32,13 +31,13 @@ class Short(base.IdentNode):
 
   @property
   def name(self):
-    return self.__name.txt
+    return self.__name.elm
 
-  def __repr__(self) -> str:
+  def __repr__(self):
     return f'''-{self.name}{self.repeatable_suffix}
   arg: {self.arg}'''
 
-  def __iter__(self) -> Iterator[tuple[str, Union[str, bool]]]:
+  def __iter__(self) -> base.DictGenerator:
     yield 'name', self.name
     yield 'repeatable', self.repeatable
     yield 'arg', dict(self.arg) if self.arg else None

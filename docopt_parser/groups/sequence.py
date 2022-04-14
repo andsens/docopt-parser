@@ -1,22 +1,24 @@
-from typing import Generator, Iterator, Union
-from parsec import Parser, optional, generate, eof, lookahead
+from typing import List
+from parsec import optional, generate, eof, lookahead
 
 from docopt_parser import base, elements, groups, parsers
+from docopt_parser.helpers import GeneratorParser
 
 @generate('sequence')
-def sequence() -> Generator[Parser, Parser, Union[base.AstLeaf, None]]:
-
+def sequence() -> GeneratorParser[base.AstLeaf | None]:
+  Atom = base.AstLeaf | groups.Optional | elements.OptionsShortcut | elements.ArgumentSeparator | \
+    List[elements.Short] | List[elements.Long] | elements.Argument | elements.Command | None
   atoms = (
     groups.group | groups.optional
     | elements.options_shortcut | elements.arg_separator | groups.option_list
     | elements.argument | elements.command
   ).desc('any element (cmd, ARG, options, --option, (group), [optional], --)')
 
-  nodes = []
+  nodes: List[base.AstLeaf] = []
   while True:
-    atom = yield atoms
+    atom: Atom = yield atoms
     if isinstance(atom, list):
-      # We're dealing with an optionlist or shortcut, append all children to the sequence
+      # We're dealing with an optionlist, append all children to the sequence
       nodes.extend(atom)
     else:
       if atom is not None:
@@ -39,8 +41,8 @@ def sequence() -> Generator[Parser, Parser, Union[base.AstLeaf, None]]:
 
 
 class Sequence(base.AstNode):
-  def __init__(self, items: list[base.AstLeaf]):
-    _items = []
+  def __init__(self, items: List[base.AstLeaf]):
+    _items: List[base.AstLeaf] = []
     for item in items:
       # Flatten the list
       if isinstance(item, Sequence):
@@ -53,7 +55,7 @@ class Sequence(base.AstNode):
     return f'''<Sequence>{self.repeatable_suffix}
 {self.indent(self.items)}'''
 
-  def __iter__(self) -> Iterator[tuple[str, Union[str, bool, list[dict]]]]:
+  def __iter__(self) -> base.DictGenerator:
     yield 'type', 'sequence'
     yield 'repeatable', self.repeatable
-    yield 'items', list(map(dict, self.items))
+    yield 'items', [dict(item) for item in self.items]

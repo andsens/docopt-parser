@@ -1,31 +1,27 @@
-from typing import Iterator, Union
 
-from docopt_parser import elements, groups, parsers, marked
+from typing import Iterable
+from docopt_parser import base, elements, parsers, marked
 
 options_shortcut = parsers.string('options').mark().desc('options shortcut').parsecmap(lambda n: OptionsShortcut(n))
 
-class OptionsShortcut(groups.Optional):
-  __name: marked.Marked
-  options: list[elements.DocumentedOption]
+class OptionsShortcut(base.AstNode):
+  __name: marked.Marked[str]
+  items: Iterable[elements.DocumentedOption]
   mark: marked.Mark
 
-  def __init__(self, name: marked.MarkedTuple):
-    self.options = []
+  def __init__(self, name: marked.MarkedTuple[str]):
+    super().__init__([])
     self.__name = marked.Marked(name)
     self.mark = marked.Mark(self.__name.start, self.__name.end)
-
-  @property
-  def items(self) -> list[elements.DocumentedOption]:
-    return list(filter(lambda o: o.shortcut, self.options))
 
   def __repr__(self) -> str:
     return f'''<OptionsShortcut>{self.repeatable_suffix}
 {self.indent(self.items)}'''
 
-  def __iter__(self) -> Iterator[tuple[str, Union[str, bool, list[dict]]]]:
+  def __iter__(self) -> base.DictGenerator:
     yield 'type', 'optionsshortcut'
     yield 'repeatable', self.repeatable
-    yield 'items', list(map(dict, self.items))
+    yield 'items', [dict(item) for item in self.items]
 
   @property
   def multiple(self) -> bool:

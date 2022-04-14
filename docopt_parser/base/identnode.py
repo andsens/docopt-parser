@@ -1,26 +1,27 @@
-from typing import Union
-from parsec import Parser, many, fail_with
+from typing import Any
+from parsec import Parser, many, fail_with  # type: ignore
 
 from docopt_parser import helpers, parsers, base
 
 
-def ident(illegal: Union[str, Parser, None], starts_with: Union[Parser, None] = None) -> Parser:
+def ident(illegal: "str | Parser[str | None] | None", starts_with: "Parser[str] | None" = None) -> "Parser[str]":
   if starts_with is None:
     starts_with = parsers.char(illegal=illegal)
   return (
     starts_with
     + many(parsers.char(illegal=illegal))
-  ).parsecmap(helpers.flatten).parsecmap(helpers.join_string) ^ fail_with('identifier')
+  ).parsecmap(helpers.join_string) ^ fail_with('identifier')
 
 
 class IdentNode(base.AstLeaf):
   ident: str
 
   def __init__(self, ident: str):
+    super().__init__()
     self.ident = ident
 
   def __hash__(self) -> int:
     return hash(self.ident)
 
-  def __eq__(self, other) -> bool:
+  def __eq__(self, other: Any) -> bool:
     return isinstance(other, IdentNode) and self.ident == other.ident

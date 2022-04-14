@@ -1,7 +1,7 @@
 import warnings
 from ordered_set import OrderedSet
 
-from docopt_parser import base, elements, groups, doc
+from docopt_parser import doc, elements
 
 def post_process_ast(ast: doc.Doc, txt: str) -> doc.Doc:
   # TODO:
@@ -12,17 +12,20 @@ def post_process_ast(ast: doc.Doc, txt: str) -> doc.Doc:
   validate_ununused_options(ast, txt)
   # mark_multiple(doc)
   validate_unambiguous_options(ast, txt)
+  return ast
 
-def match_options(node, known_leaves=OrderedSet()):
-  if isinstance(node, base.AstNode):
-    for idx, item in enumerate(node.items):
-      if isinstance(item, (elements.Command, elements.Argument, elements.ArgumentSeparator)):
-        if item in known_leaves:
-          node.items[idx] = next(filter(lambda i: i == item, known_leaves))
-        else:
-          known_leaves.add(item)
-      elif isinstance(item, base.AstNode):
-        match_options(item, known_leaves)
+# def match_options(node: base.AstLeaf, known_leaves: OrderedSet[base.AstLeaf] | None = None):
+#   if known_leaves is None:
+#     known_leaves = OrderedSet[base.AstLeaf]([])
+#   if isinstance(node, base.AstNode):
+#     for idx, item in enumerate(node.items):
+#       if isinstance(item, (elements.Command, elements.Argument, elements.ArgumentSeparator)):
+#         if item in known_leaves:
+#           node.items[idx] = next(filter(lambda i: i == item, known_leaves))
+#         else:
+#           known_leaves.add(item)
+#       elif isinstance(item, base.AstNode):
+#         match_options(item, known_leaves)
 
 
 def validate_unambiguous_options(ast: doc.Doc, txt: str):
@@ -35,22 +38,22 @@ def validate_unambiguous_options(ast: doc.Doc, txt: str):
       ['-%s is specified %d times' % (n, shorts.count(n)) for n in dup_shorts] + \
       ['--%s is specified %d times' % (n, longs.count(n)) for n in dup_longs]
   if len(messages):
-    from .. import DocoptParseError
+    from docopt_parser import DocoptParseError
     raise DocoptParseError(', '.join(messages))
 
 def validate_ununused_options(ast: doc.Doc, txt: str) -> None:
-  if ast.usage.reduce(lambda memo, node: memo or isinstance(node, elements.OptionsShortcut), False):
+  if ast.usage_section.reduce(lambda memo, node: memo or isinstance(node, elements.OptionsShortcut), False):
     return
   unused_options = ast.section_options - ast.usage_options
   for option in unused_options:
     warnings.warn(f'{option.mark.show(txt)} this option is not referenced from the usage section.')
 
-def mark_multiple(node, repeatable=False, siblings=[]):
-  if hasattr(node, 'multiple') and not node.multiple:
-    node.multiple = repeatable or node in siblings
-  elif isinstance(node, groups.Choice):
-    for item in node.items:
-      mark_multiple(item, repeatable or node.repeatable, siblings)
-  elif isinstance(node, base.AstNode):
-    for item in node.items:
-      mark_multiple(item, repeatable or node.repeatable, siblings + [i for i in node.items if i != item])
+# def mark_multiple(node, repeatable=False, siblings=[]):
+#   if hasattr(node, 'multiple') and not node.multiple:
+#     node.multiple = repeatable or node in siblings
+#   elif isinstance(node, groups.Choice):
+#     for item in node.items:
+#       mark_multiple(item, repeatable or node.repeatable, siblings)
+#   elif isinstance(node, base.AstNode):
+#     for item in node.items:
+#       mark_multiple(item, repeatable or node.repeatable, siblings + [i for i in node.items if i != item])

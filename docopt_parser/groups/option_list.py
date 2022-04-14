@@ -1,10 +1,11 @@
-from typing import Generator
-from parsec import Parser, generate, optional
+from typing import List
+from parsec import generate, optional
 
 from docopt_parser import elements
+from docopt_parser.helpers import GeneratorParser
 
 @generate('Options (-s or --long)')
-def option_list() -> Generator[Parser, Parser, list[elements.Short, elements.Long]]:
+def option_list() -> GeneratorParser[List[elements.Short] | List[elements.Long]]:
   opt = yield elements.inline_short_option_spec | elements.inline_long_option_spec
   opts = [opt]
   # multiple short options can be specified like "-abc".

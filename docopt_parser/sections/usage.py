@@ -1,16 +1,17 @@
-from typing import Generator, Iterator, Union
-from parsec import Parser, generate, optional, regex, eof, many, lookahead
+from typing import List
+from parsec import generate, optional, regex, eof, many, lookahead  # type: ignore
 import re
 
 from docopt_parser import base, groups, parsers
+from docopt_parser.helpers import GeneratorParser
 
-def usage_section(strict):
+def usage_section(strict: bool):
   @generate('usage section')
-  def p() -> Generator[Parser, Parser, UsageSection]:
+  def p() -> GeneratorParser[UsageSection]:
     yield regex(r'usage:', re.I)
     yield optional(parsers.nl + parsers.indent)
     prog = yield lookahead(optional(base.ident(parsers.non_symbol_chars)))
-    lines = []
+    lines: List[groups.Choice | groups.Sequence] = []
     if prog is not None:
       while True:
         line = yield usage_line(prog)
@@ -32,28 +33,30 @@ def usage_section(strict):
   return p
 
 class UsageSection(base.AstNode):
-  root: base.AstLeaf
+  root: groups.Choice | groups.Sequence | None
 
-  def __init__(self, root: base.AstLeaf):
-    super().__init__([root])
+  def __init__(self, root: groups.Choice | groups.Sequence | None):
+    if root is None:
+      super().__init__([])
+    else:
+      super().__init__([root])
     self.root = root
 
   def __repr__(self) -> str:
     return f'''<UsageSection>
 {self.indent(self.items)}'''
 
-  def __iter__(self) -> Iterator[tuple[str, Union[str, list[dict]]]]:
+  def __iter__(self) -> base.DictGenerator:
     yield 'type', 'usagesection'
-    yield 'items', list(map(dict, self.items))
+    yield 'items', [dict(item) for item in self.items]
 
 def usage_line(prog: str):
   @generate('usage line')
-  def p() -> Generator[Parser, Parser, Union[str, base.AstLeaf]]:
+  def p() -> GeneratorParser[groups.Choice | groups.Sequence]:
     yield parsers.string(prog)
     if (yield optional(lookahead(parsers.eol))) is None:
-      e = yield parsers.whitespaces1 >> groups.choice
+      return (yield parsers.whitespaces1 >> groups.choice)
     else:
       yield parsers.whitespaces
-      e = groups.Sequence([])
-    return e
+      return groups.Sequence([])
   return p

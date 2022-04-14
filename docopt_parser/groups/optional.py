@@ -1,24 +1,26 @@
-from typing import Generator, Iterator, Union
-from parsec import Parser, generate
+from typing import Iterable
+from parsec import generate
 
 from docopt_parser import base, groups, parsers
+from docopt_parser.base.astleaf import AstLeaf
+from docopt_parser.helpers import GeneratorParser
 
 class Optional(base.AstNode):
-  def __init__(self, items: base.AstLeaf):
+  def __init__(self, items: Iterable[base.AstLeaf]):
     super().__init__(items)
 
   def __repr__(self):
     return f'''<Optional>{self.repeatable_suffix}
 {self.indent(self.items)}'''
 
-  def __iter__(self) -> Iterator[tuple[str, Union[str, bool, list[dict]]]]:
+  def __iter__(self) -> base.DictGenerator:
     yield 'type', 'optional'
     yield 'repeatable', self.repeatable
-    yield 'items', list(map(dict, self.items))
+    yield 'items', [dict(item) for item in self.items]
 
 @generate('[optional]')
-def optional() -> Generator[Parser, Parser, Union[Optional, None]]:
-  node = yield (parsers.char('[') >> groups.choice << parsers.char(']'))
+def optional() -> GeneratorParser[Optional | None]:
+  node: AstLeaf = yield (parsers.char('[') >> groups.choice << parsers.char(']'))
   # Unnest [[optional]], or [sequence]
   if isinstance(node, (Optional, groups.Sequence)):
     return Optional(node.items)

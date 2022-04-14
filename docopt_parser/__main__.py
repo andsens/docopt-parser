@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 import sys
 import os
+from typing import TypedDict, cast
 import docopt
 import logging
 import termcolor
 import yaml
-from docopt_parser import DocoptParseError, parse, __doc__ as pkg_doc, __name__ as root_name, __version__
+from docopt_parser import DocoptParseError, parse, \
+  __doc__ as pkg_doc, __name__ as root_name, __version__  # type: ignore
 
 log = logging.getLogger(root_name)
 
-__doc__ = pkg_doc + """
+__doc__: str = cast(str, pkg_doc) + """
 Usage:
   docopt-parser [-Sy] ast
   docopt-parser -h
@@ -21,9 +23,9 @@ Options:
   --help -h  Show this help screen
   --version  Show the docopt.sh version
 """
+Params = TypedDict('Params', {'-S': bool, '--yaml': bool, 'ast': bool})
 
-
-def docopt_parser(params):
+def docopt_parser(params: Params):
   try:
     doc = sys.stdin.read()
     if params['-S']:
@@ -31,9 +33,9 @@ def docopt_parser(params):
       if params['ast']:
         sys.stdout.write(yaml.dump(dict(ast), sort_keys=False) if params['--yaml'] else repr(ast) + '\n')
       if parsed_doc != doc:
-        ast = parse(doc, strict=True)
+        parse(doc, strict=True)
     else:
-      ast = parse(doc, strict=True)
+      ast, parsed_doc = parse(doc, strict=True)
       if params['ast']:
         sys.stdout.write(yaml.dump(dict(ast), sort_keys=False) if params['--yaml'] else repr(ast) + '\n')
   except DocoptParseError as e:
@@ -49,7 +51,7 @@ def setup_logging():
 
   class ColorFormatter(logging.Formatter):
 
-    def format(self, record):
+    def format(self, record: logging.LogRecord):
         record.msg = termcolor.colored(str(record.msg), level_colors.get(record.levelno, None))
         return super(ColorFormatter, self).format(record)
 
@@ -62,7 +64,7 @@ def setup_logging():
 
 def main():
   setup_logging()
-  params = docopt.docopt(__doc__, version=__version__)
+  params = cast(Params, docopt.docopt(__doc__, version=cast(str, __version__)))
   docopt_parser(params)
 
 
