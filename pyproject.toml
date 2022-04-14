@@ -38,6 +38,12 @@ hypothesis = "^6.39.4"
 [tool.poetry.scripts]
 docopt-parser = "docopt_parser.__main__:main"
 
+[tool.pyright]
+include = ["docopt_parser", "tests"]
+strict = ["docopt_parser", "tests"]
+reportMissingImports = true
+reportMissingTypeStubs = false
+
 [build-system]
 requires = ["poetry_core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
