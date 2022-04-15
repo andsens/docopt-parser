@@ -1,6 +1,6 @@
 import pytest
 from tests.lang import DocoptAst as DocoptAstGenerator
-from docopt_parser import base, parse
+from docopt_parser import base, parse, doc
 import unittest
 from hypothesis import given, settings  # type: ignore
 import re
@@ -17,13 +17,22 @@ class TestParser(unittest.TestCase):
 
 
 def test_unused_options():
-  with pytest.warns(UserWarning, match=re.escape('''<--- this option is not referenced from the usage section.''')):
+  with pytest.warns(UserWarning, match=re.escape('<--- this option is not referenced from the usage section.')):
     parse('''Usage:
   prog cmd
 
 Options:
-  -f, --sdfsdf
-  -k=ARG  Some arg
+  -f
+''')
+
+def test_duplicate_options():
+  with pytest.raises(doc.DocoptParseError, match=r'.*' + re.escape('-f has already been specified on line 5')):
+    parse('''Usage:
+  prog cmd
+
+Options:
+  -f
+  -f
 ''')
 
 if __name__ == "__main__":

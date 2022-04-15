@@ -37,10 +37,15 @@ class DocumentedOption(base.IdentNode):
     self.expects_arg = any([o.arg for o in [short, long] if o is not None])
     self.__default = marked.Marked(default) if default else None
     self.__doc = marked.Marked(doc) if doc else None
-    elements = [getattr(self.short, 'mark', None), getattr(self.long, 'mark', None), self.__default, self.__doc]
-    self.mark = marked.Mark(
-      min([e.start for e in elements if e is not None]), max([e.end for e in elements if e is not None])
-    )
+    elements = [
+      e for e in [
+        getattr(self.short, 'mark', None),
+        getattr(self.long, 'mark', None),
+        self.__default,
+        self.__doc
+      ] if e is not None
+    ]
+    self.mark = marked.Mark(min([e.start for e in elements]), max([e.end for e in elements]))
 
   @property
   def default(self):

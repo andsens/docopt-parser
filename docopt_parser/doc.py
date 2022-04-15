@@ -1,6 +1,5 @@
 from typing import Iterable, List, Tuple, cast
 from parsec import ParseError, many, generate
-from ordered_set import OrderedSet
 
 from docopt_parser import base, sections, elements, helpers, marked
 
@@ -42,16 +41,16 @@ class Doc(base.AstNode):
     self.text = text
 
   @property
-  def usage_options(self) -> OrderedSet[elements.DocumentedOption]:
-    def get_opts(memo: OrderedSet[elements.DocumentedOption], node: base.AstLeaf):
+  def usage_options(self) -> List[elements.DocumentedOption]:
+    def get_opts(memo: List[elements.DocumentedOption], node: base.AstLeaf):
       if isinstance(node, elements.DocumentedOption):
-        memo.add(node)
+        memo.append(node)
       return memo
-    return self.usage_section.reduce(get_opts, OrderedSet[elements.DocumentedOption]([]))
+    return self.usage_section.reduce(get_opts, [])
 
   @property
-  def section_options(self) -> OrderedSet[elements.DocumentedOption]:
-    return OrderedSet(sum([o.items for o in self.option_sections], []))
+  def section_options(self) -> List[elements.DocumentedOption]:
+    return sum([o.items for o in self.option_sections], [])
 
   def __repr__(self) -> str:
     return f'''{self.indent(self.items, lvl=0)}'''
@@ -78,6 +77,6 @@ def parse(txt: str, strict: bool = True) -> Tuple[Doc, str]:
 
 class DocoptParseError(Exception):
   def __init__(self, message: str, exit_code: int = 1):
-    super().__init__()
+    super().__init__(message)
     self.message = message
     self.exit_code = exit_code

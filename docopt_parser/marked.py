@@ -6,14 +6,23 @@ T = TypeVar('T')
 LocInfo = Tuple[int, int]
 MarkedTuple = Tuple[LocInfo, T, LocInfo]
 
+# All text editors use 1 indexed lines, so we simply subclass int for linenumbers
+class LineNumber(int):
+  def __str__(self):
+    return str(self + 1)
+
+  def __repr__(self):
+    return str(self + 1)
+
 @total_ordering
 class Location(object):
-  line: int
+  line: LineNumber
   col: int
 
   def __init__(self, loc: LocInfo):
     super().__init__()
-    self.line, self.col = loc
+    self.line = LineNumber(loc[0])
+    self.col = loc[1]
 
   def __eq__(self, other: object):
     return isinstance(other, Location) and self.line == other.line and self.col == other.col
@@ -24,8 +33,7 @@ class Location(object):
     return self.line < other.line or (self.line == other.line and self.col < other.col)
 
   def __repr__(self):
-    # All text editors use 1 indexed lines, show the location as such
-    return f'{self.line + 1}:{self.col}'
+    return f'{self.line}:{self.col}'
 
   def show(self, text: str):
     lines = text.split('\n')
@@ -63,7 +71,7 @@ class Mark(object):
     # If "end" is at column 0 on a new line,
     # move the location back to the end of the previous line.
     if end.col == 0 and end > start:
-      end.line -= 1
+      end.line = LineNumber(end.line - 1)
       end.col = len(lines[end.line])
     if start.line == end.line:
       prev_line = ''
