@@ -1,8 +1,19 @@
+import warnings
 import pytest
 from docopt_parser import parse, doc
 import unittest
 import re
 
+
+def test_used_options():
+  with warnings.catch_warnings():
+    warnings.simplefilter("error")
+    parse('''Usage:
+  prog -f
+
+Options:
+  -f, --long
+''')
 
 def test_unused_options():
   with pytest.warns(UserWarning, match=re.escape('<--- this option is not referenced from the usage section.')):
