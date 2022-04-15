@@ -20,7 +20,7 @@ class Optional(base.AstNode):
 
 @generate('[optional]')
 def optional() -> GeneratorParser[Optional | elements.OptionsShortcut | None]:
-  node: AstLeaf = yield (parsers.char('[') >> groups.choice << parsers.char(']'))
+  node: AstLeaf = yield (parsers.char('[') >> groups.expr << parsers.char(']'))
   # Unnest [[optional]], or [options]
   if isinstance(node, (Optional, elements.OptionsShortcut)):
     return node

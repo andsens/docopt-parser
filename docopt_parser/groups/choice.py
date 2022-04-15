@@ -6,7 +6,7 @@ from docopt_parser.base.astleaf import AstLeaf
 from docopt_parser.helpers import GeneratorParser
 
 @generate('expression')
-def choice() -> GeneratorParser[AstLeaf | None]:
+def expr() -> GeneratorParser[AstLeaf | None]:
   from .sequence import sequence
   nodes: List[base.AstLeaf] = []
   while True:

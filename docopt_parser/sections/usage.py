@@ -55,7 +55,7 @@ def usage_line(prog: str):
   def p() -> GeneratorParser[groups.Choice | groups.Sequence]:
     yield parsers.string(prog)
     if (yield optional(lookahead(parsers.eol))) is None:
-      return (yield parsers.whitespaces1 >> groups.choice)
+      return (yield parsers.whitespaces1 >> groups.expr)
     else:
       yield parsers.whitespaces
       return groups.Sequence([])
