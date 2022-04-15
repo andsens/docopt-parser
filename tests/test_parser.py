@@ -19,7 +19,7 @@ class TestParser(unittest.TestCase):
 def test_unused_options():
   with pytest.warns(UserWarning, match=re.escape('<--- this option is not referenced from the usage section.')):
     parse('''Usage:
-  prog cmd
+  prog
 
 Options:
   -f
@@ -28,7 +28,7 @@ Options:
 def test_duplicate_options():
   with pytest.raises(doc.DocoptParseError, match=r'.*' + re.escape('-f has already been specified on line 5')):
     parse('''Usage:
-  prog cmd
+  prog options
 
 Options:
   -f

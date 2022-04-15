@@ -70,7 +70,6 @@ def parse(txt: str, strict: bool = True) -> Tuple[Doc, str]:
     else:
       ast, parsed_doc = parser.parse_partial(txt)
     ast = post_processors.post_process_ast(ast, txt)
-    # TODO: Mark multi elements as such
     return ast, parsed_doc
   except ParseError as e:
     raise DocoptParseError(marked.explain_error(e, txt)) from e

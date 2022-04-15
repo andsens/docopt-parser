@@ -1,5 +1,5 @@
 from functools import total_ordering
-from typing import Generic, Tuple, TypeVar
+from typing import Generic, List, Tuple, TypeVar
 from parsec import ParseError
 
 T = TypeVar('T')
@@ -13,6 +13,14 @@ class LineNumber(int):
 
   def __repr__(self):
     return str(self + 1)
+
+  def show(self, text: List[str] | str):
+    lines = text if isinstance(text, list) else text.split('\n')
+    return f'{(self + 1):02d} {lines[self]}'
+
+  @property
+  def prefix_length(self):
+    return len(f'{(self + 1):02d} ')
 
 @total_ordering
 class Location(object):
@@ -35,13 +43,9 @@ class Location(object):
   def __repr__(self):
     return f'{self.line}:{self.col}'
 
-  def show(self, text: str):
-    lines = text.split('\n')
-    prev_line = ''
-    if self.line > 0:
-      prev_line = lines[self.line - 1]
+  def show(self, text: List[str] | str):
     col_offset = ' ' * self.col
-    return f'\n{prev_line}\n{lines[self.line]}\n{col_offset}^'
+    return f'{self.line.show(text)}\n{col_offset}^'
 
 @total_ordering
 class Mark(object):
@@ -64,7 +68,7 @@ class Mark(object):
   def __repr__(self):
     return f'{self.start}-{self.end}'
 
-  def show(self, text: str):
+  def show(self, text: str, message: str | None = None):
     lines = text.split('\n')
     start = Location((self.start.line, self.start.col))
     end = Location((self.end.line, self.end.col))
@@ -74,20 +78,21 @@ class Mark(object):
       end.line = LineNumber(end.line - 1)
       end.col = len(lines[end.line])
     if start.line == end.line:
-      prev_line = ''
-      if start.line > 0:
-        prev_line = lines[start.line - 1] + '\n'
       line = lines[start.line]
       if line.strip() == line[start.col:end.col].strip():
-        return f'{prev_line}{line} <---'
+        message = f' <--- {message}' if message is not None else ''
+        return f'{start.line.show(lines)}{message}'
       else:
-        start_col_offset = ' ' * start.col
+        start_col_offset = ' ' * (start.col + start.line.prefix_length)
         underline = '~' * (end.col - start.col)
-        return f'{prev_line}{line}\n{start_col_offset}{underline}'
+        message = f'\n{message}' if message is not None else ''
+        return f'{start.line.show(lines)}\n{start_col_offset}{underline}{message}'
     else:
-      all_lines = '\n'.join(lines[start.line:end.line + 1])
-      start_col_offset = ' ' * start.col
-      end_col_offset = ' ' * end.col
+      # i + 1 accounts for editor line numbering
+      # end.line + 1 accounts for [a,b,c][1,2] = [b] and not [b,c] (end.line is be inclusive)
+      all_lines = '\n'.join(LineNumber(i).show(lines) for i in range(start.line, end.line + 1))
+      start_col_offset = ' ' * (start.col + start.line.prefix_length)
+      end_col_offset = ' ' * (end.col + end.line.prefix_length)
       return f'{start_col_offset}V\n{all_lines}\n{end_col_offset}^'
 
 class Marked(Mark, Generic[T]):

@@ -8,10 +8,11 @@ def post_process_ast(ast: doc.Doc, txt: str) -> doc.Doc:
   # Missing the repeated options parser, where e.g. -AA or --opt --opt becomes a counter
   # Handle options that are not referenced from usage
   # Find unreachable lines, e.g.:
-  # Usage:
-  #   prog ARG
-  #   prog cmd <--
+  #   Usage:
+  #     prog ARG
+  #     prog cmd <--
 
+  # merge leaves
   # match_options(root)
   warn_unused_options(ast, txt)
   # mark_multiple(doc)
@@ -23,7 +24,7 @@ def warn_unused_options(ast: doc.Doc, txt: str) -> None:
     return
   unused_options = OrderedSet(ast.section_options) - OrderedSet(ast.usage_options)
   for option in unused_options:
-    warnings.warn(f'{option.mark.show(txt)} this option is not referenced from the usage section.')
+    warnings.warn(option.mark.show(txt, message='this option is not referenced from the usage section.'))
 
 
 def fail_duplicate_options(ast: doc.Doc, txt: str):
@@ -34,19 +35,17 @@ def fail_duplicate_options(ast: doc.Doc, txt: str):
     if option.short is not None:
       previous_short = seen_shorts.get(option.short.name, None)
       if previous_short is not None:
-        messages.append(
-          f'{option.short.mark.show(txt)}\n'
-          + f'{option.short.ident} has already been specified on line {previous_short.mark.start.line}'
-        )
+        messages.append(option.short.mark.show(
+            txt, message=f'{option.short.ident} has already been specified on line {previous_short.mark.start.line}'
+        ))
       else:
         seen_shorts[option.short.name] = option.short
     if option.long is not None:
       previous_long = seen_longs.get(option.long.name, None)
       if previous_long is not None:
-        messages.append(
-          f'{option.long.mark.show(txt)}\n'
-          + f'{option.long.ident} has already been specified on line {previous_long.mark.start.line}'
-        )
+        messages.append(option.long.mark.show(
+            txt, message=f'{option.long.ident} has already been specified on line {previous_long.mark.start.line}'
+        ))
       else:
         seen_longs[option.long.name] = option.long
   if len(messages):
