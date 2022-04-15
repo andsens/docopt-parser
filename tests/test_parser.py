@@ -10,8 +10,8 @@ class TestParser(unittest.TestCase):
   @pytest.mark.filterwarnings('ignore:(.|\n)*this option is not referenced from the usage section.')
   @settings(max_examples=500)
   @given(DocoptAstGenerator.asts)
-  def test_parse(self, s):
-    assert isinstance(parse(str(s)), base.AstLeaf)
+  def test_parse(self, text: str):
+    assert isinstance(parse(str(text))[0], base.AstLeaf)
 
   # TODO: Never expect <None> or <nl>
 
@@ -19,7 +19,7 @@ class TestParser(unittest.TestCase):
 def test_unused_options():
   with pytest.warns(UserWarning, match=re.escape('''<--- this option is not referenced from the usage section.''')):
     parse('''Usage:
-  prog cmd [options]
+  prog cmd
 
 Options:
   -f, --sdfsdf
