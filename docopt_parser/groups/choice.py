@@ -1,26 +1,6 @@
 from typing import Iterable, List
-from parsec import generate, optional
 
-from docopt_parser import base, parsers
-from docopt_parser.base.astleaf import AstLeaf
-from docopt_parser.helpers import GeneratorParser
-
-@generate('expression')
-def expr() -> GeneratorParser[AstLeaf | None]:
-  from .sequence import sequence
-  nodes: List[base.AstLeaf] = []
-  while True:
-    _sequence = yield sequence
-    if _sequence is not None:
-      nodes.append(_sequence)
-    if (yield optional(parsers.either << parsers.whitespaces)) is None:
-      break
-  if len(nodes) > 1:
-    return Choice(nodes)
-  elif len(nodes) == 1:
-    return nodes[0]
-  else:
-    return None
+from docopt_parser import base
 
 
 class Choice(base.AstNode):

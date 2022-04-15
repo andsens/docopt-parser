@@ -10,7 +10,8 @@ from docopt_parser.elements.text import Text, other_documentation
 
 __all__ = [
   'Argument', 'argument', 'ArgumentSeparator', 'arg_separator', 'Command', 'command',
-  'DocumentedOption', 'OptionsShortcut', 'options_shortcut', 'Long', 'inline_long_option_spec', 'long_illegal',
+  'DocumentedOption', 'OptionsShortcut', 'options_shortcut',
+  'Long', 'inline_long_option_spec', 'long_illegal',
   'Short', 'inline_short_option_spec', 'inline_shortlist_short_option_spec', 'short_illegal',
   'Text', 'other_documentation'
 ]

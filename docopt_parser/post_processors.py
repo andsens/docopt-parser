@@ -1,4 +1,4 @@
-from typing import List, cast
+from typing import List
 import warnings
 from ordered_set import OrderedSet
 

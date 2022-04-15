@@ -44,7 +44,7 @@ class Location(object):
     return f'{self.line}:{self.col}'
 
   def show(self, text: List[str] | str):
-    col_offset = ' ' * self.col
+    col_offset = ' ' * (self.col + self.line.prefix_length)
     return f'{self.line.show(text)}\n{col_offset}^'
 
 @total_ordering
@@ -105,5 +105,6 @@ class Marked(Mark, Generic[T]):
 
 
 def explain_error(e: ParseError, text: str) -> str:
-  loc = Location(e.loc_info(e.text, e.index))
-  return f'\n{loc.show(text)}^\n{str(e)}'
+  (line, col) = e.loc_info(e.text, e.index)
+  loc = Location((line, col))
+  return f'{loc.show(text)}\n{str(e)}'

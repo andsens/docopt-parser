@@ -44,5 +44,5 @@ whitespaces = optional(whitespaces1)
 eol = (whitespaces + (nl | eof())).desc('<end of line>')
 indent = (many1(char(' ')) | char('\t')).parsecmap(helpers.join_string).desc('<indent> (spaces or tabs)')
 either = char('|').desc('<pipe> (|)')
-repeatable = string('...').desc('repeatable (...)')
-non_symbol_chars = char('=|()[], \t\n\r\b\f\x1B\x07\0') | eof() | repeatable
+ellipsis = string('...').desc('ellipsis (...)')
+non_symbol_chars = char('=|()[], \t\n\r\b\f\x1B\x07\0') | eof() | ellipsis

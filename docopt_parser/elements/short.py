@@ -4,13 +4,9 @@ from docopt_parser import base, elements, parsers, marked
 
 illegal = parsers.non_symbol_chars | parsers.char(',=-')
 
-# The reference implementation only allows inline specifying long options with arguments.
-# Since supporting short options as well does not introduce any ambiguity I chose to implement it.
-# TODO: Emit a warning when this additional feature is used
 inline_short_option_spec = (
   unit(parsers.char('-') >> parsers.char(illegal=illegal)).mark()
-  + optional((parsers.char('=') >> elements.argument))
-).desc('short option (-a)').parsecmap(lambda n: Short(*n))
+).desc('short option (-a)').parsecmap(lambda n: Short(n, None))
 
 # Usage parser without the leading "-" to allow parsing "-abc" style option specs
 inline_shortlist_short_option_spec = (

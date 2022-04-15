@@ -1,9 +1,6 @@
 from typing import List
-from parsec import generate
 
-from docopt_parser import base, elements, groups, parsers
-from docopt_parser.base.astleaf import AstLeaf
-from docopt_parser.helpers import GeneratorParser
+from docopt_parser import base
 
 class Optional(base.AstNode):
   def __init__(self, items: List[base.AstLeaf]):
@@ -17,14 +14,3 @@ class Optional(base.AstNode):
     yield 'type', 'optional'
     yield 'repeatable', self.repeatable
     yield 'items', [dict(item) for item in self.items]
-
-@generate('[optional]')
-def optional() -> GeneratorParser[Optional | elements.OptionsShortcut | None]:
-  node: AstLeaf = yield (parsers.char('[') >> groups.expr << parsers.char(']'))
-  # Unnest [[optional]], or [options]
-  if isinstance(node, (Optional, elements.OptionsShortcut)):
-    return node
-  elif node is None:
-    return None
-  else:
-    return Optional([node])

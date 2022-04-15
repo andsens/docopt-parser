@@ -2,12 +2,11 @@ from typing import List
 from parsec import generate, optional, regex, eof, many, lookahead  # type: ignore
 import re
 
-from docopt_parser import base, groups, parsers
-from docopt_parser.helpers import GeneratorParser
+from docopt_parser import base, groups, parsers, helpers
 
 def usage_section(strict: bool):
   @generate('usage section')
-  def p() -> GeneratorParser[UsageSection]:
+  def p() -> helpers.GeneratorParser[UsageSection]:
     yield regex(r'usage:', re.I)
     yield optional(parsers.nl + parsers.indent)
     prog = yield lookahead(optional(base.ident(parsers.non_symbol_chars)))
@@ -52,7 +51,7 @@ class UsageSection(base.AstNode):
 
 def usage_line(prog: str):
   @generate('usage line')
-  def p() -> GeneratorParser[groups.Choice | groups.Sequence]:
+  def p() -> helpers.GeneratorParser[groups.Choice | groups.Sequence]:
     yield parsers.string(prog)
     if (yield optional(lookahead(parsers.eol))) is None:
       return (yield parsers.whitespaces1 >> groups.expr)
