@@ -2,7 +2,7 @@ import pytest
 from tests.lang import DocoptAst as DocoptAstGenerator
 from docopt_parser import base, parse
 import unittest
-from hypothesis import given, settings
+from hypothesis import given, settings  # type: ignore
 import re
 
 

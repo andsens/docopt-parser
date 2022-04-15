@@ -7,10 +7,11 @@ from docopt_parser import helpers, parsers, base
 def ident(illegal: "str | Parser[str | None] | None", starts_with: "Parser[str] | None" = None) -> "Parser[str]":
   if starts_with is None:
     starts_with = parsers.char(illegal=illegal)
-  return (
+  p = (
     starts_with
     + many(parsers.char(illegal=illegal))
-  ).parsecmap(helpers.join_string) ^ fail_with('identifier')
+  ).parsecmap(helpers.join_string)
+  return p ^ fail_with('identifier')
 
 
 class IdentNode(base.AstLeaf):
