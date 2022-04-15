@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, cast
 import warnings
 from ordered_set import OrderedSet
 
@@ -13,45 +13,42 @@ def post_process_ast(ast: doc.Doc, text: str) -> doc.Doc:
   #     prog ARG
   #     prog cmd <--
 
-  match_args_with_options(ast, text)
-  # match_options(root)
-  # merge leaves
-  # populate_shortcuts(root)
-  warn_unused_documented_options(ast, text)
-  # mark_multiple(doc)
   fail_duplicate_documented_options(ast, text)
+  match_args_with_options(ast, text)
+  # populate_shortcuts(root)
+  # mark_multiple(doc)
+  warn_unused_documented_options(ast, text)
   return ast
 
 def match_args_with_options(ast: doc.Doc, text: str) -> None:
   def match_opts(node: base.AstLeaf):
     if not isinstance(node, base.AstNode):
       return
-    prev = None
     new_items: List[base.AstLeaf] = []
-    for item in node.items:
-      if isinstance(prev, (elements.Short, elements.Long)):
-        definition = ast.get_option_definition(prev)
-        if definition.expects_arg:
-          if prev.arg is None:
-            if isinstance(item, elements.Argument):
-              prev.arg = item
-            else:
-              raise doc.DocoptParseError(prev.mark.show(
-                text,
-                f'{prev.ident} expects an argument (defined at {definition.mark})')
-              )
+    item_list = iter(node.items)
+    # Go through the list pairwise, have each element be "left" once
+    left = next(item_list, None)
+    while left is not None:
+      right = next(item_list, None)
+      if isinstance(left, (elements.Short, elements.Long)):
+        definition = ast.get_option_definition(left)
+        if definition.expects_arg and left.arg is None:
+          if isinstance(right, elements.Argument):
+            left.arg = right
+            # Remove the argument from the list by skipping over it in the next iteration
+            right = next(item_list, None)
           else:
-            new_items.append(item)
-        elif prev.arg is not None:
-          raise doc.DocoptParseError(prev.mark.show(
+            raise doc.DocoptParseError(left.mark.show(
+              text,
+              f'{left.ident} expects an argument (defined at {definition.mark})')
+            )
+        elif not definition.expects_arg and left.arg is not None:
+          raise doc.DocoptParseError(left.arg.mark.show(
             text,
-            f'{prev.ident} does not expect an argument (defined at {definition.mark})')
+            f'{left.ident} does not expect an argument (defined at {definition.mark})')
           )
-        else:
-          new_items.append(item)
-      else:
-        new_items.append(item)
-      prev = item
+      new_items.append(left)
+      left = right
     node.items = new_items
   ast.walk(match_opts)
 
@@ -87,18 +84,6 @@ def fail_duplicate_documented_options(ast: doc.Doc, text: str):
   if len(messages):
     raise doc.DocoptParseError('\n'.join(messages))
 
-# def match_options(node: base.AstLeaf, known_leaves: OrderedSet[base.AstLeaf] | None = None):
-#   if known_leaves is None:
-#     known_leaves = OrderedSet[base.AstLeaf]([])
-#   if isinstance(node, base.AstNode):
-#     for idx, item in enumerate(node.items):
-#       if isinstance(item, (elements.Command, elements.Argument, elements.ArgumentSeparator)):
-#         if item in known_leaves:
-#           node.items[idx] = next(filter(lambda i: i == item, known_leaves))
-#         else:
-#           known_leaves.add(item)
-#       elif isinstance(item, base.AstNode):
-#         match_options(item, known_leaves)
 
 # def mark_multiple(node, repeatable=False, siblings=[]):
 #   if hasattr(node, 'multiple') and not node.multiple:

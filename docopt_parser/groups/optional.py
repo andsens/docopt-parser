@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import List
 from parsec import generate
 
 from docopt_parser import base, groups, parsers
@@ -6,7 +6,7 @@ from docopt_parser.base.astleaf import AstLeaf
 from docopt_parser.helpers import GeneratorParser
 
 class Optional(base.AstNode):
-  def __init__(self, items: Iterable[base.AstLeaf]):
+  def __init__(self, items: List[base.AstLeaf]):
     super().__init__(items)
 
   def __repr__(self):

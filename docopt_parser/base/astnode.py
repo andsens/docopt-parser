@@ -1,11 +1,11 @@
-from typing import Callable, Iterable, TypeVar
+from typing import Callable, List, TypeVar
 
 from docopt_parser import base
 
 class AstNode(base.AstLeaf):
-  items: Iterable[base.AstLeaf]
+  items: List[base.AstLeaf]
 
-  def __init__(self, items: Iterable[base.AstLeaf]):
+  def __init__(self, items: List[base.AstLeaf]):
     super().__init__()
     self.items = items
 
