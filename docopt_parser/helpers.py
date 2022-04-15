@@ -1,7 +1,5 @@
-from typing import Generator, List, TypeVar, Iterable, Any, cast, overload
+from typing import Generator, List, TypeVar, Iterable, Any, overload
 from parsec import Parser
-
-from docopt_parser import marked
 
 T = TypeVar('T')
 GeneratorParser = Generator["Parser[Any]", Any, T]
@@ -16,23 +14,13 @@ Nested = T | Iterable["Nested[T]"]
 def join_string(elm: Nested[str]) -> str:
   pass
 @overload
+def join_string(elm: Nested[None]) -> None:
+  pass
+@overload
 def join_string(elm: Nested[str | None]) -> str | None:
   pass
-@overload
-def join_string(elm: marked.MarkedTuple[Nested[str]]) -> marked.MarkedTuple[str]:
-  pass
-@overload
-def join_string(elm: marked.MarkedTuple[Nested[str | None]]) -> marked.MarkedTuple[str | None]:
-  pass
 
-def join_string(elm: marked.MarkedTuple[Nested[str | None]] | Nested[str | None]) -> \
-  marked.MarkedTuple[str | None] | str | None:
-  if marked.is_marked_tuple(elm):
-    return marked.unwrappedMarked(_join_string, cast(marked.MarkedTuple[str | None], elm))
-  else:
-    return _join_string(cast(str | None, elm))
-
-def _join_string(elm: Nested[str | None]) -> str | None:
+def join_string(elm: Nested[str | None]) -> str | None:
   if elm is None or isinstance(elm, (str)):
     return elm
   else:

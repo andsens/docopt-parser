@@ -21,17 +21,25 @@ def doc(strict: bool):
     )
     ((pre, usage), post) = items
     option_sections = list(n for n in pre + post if isinstance(n, sections.OptionsSection))
-    return Doc(usage, option_sections)
+    text = list(n for n in pre + post if isinstance(n, elements.Text))
+    return Doc(usage, option_sections, text)
   return p
 
 class Doc(base.AstNode):
   usage_section: sections.UsageSection
   option_sections: Iterable[sections.OptionsSection]
+  text: Iterable[elements.Text]
 
-  def __init__(self, usage_section: sections.UsageSection, option_sections: List[sections.OptionsSection]):
+  def __init__(
+    self,
+    usage_section: sections.UsageSection,
+    option_sections: List[sections.OptionsSection],
+    text: List[elements.Text]
+  ):
     super().__init__(cast(List[base.AstLeaf], [usage_section]) + cast(List[base.AstLeaf], option_sections))
     self.usage_section = usage_section
     self.option_sections = option_sections
+    self.text = text
 
   @property
   def usage_options(self) -> OrderedSet[elements.DocumentedOption]:

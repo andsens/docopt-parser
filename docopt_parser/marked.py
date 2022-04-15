@@ -1,37 +1,10 @@
 from functools import total_ordering
-from typing import Any, Callable, Generic, Tuple, TypeVar
+from typing import Generic, Tuple, TypeVar
 from parsec import ParseError
 
 T = TypeVar('T')
 LocInfo = Tuple[int, int]
 MarkedTuple = Tuple[LocInfo, T, LocInfo]
-
-def is_marked_tuple(marked_tuple: Any) -> bool:
-  if not isinstance(marked_tuple, tuple):
-    return False
-  if len(marked_tuple) != 3:  # type: ignore
-    return False
-  if not is_loc_info(marked_tuple[0]):
-    return False
-  if not is_loc_info(marked_tuple[2]):
-    return False
-  return True
-
-def is_loc_info(loc_info: Any) -> bool:
-  if not isinstance(loc_info, tuple):
-    return False
-  if len(loc_info) != 2:  # type: ignore
-    return False
-  if not isinstance(loc_info[0], int):
-    return False
-  if not isinstance(loc_info[1], int):
-    return False
-  return True
-
-U = TypeVar('U')
-def unwrappedMarked(function: Callable[[T], U], marked: MarkedTuple[T]) -> MarkedTuple[U]:
-  start, elm, end = marked
-  return (start, function(elm), end)
 
 @total_ordering
 class Location(object):
@@ -49,6 +22,10 @@ class Location(object):
     if not isinstance(other, Location):
       raise Exception(f'Unable to compare <Location> with <{type(other)}>')
     return self.line < other.line or (self.line == other.line and self.col < other.col)
+
+  def __repr__(self):
+    # All text editors use 1 indexed lines, show the location as such
+    return f'{self.line + 1}:{self.col}'
 
   def show(self, text: str):
     lines = text.split('\n')
@@ -76,23 +53,33 @@ class Mark(object):
       raise Exception(f'Unable to compare <Location> with <{type(other)}>')
     return self.start < other.start or (self.start == other.start and self.end < other.end)
 
+  def __repr__(self):
+    return f'{self.start}-{self.end}'
+
   def show(self, text: str):
     lines = text.split('\n')
-    if self.start.line == self.end.line:
+    start = Location((self.start.line, self.start.col))
+    end = Location((self.end.line, self.end.col))
+    # If "end" is at column 0 on a new line,
+    # move the location back to the end of the previous line.
+    if end.col == 0 and end > start:
+      end.line -= 1
+      end.col = len(lines[end.line])
+    if start.line == end.line:
       prev_line = ''
-      if self.start.line > 0:
-        prev_line = lines[self.start.line - 1] + '\n'
-      line = lines[self.start.line]
-      if line.strip() == line[self.start.col:self.end.col].strip():
+      if start.line > 0:
+        prev_line = lines[start.line - 1] + '\n'
+      line = lines[start.line]
+      if line.strip() == line[start.col:end.col].strip():
         return f'{prev_line}{line} <---'
       else:
-        start_col_offset = ' ' * self.start.col
-        underline = '~' * (self.end.col - self.start.col)
+        start_col_offset = ' ' * start.col
+        underline = '~' * (end.col - start.col)
         return f'{prev_line}{line}\n{start_col_offset}{underline}'
     else:
-      all_lines = '\n'.join(lines[self.start.line:self.end.line])
-      start_col_offset = ' ' * self.start.col
-      end_col_offset = ' ' * self.end.col
+      all_lines = '\n'.join(lines[start.line:end.line + 1])
+      start_col_offset = ' ' * start.col
+      end_col_offset = ' ' * end.col
       return f'{start_col_offset}V\n{all_lines}\n{end_col_offset}^'
 
 class Marked(Mark, Generic[T]):

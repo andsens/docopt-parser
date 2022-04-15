@@ -6,16 +6,18 @@ from docopt_parser import base, helpers, parsers, marked
 class Argument(base.IdentNode):
   __name: marked.Marked[str]
   multiple: bool = False
-  mark: marked.Mark
 
   def __init__(self, name: marked.MarkedTuple[str]):
     super().__init__(name[1])
     self.__name = marked.Marked(name)
-    self.mark = marked.Mark(self.__name.start, self.__name.end)
 
   @property
   def name(self):
     return self.__name.elm
+
+  @property
+  def mark(self) -> marked.Mark:
+    return self.__name
 
   def __repr__(self):
     return f'''<Argument{self.multiple_suffix}>: {self.name}'''

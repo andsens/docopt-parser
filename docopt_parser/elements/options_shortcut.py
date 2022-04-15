@@ -7,12 +7,14 @@ options_shortcut = parsers.string('options').mark().desc('options shortcut').par
 class OptionsShortcut(base.AstNode):
   __name: marked.Marked[str]
   items: Iterable[elements.DocumentedOption]
-  mark: marked.Mark
 
   def __init__(self, name: marked.MarkedTuple[str]):
     super().__init__([])
     self.__name = marked.Marked(name)
-    self.mark = marked.Mark(self.__name.start, self.__name.end)
+
+  @property
+  def mark(self) -> marked.Mark:
+    return self.__name
 
   def __repr__(self) -> str:
     return f'''<OptionsShortcut>{self.repeatable_suffix}

@@ -8,15 +8,17 @@ arg_separator = unit(parsers.string('--') << lookahead(parsers.non_symbol_chars)
 class ArgumentSeparator(base.AstLeaf):
   __name: marked.Marked[str]
   multiple: bool = False
-  mark: marked.Mark
 
   def __init__(self, name: marked.MarkedTuple[str]):
     super().__init__()
     self.__name = marked.Marked(name)
-    self.mark = marked.Mark(self.__name.start, self.__name.end)
+
+  @property
+  def mark(self) -> marked.Mark:
+    return self.__name
 
   def __repr__(self):
     return f'<ArgumentSeparator{self.multiple_suffix}>{self.repeatable_suffix}'
 
   def __iter__(self) -> base.DictGenerator:
-    yield '--'
+    yield 'name', self.__name.elm
