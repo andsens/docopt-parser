@@ -28,7 +28,7 @@ def options_section(strict: bool):
         yield (parsers.char(' ') + many1(parsers.char(' '))) ^ fail_with('at least 2 spaces')
         _default = yield lookahead(optional(doc) >> optional(default).mark() << optional(doc))
         _doc = yield optional(doc).mark()
-      options.append(elements.DocumentedOption(short, long, True, _default, _doc))
+      options.append(elements.DocumentedOption(short, long, _default, _doc))
       if (yield lookahead(optional(next_option))) is None:
         break
       yield parsers.nl + optional(parsers.indent)

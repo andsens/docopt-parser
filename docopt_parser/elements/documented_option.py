@@ -14,18 +14,18 @@ class DocumentedOption(base.IdentNode):
 
   @overload
   def __init__(self,
-               short: elements.Short, long: elements.Long | None, shortcut: bool,
+               short: elements.Short, long: elements.Long | None,
                default: marked.MarkedTuple[str] | None, doc: marked.MarkedTuple[str] | None):
     pass
 
   @overload
   def __init__(self,
-               short: elements.Short | None, long: elements.Long, shortcut: bool,
+               short: elements.Short | None, long: elements.Long,
                default: marked.MarkedTuple[str] | None, doc: marked.MarkedTuple[str] | None):
     pass
 
   def __init__(self,
-               short: elements.Short | None, long: elements.Long | None, shortcut: bool,
+               short: elements.Short | None, long: elements.Long | None,
                default: marked.MarkedTuple[str] | None, doc: marked.MarkedTuple[str] | None):
     if long:
       super().__init__(long.ident)
@@ -33,7 +33,6 @@ class DocumentedOption(base.IdentNode):
       super().__init__(short.ident)
     self.short = short
     self.long = long
-    self.shortcut = shortcut
     self.expects_arg = any([o.arg for o in [short, long] if o is not None])
     self.__default = marked.Marked(default) if default else None
     self.__doc = marked.Marked(doc) if doc else None
@@ -59,7 +58,6 @@ class DocumentedOption(base.IdentNode):
     return f'''<Option{self.multiple_suffix}>{self.repeatable_suffix}
   short: {self.indent(self.short) if self.short else 'None'}
   long:  {self.indent(self.long) if self.long else 'None'}
-  shortcut: {self.shortcut}
   arg?:     {self.expects_arg}
   default:  {self.default}
   doc:      {self.doc}'''
@@ -67,7 +65,6 @@ class DocumentedOption(base.IdentNode):
   def __iter__(self) -> base.DictGenerator:
     yield 'short', dict(self.short) if self.short else None
     yield 'long', dict(self.long) if self.long else None
-    yield 'shortcut', self.shortcut
     yield 'expects_arg', self.expects_arg
     yield 'default', self.default
     yield 'doc', self.doc
