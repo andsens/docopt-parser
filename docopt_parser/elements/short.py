@@ -35,6 +35,10 @@ class Short(base.IdentNode):
   def mark(self) -> marked.Mark:
     return self.__name
 
+  @property
+  def expects_arg(self):
+    return self.arg is not None
+
   def __repr__(self):
     return f'''-{self.name}{self.repeatable_suffix}
   arg: {self.arg}'''

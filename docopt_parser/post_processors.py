@@ -1,9 +1,10 @@
+from typing import List
 import warnings
 from ordered_set import OrderedSet
 
-from docopt_parser import doc, elements
+from docopt_parser import doc, base, elements
 
-def post_process_ast(ast: doc.Doc, txt: str) -> doc.Doc:
+def post_process_ast(ast: doc.Doc, text: str) -> doc.Doc:
   # TODO:
   # Missing the repeated options parser, where e.g. -AA or --opt --opt becomes a counter
   # Handle options that are not referenced from usage
@@ -12,22 +13,57 @@ def post_process_ast(ast: doc.Doc, txt: str) -> doc.Doc:
   #     prog ARG
   #     prog cmd <--
 
-  # merge leaves
+  match_args_with_options(ast, text)
   # match_options(root)
-  warn_unused_options(ast, txt)
+  # merge leaves
+  # populate_shortcuts(root)
+  warn_unused_documented_options(ast, text)
   # mark_multiple(doc)
-  fail_duplicate_options(ast, txt)
+  fail_duplicate_documented_options(ast, text)
   return ast
 
-def warn_unused_options(ast: doc.Doc, txt: str) -> None:
+def match_args_with_options(ast: doc.Doc, text: str) -> None:
+  def match_opts(node: base.AstLeaf):
+    if not isinstance(node, base.AstNode):
+      return
+    prev = None
+    new_items: List[base.AstLeaf] = []
+    for item in node.items:
+      if isinstance(prev, (elements.Short, elements.Long)):
+        definition = ast.get_option_definition(prev)
+        if definition.expects_arg:
+          if prev.arg is None:
+            if isinstance(item, elements.Argument):
+              prev.arg = item
+            else:
+              raise doc.DocoptParseError(prev.mark.show(
+                text,
+                f'{prev.ident} expects an argument (defined at {definition.mark})')
+              )
+          else:
+            new_items.append(item)
+        elif prev.arg is not None:
+          raise doc.DocoptParseError(prev.mark.show(
+            text,
+            f'{prev.ident} does not expect an argument (defined at {definition.mark})')
+          )
+        else:
+          new_items.append(item)
+      else:
+        new_items.append(item)
+      prev = item
+    node.items = new_items
+  ast.walk(match_opts)
+
+def warn_unused_documented_options(ast: doc.Doc, text: str) -> None:
   if ast.usage_section.reduce(lambda memo, node: memo or isinstance(node, elements.OptionsShortcut), False):
     return
   unused_options = OrderedSet(ast.section_options) - OrderedSet(ast.usage_options)
   for option in unused_options:
-    warnings.warn(option.mark.show(txt, message='this option is not referenced from the usage section.'))
+    warnings.warn(option.mark.show(text, message='this option is not referenced from the usage section.'))
 
 
-def fail_duplicate_options(ast: doc.Doc, txt: str):
+def fail_duplicate_documented_options(ast: doc.Doc, text: str):
   seen_shorts: dict[str, elements.Short] = dict()
   seen_longs: dict[str, elements.Long] = dict()
   messages: list[str] = []
@@ -36,7 +72,7 @@ def fail_duplicate_options(ast: doc.Doc, txt: str):
       previous_short = seen_shorts.get(option.short.name, None)
       if previous_short is not None:
         messages.append(option.short.mark.show(
-            txt, message=f'{option.short.ident} has already been specified on line {previous_short.mark.start.line}'
+            text, message=f'{option.short.ident} has already been specified on line {previous_short.mark.start.line}'
         ))
       else:
         seen_shorts[option.short.name] = option.short
@@ -44,7 +80,7 @@ def fail_duplicate_options(ast: doc.Doc, txt: str):
       previous_long = seen_longs.get(option.long.name, None)
       if previous_long is not None:
         messages.append(option.long.mark.show(
-            txt, message=f'{option.long.ident} has already been specified on line {previous_long.mark.start.line}'
+            text, message=f'{option.long.ident} has already been specified on line {previous_long.mark.start.line}'
         ))
       else:
         seen_longs[option.long.name] = option.long

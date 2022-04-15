@@ -17,3 +17,9 @@ class AstNode(base.AstLeaf):
       if isinstance(item, AstNode):
         memo = item.reduce(function, memo)
     return memo
+
+  def walk(self, function: Callable[["base.AstLeaf"], None]) -> None:
+    for item in iter(self.items):
+      if isinstance(item, AstNode):
+        item.walk(function)
+      function(item)

@@ -6,7 +6,7 @@ import docopt
 import logging
 import termcolor
 import yaml
-from docopt_parser import DocoptParseError, parse, __doc__ as pkg_doc, __name__ as root_name, __version__
+from docopt_parser import DocoptError, parse, __doc__ as pkg_doc, __name__ as root_name, __version__
 
 log = logging.getLogger(root_name)
 
@@ -37,7 +37,7 @@ def docopt_parser(params: Params):
       ast, parsed_doc = parse(doc, strict=True)
       if params['ast']:
         sys.stdout.write(yaml.dump(dict(ast), sort_keys=False) if params['--yaml'] else repr(ast) + '\n')
-  except DocoptParseError as e:
+  except DocoptError as e:
     log.error(str(e))
     sys.exit(e.exit_code)
 
