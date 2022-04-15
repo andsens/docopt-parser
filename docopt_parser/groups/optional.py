@@ -22,7 +22,7 @@ class Optional(base.AstNode):
 def optional() -> GeneratorParser[Optional | None]:
   node: AstLeaf = yield (parsers.char('[') >> groups.choice << parsers.char(']'))
   # Unnest [[optional]], or [sequence]
-  if isinstance(node, (Optional, groups.Sequence)):
+  if isinstance(node, (Optional)):
     return Optional(node.items)
   elif node is None:
     return None
