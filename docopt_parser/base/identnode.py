@@ -1,7 +1,7 @@
 import typing as T
 from parsec import Parser, many, fail_with  # type: ignore
 
-from docopt_parser import helpers, parsers, base
+from docopt_parser import helpers, marks, parsers, base
 
 
 def ident(illegal: "str | Parser[str | None] | None", starts_with: "Parser[str] | None" = None) -> "Parser[str]":
@@ -17,12 +17,16 @@ def ident(illegal: "str | Parser[str | None] | None", starts_with: "Parser[str] 
 class IdentNode(base.AstLeaf):
   ident: str
 
-  def __init__(self, ident: str):
-    super().__init__()
-    self.ident = ident
+  def __init__(self, ident: marks.MarkedTuple[str]):
+    super().__init__((ident[0], ident[2]))
+    self.ident = ident[1]
 
   def __hash__(self) -> int:
     return hash(self.ident)
 
   def __eq__(self, other: T.Any) -> bool:
     return isinstance(other, IdentNode) and self.ident == other.ident
+
+  def __iter__(self):
+    yield from super().__iter__()
+    yield 'ident', self.ident

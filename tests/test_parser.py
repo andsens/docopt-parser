@@ -10,7 +10,7 @@ class TestParser(unittest.TestCase):
   @settings(max_examples=500)
   @given(DocoptAstGenerator.asts)
   def test_parse(self, text: str):
-    assert isinstance(parse(str(text))[0], base.AstLeaf)
+    assert isinstance(parse(str(text))[0], base.AstNode)
 
   # TODO: Never expect <None> or <nl>
 

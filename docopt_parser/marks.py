@@ -4,6 +4,7 @@ from parsec import ParseError
 
 _T = T.TypeVar('_T')
 LocInfo = T.Tuple[int, int]
+RangeTuple = T.Tuple[LocInfo, LocInfo]
 MarkedTuple = T.Tuple[LocInfo, _T, LocInfo]
 
 # All text editors use 1 indexed lines, so we simply subclass int for linenumbers
@@ -48,20 +49,20 @@ class Location(object):
     return f'{self.line.show(text)}\n{col_offset}^'
 
 @total_ordering
-class Mark(object):
+class Range(object):
   start: Location
   end: Location
 
-  def __init__(self, start: Location, end: Location):
+  def __init__(self, range: RangeTuple):
     super().__init__()
-    self.start = start
-    self.end = end
+    self.start = Location(range[0])
+    self.end = Location(range[1])
 
   def __eq__(self, other: object):
-    return isinstance(other, Mark) and self.start == other.start and self.end == other.end
+    return isinstance(other, Range) and self.start == other.start and self.end == other.end
 
   def __lt__(self, other: object):
-    if not isinstance(other, Mark):
+    if not isinstance(other, Range):
       raise Exception(f'Unable to compare <Location> with <{type(other)}>')
     return self.start < other.start or (self.start == other.start and self.end < other.end)
 
@@ -95,13 +96,12 @@ class Mark(object):
       end_col_offset = ' ' * (end.col + end.line.prefix_length)
       return f'{start_col_offset}V\n{all_lines}\n{end_col_offset}^'
 
-class Marked(Mark, T.Generic[_T]):
+class Marked(Range, T.Generic[_T]):
   elm: _T
 
   def __init__(self, mark: MarkedTuple[_T]):
-    start, txt, end = mark
-    super().__init__(Location(start), Location(end))
-    self.elm = txt
+    super().__init__((mark[0], mark[2]))
+    self.elm = mark[1]
 
 
 def explain_error(e: ParseError, text: str) -> str:

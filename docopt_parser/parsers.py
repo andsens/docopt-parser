@@ -1,7 +1,7 @@
 import typing as T
 import parsec as P
 
-from docopt_parser import helpers
+from docopt_parser import helpers, marks
 
 any_char = P.regex(r'.|\n').desc('any char')  # type: ignore
 def char(legal: "str | P.Parser[str]" = any_char, illegal: "P.Parser[T.Any] | str | None" = None) -> "P.Parser[str]":
@@ -37,6 +37,11 @@ def string(s: str) -> "P.Parser[str]":
     else:
       return T.cast(P.Value[str], P.Value.failure(index, s))
   return string_parser
+
+@P.Parser
+def location(text: str, index: int = 0) -> P.Value[marks.LocInfo]:
+  '''Returns the current location of the parser'''
+  return P.Value.success(index, P.ParseError.loc_info(text, index))
 
 nl = char('\n')
 whitespaces1 = P.many1(char(' \t', nl)).parsecmap(helpers.join_string).desc('<whitespace>')

@@ -1,31 +1,14 @@
 import typing as T
 import parsec as P
 
-from docopt_parser import base, helpers, parsers, marked
+from docopt_parser import base, helpers, marks, parsers
 
 class Argument(base.IdentNode):
-  __name: marked.Marked[str]
-  multiple: bool = False
-
-  def __init__(self, name: marked.MarkedTuple[str]):
-    super().__init__(name[1])
-    self.__name = marked.Marked(name)
-
-  @property
-  def name(self):
-    return self.__name.elm
-
-  @property
-  def mark(self) -> marked.Mark:
-    return self.__name
+  def __init__(self, name: marks.MarkedTuple[str]):
+    super().__init__(name)
 
   def __repr__(self):
-    return f'''<Argument{self.multiple_suffix}>: {self.name}'''
-
-  def __iter__(self) -> base.DictGenerator:
-    yield 'name', self.name
-    yield 'multiple', self.multiple
-
+    return f'''<Argument{self.multiple_suffix}>: {self.ident}'''
 
 illegal = parsers.non_symbol_chars
 

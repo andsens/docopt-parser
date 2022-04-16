@@ -6,7 +6,8 @@ from docopt_parser import base, groups, parsers, helpers
 
 def usage_section(strict: bool):
   @P.generate('usage section')
-  def p() -> helpers.GeneratorParser[UsageSection]:
+  def p() -> helpers.GeneratorParser[T.Tuple[str, groups.Choice]]:
+    start = yield parsers.location
     yield P.regex(r'usage:', re.I)  # type: ignore
     yield P.optional(parsers.nl + parsers.indent)
     prog = yield P.lookahead(P.optional(base.ident(parsers.non_symbol_chars)))
@@ -22,40 +23,18 @@ def usage_section(strict: bool):
       yield (parsers.nl + parsers.nl) ^ P.many(parsers.char(' \t') | parsers.nl) + P.eof()
     else:
       yield P.optional((parsers.nl + parsers.nl) ^ P.many(parsers.char(' \t') | parsers.nl) + P.eof())
-    if len(lines) > 1:
-      root = groups.Choice(lines)
-    elif len(lines) == 1:
-      root = lines[0]
-    else:
-      root = None
-    return UsageSection(root)
+    end = yield parsers.location
+    return (prog, groups.Choice((start, lines, end)))
   return p
 
-class UsageSection(base.AstNode):
-  root: groups.Choice | groups.Sequence | None
 
-  def __init__(self, root: groups.Choice | groups.Sequence | None):
-    if root is None:
-      super().__init__([])
-    else:
-      super().__init__([root])
-    self.root = root
-
-  def __repr__(self) -> str:
-    return f'''<UsageSection>
-{self.indent(self.items)}'''
-
-  def __iter__(self) -> base.DictGenerator:
-    yield 'type', 'usagesection'
-    yield 'items', [dict(item) for item in self.items]
-
-def usage_line(prog: str):
-  @P.generate('usage line')
-  def p() -> helpers.GeneratorParser[groups.Choice | groups.Sequence]:
-    yield parsers.string(prog)
-    if (yield P.optional(P.lookahead(parsers.eol))) is None:
-      return (yield parsers.whitespaces1 >> groups.expr)
-    else:
-      yield parsers.whitespaces
-      return groups.Sequence([])
-  return p
+def usage_line(prog: str) -> "P.Parser[groups.Choice | groups.Sequence]":
+  # Regarding "type: ignore": Error is
+  # Operator ">>" not supported for types "Parser[str]" and "Parser[Choice]" when expected type is "Parser[Sequence]"
+  # but parser.__or__(other_parser) works fine, not a clue how to fix this
+  return parsers.string(prog) >> (
+    (
+      P.lookahead(parsers.eol) >> parsers.whitespaces
+      .parsecmap(lambda _: []).mark().parsecmap(lambda n: groups.Sequence(n))
+    ) | (parsers.whitespaces1 >> groups.expr)  # type: ignore
+  )
