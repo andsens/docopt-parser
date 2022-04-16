@@ -44,26 +44,26 @@ Options:
 ''')
 
 def test_missing_arg_from_usage():
-  with pytest.raises(doc.DocoptParseError, match=r'.*' + re.escape('-a expects an argument')):
+  with pytest.raises(doc.DocoptParseError, match=r'.*' + re.escape('--long expects an argument')):
     parse('''Usage:
-  prog -a=F
-  prog -a
+  prog --long=F
+  prog --long
 ''')
 
 def test_unexpected_arg_from_doc():
-  with pytest.raises(doc.DocoptParseError, match=r'.*' + re.escape('-a does not expect an argument')):
+  with pytest.raises(doc.DocoptParseError, match=r'.*' + re.escape('--long does not expect an argument')):
     parse('''Usage:
-  prog -a=B
+  prog --long=B
 
 Options:
-  -a
+  --long
 ''')
 
 def test_unexpected_arg_from_usage():
-  with pytest.raises(doc.DocoptParseError, match=r'.*' + re.escape('-a does not expect an argument')):
+  with pytest.raises(doc.DocoptParseError, match=r'.*' + re.escape('--long does not expect an argument')):
     parse('''Usage:
-  prog -a
-  prog -a=B
+  prog --long
+  prog --long=B
 ''')
 
 if __name__ == "__main__":
