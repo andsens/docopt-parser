@@ -1,11 +1,7 @@
-from typing import List
-
 from docopt_parser import base
 
-class Optional(base.AstNode):
-  def __init__(self, items: List[base.AstLeaf]):
-    super().__init__(items)
 
+class Optional(base.AstNode):
   def __repr__(self):
     return f'''<Optional>{self.repeatable_suffix}
 {self.indent(self.items)}'''

@@ -1,10 +1,11 @@
 import re
-from parsec import regex, many1  # type: ignore
+import parsec as P
 
 from docopt_parser import base, helpers, parsers, marked
 
-other_documentation = many1(parsers.char(illegal=regex(r'[^\n]*(options:|usage:)', re.I))) \
-  .desc('Text').parsecmap(helpers.join_string).mark().parsecmap(lambda n: Text(n))
+other_documentation = P.many1(parsers.char(
+  illegal=P.regex(r'[^\n]*(options:|usage:)', re.I))  # type: ignore
+  ).desc('Text').parsecmap(helpers.join_string).mark().parsecmap(lambda n: Text(n))
 
 class Text(base.AstLeaf):
   __text: marked.Marked[str]

@@ -1,9 +1,12 @@
-# from docopt_parser import parsers
-# from docopt_parser.groups import expr
+from docopt_parser import base
 
-# TODO: Group must be represented somehow
-# Bug:
-# Usage: prog [(a b c)]
-# vs.
-# Usage: prog ([a b c])
-# group = (parsers.char('(') >> expr << parsers.char(')')).desc('group')
+
+class Group(base.AstNode):
+  def __repr__(self):
+    return f'''<Group>{self.repeatable_suffix}
+{self.indent(self.items)}'''
+
+  def __iter__(self) -> base.DictGenerator:
+    yield 'repeatable', self.repeatable
+    yield 'type', 'group'
+    yield 'items', [dict(item) for item in self.items]

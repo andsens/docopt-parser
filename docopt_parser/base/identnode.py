@@ -1,4 +1,4 @@
-from typing import Any
+import typing as T
 from parsec import Parser, many, fail_with  # type: ignore
 
 from docopt_parser import helpers, parsers, base
@@ -24,5 +24,5 @@ class IdentNode(base.AstLeaf):
   def __hash__(self) -> int:
     return hash(self.ident)
 
-  def __eq__(self, other: Any) -> bool:
+  def __eq__(self, other: T.Any) -> bool:
     return isinstance(other, IdentNode) and self.ident == other.ident

@@ -1,5 +1,5 @@
-from typing import cast
-from parsec import generate, many1, optional, lookahead, fail_with  # type: ignore
+import typing as T
+import parsec as P
 
 from docopt_parser import base, helpers, parsers, marked
 
@@ -32,14 +32,14 @@ illegal = parsers.non_symbol_chars
 wrapped_arg = (parsers.char('<') + base.ident(illegal | parsers.char('>')) + parsers.char('>')) \
   .desc('<arg>').parsecmap(helpers.join_string)
 
-@generate('ARG')
+@P.generate('ARG')
 def uppercase_arg() -> helpers.GeneratorParser[str]:
-  name_p = many1(parsers.char(illegal=illegal)).parsecmap(helpers.join_string).desc('ARG')
-  name: str | None = yield lookahead(optional(name_p))
+  name_p = P.many1(parsers.char(illegal=illegal)).parsecmap(helpers.join_string).desc('ARG')
+  name: str | None = yield P.lookahead(P.optional(name_p))
   if name is not None and name.isupper():
     return (yield name_p)
   else:
-    yield fail_with('Not an argument')
-  return cast(str, name)
+    yield P.fail_with('Not an argument')  # type: ignore
+  return T.cast(str, name)
 
 argument = (wrapped_arg ^ uppercase_arg).mark().desc('argument').parsecmap(lambda n: Argument(n))

@@ -1,4 +1,4 @@
-from typing import overload
+import typing as T
 
 from docopt_parser import elements, base, marked
 
@@ -12,13 +12,13 @@ class DocumentedOption(base.IdentNode):
   __doc: marked.Marked[str] | None
   mark: marked.Mark
 
-  @overload
+  @T.overload
   def __init__(self,
                short: elements.Short, long: elements.Long | None,
                default: marked.MarkedTuple[str] | None, doc: marked.MarkedTuple[str] | None):
     pass
 
-  @overload
+  @T.overload
   def __init__(self,
                short: elements.Short | None, long: elements.Long,
                default: marked.MarkedTuple[str] | None, doc: marked.MarkedTuple[str] | None):

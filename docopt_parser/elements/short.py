@@ -1,16 +1,16 @@
-from parsec import optional, unit
+import parsec as P
 
 from docopt_parser import base, elements, parsers, marked
 
 illegal = parsers.non_symbol_chars | parsers.char(',=-')
 
 inline_short_option_spec = (
-  unit(parsers.char('-') >> parsers.char(illegal=illegal)).mark()
+  P.unit(parsers.char('-') >> parsers.char(illegal=illegal)).mark()
 ).desc('short option (-a)').parsecmap(lambda n: Short(n, None))
 
 # Usage parser without the leading "-" to allow parsing "-abc" style option specs
 inline_shortlist_short_option_spec = (
-  parsers.char(illegal=illegal).mark() + optional((parsers.char('=') >> elements.argument))
+  parsers.char(illegal=illegal).mark() + P.optional((parsers.char('=') >> elements.argument))
 ).desc('short option (-a)').parsecmap(lambda n: Short(*n))
 
 

@@ -1,16 +1,16 @@
-from typing import Any, cast
-from parsec import Parser, Value, one_of, eof, many1, optional, regex, exclude  # type: ignore
+import typing as T
+import parsec as P
 
 from docopt_parser import helpers
 
-any_char = regex(r'.|\n').desc('any char')
-def char(legal: "str | Parser[str]" = any_char, illegal: "Parser[Any] | str | None" = None) -> "Parser[str]":
+any_char = P.regex(r'.|\n').desc('any char')  # type: ignore
+def char(legal: "str | P.Parser[str]" = any_char, illegal: "P.Parser[T.Any] | str | None" = None) -> "P.Parser[str]":
   if isinstance(legal, str):
     desc = ''
     if len(legal) > 1:
       desc = 'any of '
     desc += ''.join(map(helpers.describe_value, legal))
-    a = one_of(legal).desc(desc)
+    a = P.one_of(legal).desc(desc)
   else:
     a = legal
   if illegal is not None:
@@ -19,30 +19,30 @@ def char(legal: "str | Parser[str]" = any_char, illegal: "Parser[Any] | str | No
       if len(illegal) > 1:
         desc = 'any of '
       desc += ''.join(map(helpers.describe_value, illegal))
-      d = one_of(illegal).desc(desc)
+      d = P.one_of(illegal).desc(desc)
     else:
       d = illegal
-    d = one_of(illegal) if isinstance(illegal, str) else illegal
-    return exclude(a, d)
+    d = P.one_of(illegal) if isinstance(illegal, str) else illegal
+    return P.exclude(a, d)  # type: ignore
   else:
     return a
 
-def string(s: str) -> "Parser[str]":
+def string(s: str) -> "P.Parser[str]":
   '''Parses a string.'''
-  @Parser
-  def string_parser(text: str, index: int = 0) -> Value[str]:
+  @P.Parser
+  def string_parser(text: str, index: int = 0) -> P.Value[str]:
     slen = len(s)
     if text[index:index + slen] == s:
-      return Value.success(index + slen, s)
+      return P.Value.success(index + slen, s)
     else:
-      return cast(Value[str], Value.failure(index, s))
+      return T.cast(P.Value[str], P.Value.failure(index, s))
   return string_parser
 
 nl = char('\n')
-whitespaces1 = many1(char(' \t', nl)).parsecmap(helpers.join_string).desc('<whitespace>')
-whitespaces = optional(whitespaces1)
-eol = (whitespaces + (nl | eof())).desc('<end of line>')
-indent = (many1(char(' ')) | char('\t')).parsecmap(helpers.join_string).desc('<indent> (spaces or tabs)')
+whitespaces1 = P.many1(char(' \t', nl)).parsecmap(helpers.join_string).desc('<whitespace>')
+whitespaces = P.optional(whitespaces1)
+eol = (whitespaces + (nl | P.eof())).desc('<end of line>')
+indent = (P.many1(char(' ')) | char('\t')).parsecmap(helpers.join_string).desc('<indent> (spaces or tabs)')
 either = char('|').desc('<pipe> (|)')
 ellipsis = string('...').desc('ellipsis (...)')
-non_symbol_chars = char('=|()[], \t\n\r\b\f\x1B\x07\0') | eof() | ellipsis
+non_symbol_chars = char('=|()[], \t\n\r\b\f\x1B\x07\0') | P.eof() | ellipsis

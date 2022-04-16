@@ -1,12 +1,12 @@
+import typing as T
 
-from typing import Iterable
 from docopt_parser import base, elements, parsers, marked
 
 options_shortcut = parsers.string('options').mark().desc('options shortcut').parsecmap(lambda n: OptionsShortcut(n))
 
 class OptionsShortcut(base.AstNode):
   __name: marked.Marked[str]
-  items: Iterable[elements.DocumentedOption]
+  items: T.List[elements.DocumentedOption]
 
   def __init__(self, name: marked.MarkedTuple[str]):
     super().__init__([])

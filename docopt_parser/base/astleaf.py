@@ -1,13 +1,13 @@
-from typing import Dict, Generator, Iterable, List, Tuple
+import typing as T
 from abc import ABC, abstractmethod
 
-IterVal = str | bool | List["IterVal"] | Dict[str, "IterVal"] | None
-DictGenerator = Generator[Tuple[str, IterVal], None, None]
+IterVal = str | bool | T.Sequence["IterVal"] | T.Dict[str, "IterVal"] | None
+DictGenerator = T.Generator[T.Tuple[str, IterVal], None, None]
 
 class AstLeaf(ABC):
   repeatable: bool = False
 
-  def indent(self, child: "AstLeaf" | Iterable["AstLeaf"], lvl: int = 1) -> str:
+  def indent(self, child: "AstLeaf" | T.Sequence["AstLeaf"], lvl: int = 1) -> str:
     if isinstance(child, AstLeaf):
       lines = repr(child).split('\n')
       lines = [lines[0]] + ['  ' * lvl + line for line in lines[1:]]

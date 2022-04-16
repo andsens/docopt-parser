@@ -1,22 +1,22 @@
-from typing import Dict, Iterable, List, Tuple, cast
-from parsec import ParseError, many, generate
+import typing as T
+import parsec as P
 
 from docopt_parser import base, sections, elements, helpers, marked
 
 
 def doc(strict: bool):
-  @generate('docopt')
+  @P.generate('docopt')
   def p() -> helpers.GeneratorParser[Doc]:
-    items: Tuple[
-      Tuple[
-        List[sections.OptionsSection | elements.Text],
+    items: T.Tuple[
+      T.Tuple[
+        T.List[sections.OptionsSection | elements.Text],
         sections.UsageSection
       ],
-      List[sections.OptionsSection | elements.Text]
+      T.List[sections.OptionsSection | elements.Text]
     ] = yield (
-      many(sections.options_section(strict) | elements.other_documentation)
+      P.many(sections.options_section(strict) | elements.other_documentation)
       + sections.usage_section(strict)
-      + many(sections.options_section(strict) | elements.other_documentation)
+      + P.many(sections.options_section(strict) | elements.other_documentation)
     )
     ((pre, usage), post) = items
     option_sections = list(n for n in pre + post if isinstance(n, sections.OptionsSection))
@@ -26,30 +26,30 @@ def doc(strict: bool):
 
 class Doc(base.AstNode):
   usage_section: sections.UsageSection
-  option_sections: Iterable[sections.OptionsSection]
-  text: Iterable[elements.Text]
+  option_sections: T.List[sections.OptionsSection]
+  text: T.List[elements.Text]
 
   def __init__(
     self,
     usage_section: sections.UsageSection,
-    option_sections: List[sections.OptionsSection],
-    text: List[elements.Text]
+    option_sections: T.Sequence[sections.OptionsSection],
+    text: T.Sequence[elements.Text]
   ):
-    super().__init__(cast(List[base.AstLeaf], [usage_section]) + cast(List[base.AstLeaf], option_sections))
     self.usage_section = usage_section
-    self.option_sections = option_sections
-    self.text = text
+    self.option_sections = list(option_sections)
+    self.text = list(text)
+    super().__init__(T.cast(T.List[base.AstLeaf], [usage_section]) + T.cast(T.List[base.AstLeaf], option_sections))
 
   @property
-  def usage_options(self) -> List[elements.Short | elements.Long]:
-    def get_opts(memo: List[elements.Short | elements.Long], node: base.AstLeaf):
+  def usage_options(self) -> T.List[elements.Short | elements.Long]:
+    def get_opts(memo: T.List[elements.Short | elements.Long], node: base.AstLeaf):
       if isinstance(node, elements.Short | elements.Long):
         memo.append(node)
       return memo
     return self.usage_section.reduce(get_opts, [])
 
   @property
-  def section_options(self) -> List[elements.DocumentedOption]:
+  def section_options(self) -> T.List[elements.DocumentedOption]:
     return sum([o.items for o in self.option_sections], [])
 
   def get_option_definition(
@@ -65,9 +65,12 @@ class Doc(base.AstNode):
     raise DocoptError(f'Unable to find option: {needle}')
 
   @property
-  def grouped_options(self) -> Dict[str, Tuple[elements.DocumentedOption | None, List[elements.Short | elements.Long]]]:
-    aliases: Dict[str, elements.DocumentedOption] = {}
-    grouped: Dict[str, Tuple[elements.DocumentedOption | None, List[elements.Short | elements.Long]]] = {}
+  def grouped_options(self) -> T.Dict[
+    str,
+    T.Tuple[elements.DocumentedOption | None, T.List[elements.Short | elements.Long]]
+  ]:
+    aliases: T.Dict[str, elements.DocumentedOption] = {}
+    grouped: T.Dict[str, T.Tuple[elements.DocumentedOption | None, T.List[elements.Short | elements.Long]]] = {}
     for option in self.section_options:
       if option.long is not None and option.short is not None:
         aliases[option.short.ident] = option
@@ -89,7 +92,7 @@ class Doc(base.AstNode):
     yield 'options', [dict(option) for option in self.option_sections]
 
 
-def parse(txt: str, strict: bool = True) -> Tuple[Doc, str]:
+def parse(txt: str, strict: bool = True) -> T.Tuple[Doc, str]:
   from docopt_parser import post_processors
   try:
     parser = doc(strict)
@@ -100,7 +103,7 @@ def parse(txt: str, strict: bool = True) -> Tuple[Doc, str]:
       ast, parsed_doc = parser.parse_partial(txt)
     ast = post_processors.post_process_ast(ast, txt)
     return ast, parsed_doc
-  except ParseError as e:
+  except P.ParseError as e:
     raise DocoptParseError(marked.explain_error(e, txt)) from e
 
 class DocoptError(Exception):

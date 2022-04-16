@@ -1,10 +1,10 @@
+import typing as T
 from functools import total_ordering
-from typing import Generic, List, Tuple, TypeVar
 from parsec import ParseError
 
-T = TypeVar('T')
-LocInfo = Tuple[int, int]
-MarkedTuple = Tuple[LocInfo, T, LocInfo]
+_T = T.TypeVar('_T')
+LocInfo = T.Tuple[int, int]
+MarkedTuple = T.Tuple[LocInfo, _T, LocInfo]
 
 # All text editors use 1 indexed lines, so we simply subclass int for linenumbers
 class LineNumber(int):
@@ -14,7 +14,7 @@ class LineNumber(int):
   def __repr__(self):
     return str(self + 1)
 
-  def show(self, text: List[str] | str):
+  def show(self, text: T.List[str] | str):
     lines = text if isinstance(text, list) else text.split('\n')
     return f'{(self + 1):02d} {lines[self]}'
 
@@ -43,7 +43,7 @@ class Location(object):
   def __repr__(self):
     return f'{self.line}:{self.col}'
 
-  def show(self, text: List[str] | str):
+  def show(self, text: T.List[str] | str):
     col_offset = ' ' * (self.col + self.line.prefix_length)
     return f'{self.line.show(text)}\n{col_offset}^'
 
@@ -95,10 +95,10 @@ class Mark(object):
       end_col_offset = ' ' * (end.col + end.line.prefix_length)
       return f'{start_col_offset}V\n{all_lines}\n{end_col_offset}^'
 
-class Marked(Mark, Generic[T]):
-  elm: T
+class Marked(Mark, T.Generic[_T]):
+  elm: _T
 
-  def __init__(self, mark: MarkedTuple[T]):
+  def __init__(self, mark: MarkedTuple[_T]):
     start, txt, end = mark
     super().__init__(Location(start), Location(end))
     self.elm = txt

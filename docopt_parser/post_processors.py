@@ -1,4 +1,4 @@
-from typing import List
+import typing as T
 import warnings
 from ordered_set import OrderedSet
 
@@ -13,6 +13,7 @@ def post_process_ast(ast: doc.Doc, text: str) -> doc.Doc:
   #     prog ARG
   #     prog cmd <--
 
+  collapse_groups(ast, text)
   fail_duplicate_documented_options(ast, text)
   update_short_option_idents(ast, text)
   match_args_with_options(ast, text)
@@ -22,6 +23,9 @@ def post_process_ast(ast: doc.Doc, text: str) -> doc.Doc:
   return ast
 
 
+def collapse_groups(ast: doc.Doc, text: str):
+  pass
+
 def fail_duplicate_documented_options(ast: doc.Doc, text: str):
   # Fail when an option section defines an option twice, e.g.:
   # Options:
@@ -29,7 +33,7 @@ def fail_duplicate_documented_options(ast: doc.Doc, text: str):
   #   -a, --long
   seen_shorts: dict[str, elements.Short] = dict()
   seen_longs: dict[str, elements.Long] = dict()
-  messages: list[str] = []
+  messages: T.List[str] = []
   for option in ast.section_options:
     if option.short is not None:
       previous_short = seen_shorts.get(option.short.name, None)
@@ -69,7 +73,7 @@ def match_args_with_options(ast: doc.Doc, text: str) -> None:
   def match_opts(node: base.AstLeaf):
     if not isinstance(node, base.AstNode):
       return
-    new_items: List[base.AstLeaf] = []
+    new_items: T.List[base.AstLeaf] = []
     item_list = iter(node.items)
     # Go through the list pairwise, have each element be "left" once
     left = next(item_list, None)
@@ -104,7 +108,7 @@ def populate_shortcuts(ast: doc.Doc, text: str) -> None:
 
   def populate(node: base.AstLeaf):
       if isinstance(node, (elements.OptionsShortcut)):
-        node.items = shortcut_options
+        node.items = list(shortcut_options)
   ast.walk(populate)
 
 

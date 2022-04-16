@@ -1,22 +1,22 @@
-from typing import Generator, List, TypeVar, Iterable, Any, overload
-from parsec import Parser
+import typing as T
+import parsec as P
 
-T = TypeVar('T')
-GeneratorParser = Generator["Parser[Any]", Any, T]
+_T = T.TypeVar('_T')
+GeneratorParser = T.Generator["P.Parser[T.Any]", T.Any, _T]
 
-def debug(arg: T) -> T:
+def debug(arg: _T) -> _T:
   import sys
   sys.stderr.write('{}\n'.format(arg))
   return arg
 
-Nested = T | Iterable["Nested[T]"]
-@overload
+Nested = _T | T.Sequence["Nested[_T]"]
+@T.overload
 def join_string(elm: Nested[str]) -> str:
   pass
-@overload
+@T.overload
 def join_string(elm: Nested[None]) -> None:
   pass
-@overload
+@T.overload
 def join_string(elm: Nested[str | None]) -> str | None:
   pass
 
@@ -24,7 +24,7 @@ def join_string(elm: Nested[str | None]) -> str | None:
   if elm is None or isinstance(elm, (str)):
     return elm
   else:
-    flat: List[str | None] = []
+    flat: T.List[str | None] = []
     for item in elm:
       flat.append(join_string(item))
     filtered = list(e for e in flat if e is not None)

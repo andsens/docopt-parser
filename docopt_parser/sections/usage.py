@@ -1,27 +1,27 @@
-from typing import List
-from parsec import generate, optional, regex, eof, many, lookahead  # type: ignore
+import typing as T
+import parsec as P
 import re
 
 from docopt_parser import base, groups, parsers, helpers
 
 def usage_section(strict: bool):
-  @generate('usage section')
+  @P.generate('usage section')
   def p() -> helpers.GeneratorParser[UsageSection]:
-    yield regex(r'usage:', re.I)
-    yield optional(parsers.nl + parsers.indent)
-    prog = yield lookahead(optional(base.ident(parsers.non_symbol_chars)))
-    lines: List[groups.Choice | groups.Sequence] = []
+    yield P.regex(r'usage:', re.I)  # type: ignore
+    yield P.optional(parsers.nl + parsers.indent)
+    prog = yield P.lookahead(P.optional(base.ident(parsers.non_symbol_chars)))
+    lines: T.List[groups.Choice | groups.Sequence] = []
     if prog is not None:
       while True:
         line = yield usage_line(prog)
         if line is not None:
           lines.append(line)
-        if (yield optional(parsers.nl + parsers.indent)) is None:
+        if (yield P.optional(parsers.nl + parsers.indent)) is None:
           break
     if strict:
-      yield (parsers.nl + parsers.nl) ^ many(parsers.char(' \t') | parsers.nl) + eof()
+      yield (parsers.nl + parsers.nl) ^ P.many(parsers.char(' \t') | parsers.nl) + P.eof()
     else:
-      yield optional((parsers.nl + parsers.nl) ^ many(parsers.char(' \t') | parsers.nl) + eof())
+      yield P.optional((parsers.nl + parsers.nl) ^ P.many(parsers.char(' \t') | parsers.nl) + P.eof())
     if len(lines) > 1:
       root = groups.Choice(lines)
     elif len(lines) == 1:
@@ -50,10 +50,10 @@ class UsageSection(base.AstNode):
     yield 'items', [dict(item) for item in self.items]
 
 def usage_line(prog: str):
-  @generate('usage line')
+  @P.generate('usage line')
   def p() -> helpers.GeneratorParser[groups.Choice | groups.Sequence]:
     yield parsers.string(prog)
-    if (yield optional(lookahead(parsers.eol))) is None:
+    if (yield P.optional(P.lookahead(parsers.eol))) is None:
       return (yield parsers.whitespaces1 >> groups.expr)
     else:
       yield parsers.whitespaces

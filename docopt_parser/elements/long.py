@@ -1,4 +1,4 @@
-from parsec import optional, unit
+import parsec as P
 
 from docopt_parser import base, elements, parsers, marked
 
@@ -6,7 +6,7 @@ from docopt_parser import base, elements, parsers, marked
 illegal = parsers.non_symbol_chars | parsers.char(',=')
 
 inline_long_option_spec = (
-  unit(parsers.string('--') >> base.ident(illegal)).mark() + optional(parsers.char('=') >> elements.argument)
+  P.unit(parsers.string('--') >> base.ident(illegal)).mark() + P.optional(parsers.char('=') >> elements.argument)
 ).desc('long option (--long)').parsecmap(lambda n: Long(*n))
 
 class Long(base.IdentNode):

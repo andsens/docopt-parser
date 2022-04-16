@@ -6,7 +6,7 @@ import docopt
 import logging
 import termcolor
 import yaml
-from docopt_parser import DocoptError, parse, __doc__ as pkg_doc, __name__ as root_name, __version__
+from docopt_parser import DocoptError, parse, __doc__ as pkg_doc, __name__ as root_name, __version__  # type: ignore
 
 log = logging.getLogger(root_name)
 
