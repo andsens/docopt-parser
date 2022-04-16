@@ -19,8 +19,8 @@ def post_process_ast(ast: doc.Doc, text: str) -> doc.Doc:
   fail_duplicate_documented_options(ast, text)
   update_short_option_idents(ast, text)
   populate_shortcuts(ast, text)
-  match_args_with_options(ast, text)
   collapse_groups(ast, text)
+  match_args_with_options(ast, text)
   # mark_multiple(doc)
   warn_unused_documented_options(ast, text)
   return ast
@@ -32,28 +32,19 @@ def populate_shortcuts(ast: doc.Doc, text: str) -> None:
 
   def populate(node: base.AstNode):
     if isinstance(node, leaves.OptionsShortcut):
-      start = (node.mark.start.line, node.mark.start.col)
-      end = (node.mark.end.line, node.mark.end.col)
-      return groups.Optional((start, list(shortcut_options), end))
+      return groups.Optional(node.mark.wrap_element(list(shortcut_options)).to_marked_tuple())
     return node
   ast.usage = T.cast(base.AstGroup, ast.usage.replace(populate))
 
 def collapse_groups(ast: doc.Doc, text: str):
-  start = (ast.usage.mark.start.line, ast.usage.mark.start.col)
-  end = (ast.usage.mark.end.line, ast.usage.mark.end.col)
-
   def ensure_root(usage: base.AstNode | None) -> base.AstGroup:
     if usage is None:
-      return groups.Sequence((start, [], end))
+      items: T.List[base.AstNode] = []
+      return groups.Sequence(ast.usage.mark.wrap_element(items).to_marked_tuple())
     if not isinstance(usage, base.AstGroup):
-      return groups.Sequence((start, [], end))
+      return groups.Sequence(ast.usage.mark.wrap_element([usage]).to_marked_tuple())
     return usage
 
-  # Remove when 0 child: all groups
-  # Move child to parent when 1 child: choice, sequence, group
-  # Move children to parent: sequence
-  # Move children to sibling: sequence
-  # Subsume
   def remove_empty_groups(node: TAstNode) -> TAstNode | None:
     if isinstance(node, (base.AstGroup)) and len(node.items) == 0:
       return None
@@ -78,6 +69,14 @@ def collapse_groups(ast: doc.Doc, text: str):
     return node
   ast.usage = ensure_root(ast.usage.replace(merge_nested_sequences))
 
+  def dissolve_groups(node: base.AstNode) -> base.AstNode:
+    # Must run after merge_nested_sequences so that [(a b c)] does not become [a b c]
+    if isinstance(node, groups.Group):
+      assert len(node.items) == 1
+      return node.items[0]
+    return node
+  ast.usage = ensure_root(ast.usage.replace(dissolve_groups))
+
   def merge_neighboring_sequences(node: base.AstNode) -> base.AstNode:
     new_items: T.List[base.AstNode] = []
     if isinstance(node, groups.Sequence):
@@ -98,17 +97,9 @@ def collapse_groups(ast: doc.Doc, text: str):
     return node
   ast.usage = ensure_root(ast.usage.replace(merge_neighboring_sequences))
 
-  def dissolve_groups(node: base.AstNode) -> base.AstNode:
-    if isinstance(node, groups.Group):
-      assert len(node.items) == 1
-      return node.items[0]
-    return node
-  ast.usage = ensure_root(ast.usage.replace(dissolve_groups))
-
   def remove_intermediate_groups_in_optionals(node: base.AstNode) -> base.AstNode:
     if isinstance(node, groups.Optional):
-      assert len(node.items) == 1
-      if isinstance(node.items[0], (groups.Sequence, groups.Optional)):
+      if isinstance(node.items[0], (groups.Sequence, groups.Optional)) and len(node.items) == 1:
         node.items = node.items[0].items
     return node
   ast.usage = ensure_root(ast.usage.replace(remove_intermediate_groups_in_optionals))

@@ -69,6 +69,12 @@ class Range(object):
   def __repr__(self):
     return f'{self.start}-{self.end}'
 
+  def wrap_element(self, elm: _T) -> "Marked[_T]":
+    return Marked(((self.start.line, self.start.col), elm, (self.end.line, self.end.col)))
+
+  def to_range_tuple(self) -> RangeTuple:
+    return ((self.start.line, self.start.col), (self.end.line, self.end.col))
+
   def show(self, text: str, message: str | None = None):
     lines = text.split('\n')
     start = Location((self.start.line, self.start.col))
@@ -102,6 +108,9 @@ class Marked(Range, T.Generic[_T]):
   def __init__(self, mark: MarkedTuple[_T]):
     super().__init__((mark[0], mark[2]))
     self.elm = mark[1]
+
+  def to_marked_tuple(self) -> MarkedTuple[_T]:
+    return ((self.start.line, self.start.col), self.elm, (self.end.line, self.end.col))
 
 
 def explain_error(e: ParseError, text: str) -> str:

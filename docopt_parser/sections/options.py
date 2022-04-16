@@ -27,7 +27,7 @@ def options_section(strict: bool):
   return p
 
 class OptionsSection(base.AstGroup):
-  items: T.List[leaves.DocumentedOption]
+  items: T.Sequence[leaves.DocumentedOption]
   __title: marks.Marked[str]
 
   def __init__(self, items: marks.MarkedTuple[T.Sequence[leaves.DocumentedOption]], __title: marks.MarkedTuple[str]):

@@ -56,14 +56,12 @@ class Doc(base.AstElement):
 
   @property
   def section_options(self) -> T.List[leaves.DocumentedOption]:
-    return sum([o.items for o in self.option_sections], [])
+    return sum([list(o.items) for o in self.option_sections], [])
 
   def get_option_definition(
     self, needle: leaves.Short | leaves.Long) -> leaves.Short | leaves.Long | leaves.DocumentedOption:
     for option in self.section_options:
-      if isinstance(needle, leaves.Short) and option.short is not None and option.short.ident == needle.ident:
-        return option
-      if isinstance(needle, leaves.Long) and option.long is not None and option.long.ident == needle.ident:
+      if option.ident == needle.ident or (option.short is not None and option.short.ident == needle.ident):
         return option
     for option in self.usage_options:
       if option.ident == needle.ident:
