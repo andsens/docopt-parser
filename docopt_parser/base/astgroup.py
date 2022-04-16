@@ -11,18 +11,27 @@ class AstGroup(base.AstNode):
 
   _T = T.TypeVar('_T')
 
-  def reduce(self, function: T.Callable[[_T, "base.AstNode"], _T], memo: _T) -> _T:
+  def reduce(self, function: T.Callable[[_T, base.AstNode], _T], memo: _T) -> _T:
     for item in iter(self.items):
       memo = function(memo, item)
       if isinstance(item, AstGroup):
         memo = item.reduce(function, memo)
     return memo
 
-  def walk(self, function: T.Callable[["base.AstNode"], None]) -> None:
-    for item in iter(self.items):
+  _U = T.TypeVar('_U', bound=base.AstNode | None)
+  _V = T.TypeVar('_V', bound=base.AstNode | None)
+
+  def replace(self, function: T.Callable[[_U], _V]):
+    new_items: T.List[base.AstNode] = []
+    for item in self.items:
       if isinstance(item, AstGroup):
-        item.walk(function)
-      function(item)
+        item = item.replace(function)
+      else:
+        item = function(item)
+      if item is not None:
+        new_items.append(item)
+    self.items = new_items
+    return function(self)
 
   def __repr__(self):
     return f'''<{str(type(self).__name__).capitalize()}>{self.repeatable_suffix}

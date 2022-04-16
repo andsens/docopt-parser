@@ -1,9 +1,10 @@
-from functools import reduce
-import typing as T
 import parsec as P
 from docopt_parser import base, leaves, parsers, helpers
 
 class Choice(base.AstGroup):
+  pass
+
+class Sequence(base.AstGroup):
   pass
 
 class Group(base.AstGroup):
@@ -12,7 +13,7 @@ class Group(base.AstGroup):
 class Optional(base.AstGroup):
   pass
 
-class Sequence(base.AstGroup):
+class Repeatable(base.AstGroup):
   pass
 
 @P.generate('atom')
@@ -28,15 +29,12 @@ def atom() -> helpers.GeneratorParser[base.AstNode]:
 
 sequence = P.exclude(  # type: ignore
   P.sepEndBy(  # type: ignore
-    (atom + P.optional(P.unit(parsers.whitespaces >> leaves.repeatable))),
+    (atom + P.optional(P.unit(
+      parsers.whitespaces >> parsers.ellipsis.mark()
+    ))).parsecmap(lambda n: Repeatable((n[1][0], [n[0]], n[1][2])) if n[1] is not None else n[0]),
     parsers.whitespaces1
   ),
   P.lookahead(parsers.either | parsers.nl | P.eof())
-).parsecmap(
-  # Convert [(atom, None), (atom, Repeatable)] to [atom, atom, Repeatable]
-  lambda pairs: [e for e in reduce(
-    lambda memo, pair: memo + list(pair), pairs, T.cast(T.List[base.AstNode | leaves.Repeatable | None], [])
-  ) if e is not None]
 ).mark().parsecmap(lambda n: Sequence(n))
 expr = P.sepBy(  # type: ignore
   sequence,

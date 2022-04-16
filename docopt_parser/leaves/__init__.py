@@ -6,7 +6,6 @@ from docopt_parser.leaves.short import Short, inline_short_option_spec, inline_s
   illegal as short_illegal
 from docopt_parser.leaves.documented_option import DocumentedOption, documented_option, next_documented_option
 from docopt_parser.leaves.options_shortcut import OptionsShortcut, options_shortcut
-from docopt_parser.leaves.repeatable import Repeatable, repeatable
 from docopt_parser.leaves.text import Text, other_documentation
 
 __all__ = [
@@ -14,5 +13,5 @@ __all__ = [
   'DocumentedOption', 'documented_option', 'next_documented_option', 'OptionsShortcut', 'options_shortcut',
   'Long', 'inline_long_option_spec', 'long_illegal',
   'Short', 'inline_short_option_spec', 'inline_shortlist_short_option_spec', 'short_illegal',
-  'Repeatable', 'repeatable', 'Text', 'other_documentation'
+  'Text', 'other_documentation'
 ]

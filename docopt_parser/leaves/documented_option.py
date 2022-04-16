@@ -48,7 +48,7 @@ class DocumentedOption(base.IdentNode):
     return self.__doc.elm if self.__doc else None
 
   def __repr__(self):
-    return f'''<Option>
+    return f'''<DocumentedOption>
   short: {self.indent(self.short) if self.short else 'None'}
   long:  {self.indent(self.long) if self.long else 'None'}
   arg?:     {self.expects_arg}

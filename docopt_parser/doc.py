@@ -28,7 +28,7 @@ def doc(strict: bool):
 
 class Doc(base.AstElement):
   prog: str
-  usage: groups.Choice | groups.Sequence
+  usage: base.AstGroup
   option_sections: T.List[sections.OptionsSection]
   text: T.List[leaves.Text]
 
@@ -36,7 +36,7 @@ class Doc(base.AstElement):
     self,
     range: marks.RangeTuple,
     prog: str,
-    usage: groups.Choice | groups.Sequence,
+    usage: base.AstGroup,
     option_sections: T.Sequence[sections.OptionsSection],
     text: T.Sequence[leaves.Text]
   ):
@@ -47,9 +47,9 @@ class Doc(base.AstElement):
     self.text = list(text)
 
   @property
-  def usage_options(self) -> T.List[leaves.Short | leaves.Long]:
-    def get_opts(memo: T.List[leaves.Short | leaves.Long], node: base.AstNode):
-      if isinstance(node, leaves.Short | leaves.Long):
+  def usage_options(self) -> T.List[leaves.Short | leaves.Long | leaves.DocumentedOption]:
+    def get_opts(memo: T.List[leaves.Short | leaves.Long | leaves.DocumentedOption], node: base.AstNode):
+      if isinstance(node, leaves.Short | leaves.Long | leaves.DocumentedOption):
         memo.append(node)
       return memo
     return self.usage.reduce(get_opts, [])

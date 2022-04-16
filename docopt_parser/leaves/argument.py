@@ -7,9 +7,6 @@ class Argument(base.IdentNode):
   def __init__(self, name: marks.MarkedTuple[str]):
     super().__init__(name)
 
-  def __repr__(self):
-    return f'''<Argument{self.multiple_suffix}>: {self.ident}'''
-
 illegal = parsers.non_symbol_chars
 
 wrapped_arg = (parsers.char('<') + base.ident(illegal | parsers.char('>')) + parsers.char('>')) \

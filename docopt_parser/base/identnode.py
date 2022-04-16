@@ -27,6 +27,9 @@ class IdentNode(base.AstLeaf):
   def __eq__(self, other: T.Any) -> bool:
     return isinstance(other, IdentNode) and self.ident == other.ident
 
+  def __repr__(self):
+    return super().__repr__() + f': {self.ident}'
+
   def __iter__(self):
     yield from super().__iter__()
     yield 'ident', self.ident
