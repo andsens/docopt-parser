@@ -15,11 +15,15 @@ def ident(illegal: "str | Parser[str | None] | None", starts_with: "Parser[str] 
 
 
 class IdentNode(base.AstLeaf):
-  ident: str
+  _ident: str
 
   def __init__(self, ident: marks.MarkedTuple[str]):
     super().__init__((ident[0], ident[2]))
-    self.ident = ident[1]
+    self._ident = ident[1]
+
+  @property
+  def ident(self):
+    return self._ident
 
   def __hash__(self) -> int:
     return hash(self.ident)

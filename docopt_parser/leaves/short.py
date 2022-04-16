@@ -17,10 +17,19 @@ inline_shortlist_short_option_spec = (
 
 class Short(base.IdentNode):
   arg: leaves.Argument | None
+  ref: "leaves.DocumentedOption | None"
 
   def __init__(self, name: marks.MarkedTuple[str], arg: leaves.Argument | None):
     super().__init__(name)
     self.arg = arg
+    self.ref = None
+
+  @property
+  def ident(self):
+    if self.ref is not None:
+      return self.ref.ident
+    else:
+      return self._ident
 
   @property
   def expects_arg(self):

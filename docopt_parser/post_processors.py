@@ -17,7 +17,7 @@ def post_process_ast(ast: doc.Doc, text: str) -> doc.Doc:
   #     prog cmd <--
 
   fail_duplicate_documented_options(ast, text)
-  update_short_option_idents(ast, text)
+  set_usage_option_refs(ast, text)
   populate_shortcuts(ast, text)
   collapse_groups(ast, text)
   match_args_with_options(ast, text)
@@ -133,13 +133,15 @@ def fail_duplicate_documented_options(ast: doc.Doc, text: str):
     raise doc.DocoptParseError('\n'.join(messages))
 
 
-def update_short_option_idents(ast: doc.Doc, text: str) -> None:
+def set_usage_option_refs(ast: doc.Doc, text: str) -> None:
   # Change the identifiers of short option to their long counterpart (if any)
   # in order to ease comparisons for processing further down the line
 
   def update(node: TAstNode) -> TAstNode:
-    if isinstance(node, leaves.Short):
-      node.ident = ast.get_option_definition(node).ident
+    if isinstance(node, (leaves.Short, leaves.Long)):
+      definition = ast.get_option_definition(node)
+      if isinstance(definition, leaves.DocumentedOption):
+        node.ref = definition
     return node
   ast.usage = T.cast(base.AstGroup, ast.usage.replace(update))
 
