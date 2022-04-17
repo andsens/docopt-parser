@@ -11,7 +11,7 @@ def options_section(strict: bool):
     options: T.Sequence[leaves.DocumentedOption] = []
     start = yield parsers.location
     title = yield P.regex(r'[^\n]*options:', re.I).mark()  # type: ignore
-    yield parsers.nl + P.optional(parsers.indent)
+    yield parsers.whitespaces >> P.optional(parsers.nl + parsers.indent)
     while (yield P.lookahead(P.optional(parsers.char('-')))) is not None:
       options.append((yield leaves.documented_option))
       if (yield P.lookahead(P.optional(leaves.next_documented_option))) is None:

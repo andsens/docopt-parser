@@ -123,7 +123,7 @@ def option_line_opts() -> helpers.GeneratorParser[
       opt_short.arg = opt_long.arg
   return (opt_short, opt_long)
 
-next_documented_option = parsers.nl + P.optional(parsers.indent) + parsers.char('-')
+next_documented_option = parsers.nl + parsers.indent + parsers.char('-')
 terminator = (parsers.nl + parsers.nl) ^ (parsers.nl + P.eof()) ^ next_documented_option
 default = (
   P.regex(r'\[default: ', re.IGNORECASE) + P.many(parsers.char(illegal='\n]')) + parsers.char(']')  # type: ignore
