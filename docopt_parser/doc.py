@@ -16,6 +16,8 @@ def doc(strict: bool):
     text: T.List[leaves.Text] = []
     current: T.Tuple[str, base.AstGroup] | sections.OptionsSection | leaves.Text
     start = yield parsers.location
+    # We don't use the many parser here, since any errors would be swallowed by it
+    # (same as in the groups parsers)
     while (yield P.optional(P.eof().result(True))) is None:
       current = yield usage_section | options_section | leaves.other_documentation
       if isinstance(current, sections.OptionsSection):
