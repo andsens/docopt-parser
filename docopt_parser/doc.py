@@ -14,6 +14,7 @@ def doc(strict: bool):
     usage: base.AstGroup | None = None
     option_sections: T.List[sections.OptionsSection] = []
     text: T.List[leaves.Text] = []
+    current: T.Tuple[str, base.AstGroup] | sections.OptionsSection | leaves.Text
     start = yield parsers.location
     while (yield P.optional(P.eof().result(True))) is None:
       current = yield usage_section | options_section | leaves.other_documentation
@@ -23,10 +24,10 @@ def doc(strict: bool):
         text.append(current)
       else:
         if prog is not None:
-          raise DocoptParseError('Unexpected additional Usage:')
+          raise DocoptParseError('Unexpected additional Usage:', current[1].mark)
         prog, usage = current
     if prog is None or usage is None:
-      raise DocoptParseError('Expected Usage:')
+      raise DocoptParseError('Expected "Usage:"')
     end = yield parsers.location
     return Doc((start, end), prog, usage, option_sections, text)
   return p
@@ -98,19 +99,25 @@ class Doc(base.AstElement):
     yield 'options', [dict(option) for option in self.option_sections]
 
 
-def parse(txt: str, strict: bool = True) -> T.Tuple[Doc, str]:
+def parse(text: str, strict: bool = True) -> T.Tuple[Doc, str]:
   from docopt_parser import post_processors
   try:
     parser = doc(strict)
     if strict:
-      ast = parser.parse_strict(txt)
-      parsed_doc = txt
+      ast = parser.parse_strict(text)
+      parsed_doc = text
     else:
-      ast, parsed_doc = parser.parse_partial(txt)
-    ast = post_processors.post_process_ast(ast, txt)
+      ast, parsed_doc = parser.parse_partial(text)
+    ast = post_processors.post_process_ast(ast, text)
     return ast, parsed_doc
+  except DocoptParseError as e:
+    if e.mark is not None:
+      raise DocoptError(e.mark.show(text, e.message), e.exit_code) from e
+    else:
+      raise DocoptError(e.message, e.exit_code) from e
   except P.ParseError as e:
-    raise DocoptParseError(marks.explain_error(e, txt)) from e
+    loc = marks.Location(e.loc_info(e.text, e.index))
+    raise DocoptError(loc.show(text, str(e))) from e
 
 class DocoptError(Exception):
   def __init__(self, message: str, exit_code: int = 1):
@@ -119,4 +126,8 @@ class DocoptError(Exception):
     self.exit_code = exit_code
 
 class DocoptParseError(DocoptError):
-  pass
+  mark: marks.Location | marks.Range | None
+
+  def __init__(self, message: str, mark: marks.Location | marks.Range | None = None):
+    super().__init__(message, 1)
+    self.mark = mark

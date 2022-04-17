@@ -17,13 +17,13 @@ def post_process_ast(ast: doc.Doc, text: str) -> doc.Doc:
   #     prog cmd <--
 
   fail_duplicate_documented_options(ast, text)
-  set_option_refs(ast, text)
-  populate_shortcuts(ast, text)
-  collapse_groups(ast, text)
+  set_option_refs(ast)
+  populate_shortcuts(ast)
+  collapse_groups(ast)
   # merge_repeatable_into_children() run before match_args_with_options() so that a repeated arg can be found
   # e.g.: --long B...
-  merge_repeatable_into_children(ast, text)
-  match_args_with_options(ast, text)
+  merge_repeatable_into_children(ast)
+  match_args_with_options(ast)
   warn_unused_documented_options(ast, text)
   # mark_multiple(doc)
   return ast
@@ -58,7 +58,7 @@ def fail_duplicate_documented_options(ast: doc.Doc, text: str):
     raise doc.DocoptParseError('\n'.join(messages))
 
 
-def set_option_refs(ast: doc.Doc, text: str) -> None:
+def set_option_refs(ast: doc.Doc) -> None:
   # Set the refs on short options
 
   def update(node: TAstNode) -> TAstNode:
@@ -70,7 +70,7 @@ def set_option_refs(ast: doc.Doc, text: str) -> None:
   ast.usage = ast.usage.replace(update)
 
 
-def populate_shortcuts(ast: doc.Doc, text: str) -> None:
+def populate_shortcuts(ast: doc.Doc) -> None:
   # Option shortcuts contain to all documented options except the ones
   # that are explicitly mentioned in the usage section
   shortcut_options = OrderedSet(ast.section_options) - OrderedSet(ast.usage_options)
@@ -84,7 +84,7 @@ def populate_shortcuts(ast: doc.Doc, text: str) -> None:
     return node
   ast.usage = T.cast(base.AstGroup, ast.usage.replace(populate))
 
-def collapse_groups(ast: doc.Doc, text: str):
+def collapse_groups(ast: doc.Doc):
   def remove_empty_groups(node: TAstNode) -> TAstNode | None:
     if isinstance(node, (base.AstGroup)) and len(node.items) == 0:
       return None
@@ -145,7 +145,7 @@ def collapse_groups(ast: doc.Doc, text: str):
   ast.usage = ast.usage.replace(remove_intermediate_groups_in_optionals)
 
 
-def match_args_with_options(ast: doc.Doc, text: str) -> None:
+def match_args_with_options(ast: doc.Doc) -> None:
   # When parsing initially "-a ARG" is parsed as two unrelated nodes
   # This method moves that "ARG" into the option, when e.g. the doc looks like this:
   # Usage: prog -a ARG
@@ -172,15 +172,11 @@ def match_args_with_options(ast: doc.Doc, text: str) -> None:
             # Remove the argument from the list by skipping over it in the next iteration
             right = next(item_list, None)
           else:
-            raise doc.DocoptParseError(left.mark.show(
-              text,
-              f'{left.ident} expects an argument (defined at {definition.mark})')
-            )
+            raise doc.DocoptParseError(
+              f'{left.ident} expects an argument (defined at {definition.mark})', left.mark)
         elif not definition.expects_arg and left.arg is not None:
-          raise doc.DocoptParseError(left.arg.mark.show(
-            text,
-            f'{left.ident} does not expect an argument (defined at {definition.mark})')
-          )
+          raise doc.DocoptParseError(
+            f'{left.ident} does not expect an argument (defined at {definition.mark})', left.arg.mark)
       new_items.append(left)
       left = right
     node.items = new_items
@@ -194,7 +190,7 @@ def warn_unused_documented_options(ast: doc.Doc, text: str) -> None:
     warnings.warn(option.mark.show(text, message='this option is not referenced from the usage section.'))
 
 
-def merge_repeatable_into_children(ast: doc.Doc, text: str) -> None:
+def merge_repeatable_into_children(ast: doc.Doc) -> None:
   def update(node: base.AstNode):
     if isinstance(node, (groups.Repeatable)):
       assert len(node.items) == 1

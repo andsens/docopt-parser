@@ -44,9 +44,10 @@ class Location(object):
   def __repr__(self):
     return f'{self.line}:{self.col}'
 
-  def show(self, text: T.List[str] | str):
+  def show(self, text: T.List[str] | str, message: str | None = None):
+    message = f'\n{message}' if message is not None else ''
     col_offset = ' ' * (self.col + self.line.prefix_length)
-    return f'{self.line.show(text)}\n{col_offset}^'
+    return f'{self.line.show(text)}\n{col_offset}^{message}'
 
 @total_ordering
 class Range(object):
