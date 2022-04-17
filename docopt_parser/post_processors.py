@@ -21,6 +21,7 @@ def post_process_ast(ast: doc.Doc, text: str) -> doc.Doc:
   collapse_groups(ast)
   match_args_with_options(ast)
   warn_unused_documented_options(ast, text)
+  merge_identical_leaves(ast)
   mark_multiple(ast)
   return ast
 
@@ -218,6 +219,22 @@ def warn_unused_documented_options(ast: doc.Doc, text: str) -> None:
   unused_options = OrderedSet(ast.section_options) - OrderedSet(ast.usage_options)
   for option in unused_options:
     warnings.warn(option.mark.show(text, message='this option is not referenced from the usage section.'))
+
+
+def merge_identical_leaves(ast: doc.Doc) -> None:
+  known_leaves: T.Set[base.AstLeaf] = set()
+
+  def merge(node: base.AstNode):
+    if isinstance(node, base.AstLeaf):
+      for leaf in known_leaves:
+        if node == leaf:
+          if isinstance(node, (leaves.Short, leaves.Long)) and node.arg != leaf.arg:  # type: ignore
+            # Preserve argument names of options
+            return node
+          return leaf
+      known_leaves.add(node)
+    return node
+  ast.usage = ast.usage.replace(merge)
 
 
 def mark_multiple(ast: doc.Doc) -> None:

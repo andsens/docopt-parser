@@ -40,4 +40,4 @@ class AstGroup(base.AstNode):
 
   def __iter__(self) -> base.DictGenerator:
     yield from super().__iter__()
-    yield 'items', [dict(item) for item in self.items]
+    yield 'item', [item.dict for item in self.items]
