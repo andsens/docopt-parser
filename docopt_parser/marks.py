@@ -1,6 +1,6 @@
 import typing as T
+import parsec as P
 from functools import total_ordering
-from parsec import ParseError
 
 _T = T.TypeVar('_T')
 LocInfo = T.Tuple[int, int]
@@ -114,7 +114,7 @@ class Marked(Range, T.Generic[_T]):
     return ((self.start.line, self.start.col), self.elm, (self.end.line, self.end.col))
 
 
-def explain_error(e: ParseError, text: str) -> str:
+def explain_error(e: P.ParseError, text: str) -> str:
   (line, col) = e.loc_info(e.text, e.index)
   loc = Location((line, col))
   return f'{loc.show(text)}\n{str(e)}'

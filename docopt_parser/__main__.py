@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
+import typing as T
 import sys
 import os
-from typing import TypedDict, cast
 import docopt
 import logging
 import termcolor
 import yaml
+
 from docopt_parser import DocoptError, parse, __doc__ as pkg_doc, __name__ as root_name, __version__  # type: ignore
 
 log = logging.getLogger(root_name)
 
-__doc__: str = cast(str, pkg_doc) + """
+__doc__: str = T.cast(str, pkg_doc) + """
 Usage:
   docopt-parser [-Sy] ast
   docopt-parser -h
@@ -22,7 +23,7 @@ Options:
   --help -h  Show this help screen
   --version  Show the docopt.sh version
 """
-Params = TypedDict('Params', {'-S': bool, '--yaml': bool, 'ast': bool})
+Params = T.TypedDict('Params', {'-S': bool, '--yaml': bool, 'ast': bool})
 
 def docopt_parser(params: Params):
   try:
@@ -63,7 +64,7 @@ def setup_logging():
 
 def main():
   setup_logging()
-  params = cast(Params, docopt.docopt(__doc__, version=cast(str, __version__)))
+  params = T.cast(Params, docopt.docopt(__doc__, version=T.cast(str, __version__)))
   docopt_parser(params)
 
 

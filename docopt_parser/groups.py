@@ -1,5 +1,6 @@
 import typing as T
 import parsec as P
+
 from docopt_parser import base, leaves, parsers, helpers
 
 class Choice(base.AstGroup):
@@ -51,14 +52,6 @@ group = (
 optional = (
   parsers.char('[') >> expr.parsecmap(lambda n: [n]) << parsers.char(']')
 ).mark().desc('optional').parsecmap(lambda n: Optional(n))
-
-# @P.generate('sequence')
-# def option_list() -> helpers.GeneratorParser[Sequence]:
-#   leaves.inline_long_option_spec.parsecmap(lambda n: [n])
-#   | (
-#     leaves.inline_short_option_spec + P.many(leaves.inline_shortlist_short_option_spec)
-#   ).parsecmap(lambda n: [n[0]] + n[1])
-# ).mark().parsecmap(lambda n: Sequence(n))
 
 @P.generate('option list (-abc)')
 def option_list() -> helpers.GeneratorParser[Sequence]:
