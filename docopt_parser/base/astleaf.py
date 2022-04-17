@@ -1,7 +1,15 @@
 from docopt_parser.base.astnode import AstNode
 
 class AstLeaf(AstNode):
-  multiple: bool = False
+  _multiple: bool = False
+
+  @property
+  def multiple(self) -> bool:
+    return self._multiple
+
+  @multiple.setter
+  def multiple(self, val: bool):
+    self._multiple = val
 
   @property
   def multiple_suffix(self) -> str:

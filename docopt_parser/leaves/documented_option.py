@@ -6,7 +6,6 @@ from docopt_parser import leaves, base, marks, helpers, parsers
 
 
 class DocumentedOption(base.IdentNode):
-  multiple = False
   short: leaves.Short | None
   long: leaves.Long | None
   shortcut: bool
@@ -40,6 +39,18 @@ class DocumentedOption(base.IdentNode):
     self.__doc = marks.Marked(doc) if doc else None
 
   @property
+  def multiple(self) -> bool:
+    return self._multiple
+
+  @multiple.setter
+  def multiple(self, val: bool):
+    self._multiple = val
+    if self.long:
+      self.long.multiple = val
+    if self.short:
+      self.short.multiple = val
+
+  @property
   def default(self):
     return self.__default.elm if self.__default else None
 
@@ -48,7 +59,7 @@ class DocumentedOption(base.IdentNode):
     return self.__doc.elm if self.__doc else None
 
   def __repr__(self):
-    return f'''<DocumentedOption>
+    return f'''<DocumentedOption{self.multiple_suffix}>
   short: {self.indent(self.short) if self.short else 'None'}
   long:  {self.indent(self.long) if self.long else 'None'}
   arg?:     {self.expects_arg}

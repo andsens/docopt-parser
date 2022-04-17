@@ -25,6 +25,16 @@ class Short(base.IdentNode):
     self.arg = arg
     self.ref = None
 
+  @property
+  def multiple(self) -> bool:
+    return self._multiple
+
+  @multiple.setter
+  def multiple(self, val: bool):
+    self._multiple = val
+    if self.ref:
+      self.ref.multiple = val
+
   def __hash__(self) -> int:
     if self.ref is not None:
       return self.ref.__hash__()
@@ -42,8 +52,8 @@ class Short(base.IdentNode):
     return self.arg is not None
 
   def __repr__(self):
-    return f'''{self.ident}{self.repeatable_suffix}
-  arg: {self.arg}'''
+    arg_suffix = ' ' + self.arg.ident if self.arg is not None else ''
+    return f'''{self.ident}{self.multiple_suffix}{self.repeatable_suffix}{arg_suffix}'''
 
   def __iter__(self):
     yield from super().__iter__()

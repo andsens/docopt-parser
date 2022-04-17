@@ -9,8 +9,6 @@ TAstNode = T.TypeVar('TAstNode', bound=base.AstNode)
 
 def post_process_ast(ast: doc.Doc, text: str) -> doc.Doc:
   # TODO:
-  # Missing the repeated options parser, where e.g. -AA or --opt --opt becomes a counter
-  # Handle options that are not referenced from usage
   # Find unreachable lines, e.g.:
   #   Usage:
   #     prog ARG
@@ -20,12 +18,12 @@ def post_process_ast(ast: doc.Doc, text: str) -> doc.Doc:
   set_option_refs(ast)
   populate_shortcuts(ast)
   collapse_groups(ast)
-  # merge_repeatable_into_children() run before match_args_with_options() so that a repeated arg can be found
+  # merge_repeatable_into_children() must run before match_args_with_options() so that a repeated arg can be found
   # e.g.: --long B...
   merge_repeatable_into_children(ast)
   match_args_with_options(ast)
   warn_unused_documented_options(ast, text)
-  # mark_multiple(doc)
+  mark_multiple(ast)
   return ast
 
 
@@ -61,13 +59,13 @@ def fail_duplicate_documented_options(ast: doc.Doc, text: str):
 def set_option_refs(ast: doc.Doc) -> None:
   # Set the refs on short options
 
-  def update(node: TAstNode) -> TAstNode:
+  def set_refs(node: TAstNode) -> TAstNode:
     if isinstance(node, (leaves.Short, leaves.Long)):
       definition = ast.get_option_definition(node)
       if isinstance(definition, leaves.DocumentedOption):
         node.ref = definition
     return node
-  ast.usage = ast.usage.replace(update)
+  ast.usage = ast.usage.replace(set_refs)
 
 
 def populate_shortcuts(ast: doc.Doc) -> None:
@@ -85,6 +83,7 @@ def populate_shortcuts(ast: doc.Doc) -> None:
   ast.usage = T.cast(base.AstGroup, ast.usage.replace(populate))
 
 def collapse_groups(ast: doc.Doc):
+  # TODO: Don't remove empty sequence under Choice. That's a valid option
   def remove_empty_groups(node: TAstNode) -> TAstNode | None:
     if isinstance(node, (base.AstGroup)) and len(node.items) == 0:
       return None
@@ -151,7 +150,7 @@ def match_args_with_options(ast: doc.Doc) -> None:
   # Usage: prog -a ARG
   # Options:
   #   -a ARG
-  def match_opts(node: TAstNode) -> TAstNode:
+  def match(node: TAstNode) -> TAstNode:
     if not isinstance(node, base.AstGroup):
       return node
     new_items: T.List[base.AstNode] = []
@@ -181,7 +180,7 @@ def match_args_with_options(ast: doc.Doc) -> None:
       left = right
     node.items = new_items
     return node
-  ast.usage = ast.usage.replace(match_opts)
+  ast.usage = ast.usage.replace(match)
 
 
 def warn_unused_documented_options(ast: doc.Doc, text: str) -> None:
@@ -191,20 +190,55 @@ def warn_unused_documented_options(ast: doc.Doc, text: str) -> None:
 
 
 def merge_repeatable_into_children(ast: doc.Doc) -> None:
-  def update(node: base.AstNode):
+  def merge(node: base.AstNode):
     if isinstance(node, (groups.Repeatable)):
       assert len(node.items) == 1
       node.items[0].repeatable = True
       return node.items[0]
     return node
-  ast.usage = ast.usage.replace(update)
+  ast.usage = ast.usage.replace(merge)
 
-# def mark_multiple(node, repeatable=False, siblings=[]):
-#   if hasattr(node, 'multiple') and not node.multiple:
-#     node.multiple = repeatable or node in siblings
-#   elif isinstance(node, groups.Choice):
-#     for item in node.items:
-#       mark_multiple(item, repeatable or node.repeatable, siblings)
-#   elif isinstance(node, base.AstNode):
-#     for item in node.items:
-#       mark_multiple(item, repeatable or node.repeatable, siblings + [i for i in node.items if i != item])
+
+def mark_multiple(ast: doc.Doc) -> None:
+  # Mark leaves that can be specified multiple times
+  marked_leaves: T.Set[base.IdentNode] = set()
+
+  def mark_from_repeatable(node: base.AstNode, multiple: bool = False):
+    if isinstance(node, (base.AstGroup)):
+      for item in node.items:
+        mark_from_repeatable(item, node.repeatable or multiple)
+    else:
+      assert isinstance(node, (base.IdentNode))
+      if node.repeatable or multiple:
+        node.multiple = True
+        marked_leaves.add(node)
+  mark_from_repeatable(ast.usage)
+
+  def mark_repeated(node: base.AstNode, possible_siblings: T.Set[base.AstLeaf]) -> T.Set[base.AstLeaf]:
+    # Mark nodes that are mentioned more than once on a path through the tree
+    if isinstance(node, (groups.Choice)):
+      # Siblings between choice do not affect each other. e.g. (a | a) does not mean a can be specified multiple times
+      new_siblings: T.Set[base.AstLeaf] = set()
+      for item in node.items:
+        new_siblings |= mark_repeated(item, possible_siblings)
+      possible_siblings = possible_siblings.union(new_siblings)
+    elif isinstance(node, (base.AstGroup)):
+      for item in node.items:
+        possible_siblings = possible_siblings.union(mark_repeated(item, possible_siblings))
+    else:
+      assert isinstance(node, (base.IdentNode))
+      if any([node == leaf for leaf in possible_siblings]):
+        node.multiple = True
+        marked_leaves.add(node)
+      # set.add(node) would mutate the set from parent calls
+      possible_siblings = possible_siblings.union(set([node]))
+    return possible_siblings
+  mark_repeated(ast.usage, set())
+
+  def mark_identical_nodes(node: base.AstNode):
+    # For some reason we can't use "node in set()"
+    # Also the reason for the type ignore
+    if any([node == leaf for leaf in marked_leaves]):
+      node.multiple = True  # type: ignore
+    return node
+  ast.usage = ast.usage.replace(mark_identical_nodes)

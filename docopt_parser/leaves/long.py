@@ -25,8 +25,8 @@ class Long(base.IdentNode):
     return self.arg is not None
 
   def __repr__(self):
-    return f'''{self.ident}{self.repeatable_suffix}
-  arg: {self.arg}'''
+    arg_suffix = ' ' + self.arg.ident if self.arg is not None else ''
+    return f'''{self.ident}{self.multiple_suffix}{self.repeatable_suffix}{arg_suffix}'''
 
   def __iter__(self):
     yield from super().__iter__()
