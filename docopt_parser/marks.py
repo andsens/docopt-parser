@@ -44,6 +44,10 @@ class Location(object):
   def __repr__(self):
     return f'{self.line}:{self.col}'
 
+  def to_bytecount(self, text: "T.List[str] | str") -> int:
+    lines = text if isinstance(text, list) else text.split('\n')
+    return sum(len(line) for line in lines[0:self.line]) + self.line + self.col
+
   def show(self, text: "T.List[str] | str", message: "str | None" = None):
     message = f'\n{message}' if message is not None else ''
     col_offset = ' ' * (self.col + self.line.prefix_length)
@@ -69,6 +73,10 @@ class Range(object):
 
   def __repr__(self):
     return f'{self.start}-{self.end}'
+
+  def to_bytecount(self, text: "T.List[str] | str") -> T.Tuple[int, int]:
+    lines = text if isinstance(text, list) else text.split('\n')
+    return (self.start.to_bytecount(lines), self.end.to_bytecount(lines))
 
   def wrap_element(self, elm: _T) -> "Marked[_T]":
     return Marked(((self.start.line, self.start.col), elm, (self.end.line, self.end.col)))
