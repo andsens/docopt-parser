@@ -75,13 +75,6 @@ class DocumentedOption(base.IdentNode):
     yield 'doc', self.doc
 
 
-next_documented_option = parsers.nl + P.optional(parsers.indent) + parsers.char('-')
-terminator = (parsers.nl + parsers.nl) ^ (parsers.nl + P.eof()) ^ next_documented_option
-default = (
-  P.regex(r'\[default: ', re.IGNORECASE) >> P.many(parsers.char(illegal='\n]')) << parsers.char(']')  # type: ignore
-).desc('[default: ]').parsecmap(helpers.join_string)
-doc = P.many1(parsers.char(illegal=default ^ terminator)).desc('option documentation').parsecmap(helpers.join_string)
-
 @P.generate('short option (-s)')
 def option_line_short() -> helpers.GeneratorParser[leaves.Short]:
   argspec = (parsers.char(' =') >> leaves.argument).desc('argument')
@@ -127,6 +120,16 @@ def option_line_opts() -> helpers.GeneratorParser[
       opt_short.arg = opt_long.arg
   return (opt_short, opt_long)
 
+next_documented_option = parsers.nl + P.optional(parsers.indent) + parsers.char('-')
+terminator = (parsers.nl + parsers.nl) ^ (parsers.nl + P.eof()) ^ next_documented_option
+default = (
+  P.regex(r'\[default: ', re.IGNORECASE) + P.many(parsers.char(illegal='\n]')) + parsers.char(']')  # type: ignore
+).desc('[default: ]')
+default_value = default.parsecmap(lambda n: n[0][1]).parsecmap(helpers.join_string).mark()
+option_documentation = P.many1(
+  parsers.char(illegal=default ^ terminator)
+).desc('option documentation').parsecmap(helpers.join_string)
+
 @P.generate('documented option')
 def documented_option() -> helpers.GeneratorParser[DocumentedOption]:
   _doc = _default = None
@@ -137,7 +140,9 @@ def documented_option() -> helpers.GeneratorParser[DocumentedOption]:
     yield parsers.whitespaces
   elif (yield P.optional(P.lookahead(parsers.char(illegal='\n')))) is not None:
     yield (parsers.char(' ') + P.many1(parsers.char(' '))) ^ P.fail_with('at least 2 spaces')  # type: ignore
-    _default = yield P.lookahead(P.optional(doc) >> P.optional(default).mark() << P.optional(doc))
-    _doc = yield P.optional(doc).mark()
+    _default = yield P.lookahead(P.optional(option_documentation) >> P.optional(default_value))
+    _doc = yield P.optional(
+      P.optional(option_documentation) + P.optional(default) + P.optional(option_documentation)
+    ).parsecmap(helpers.join_string).mark()
   end = yield parsers.location
   return DocumentedOption((start, end), short, long, _default, _doc)

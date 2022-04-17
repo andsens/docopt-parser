@@ -6,10 +6,10 @@ Usage:
   prog -h | --help
   prog --version
   prog [-hv] -y
-  prog -k F -c=T
+  prog -k F -c T
   prog [options]
   prog [a b c (f|g)]
-  prog -abc=F...
+  prog -abc F...
 
 Options:
 -h --help     Show this screen.
