@@ -28,7 +28,7 @@ def doc(strict: bool):
 
 class Doc(base.AstElement):
   prog: str
-  usage: base.AstGroup
+  _usage: base.AstGroup
   option_sections: T.List[sections.OptionsSection]
   text: T.List[leaves.Text]
 
@@ -42,9 +42,24 @@ class Doc(base.AstElement):
   ):
     super().__init__(range)
     self.prog = prog
-    self.usage = usage
+    self._usage = usage
     self.option_sections = list(option_sections)
     self.text = list(text)
+
+  @property
+  def usage(self) -> base.AstGroup:
+    return self._usage
+
+  @usage.setter
+  def usage(self, usage: base.AstNode | None):  # type: ignore
+    # Ignoring because the type incompatibility is the point here
+    if usage is None:
+      items: T.List[base.AstNode] = []
+      self._usage = groups.Sequence(self._usage.mark.wrap_element(items).to_marked_tuple())
+    elif not isinstance(usage, base.AstGroup):
+      self._usage = groups.Sequence(self._usage.mark.wrap_element([usage]).to_marked_tuple())
+    else:
+      self._usage = usage
 
   @property
   def usage_options(self) -> T.List[leaves.Short | leaves.Long | leaves.DocumentedOption]:
@@ -52,7 +67,7 @@ class Doc(base.AstElement):
       if isinstance(node, leaves.Short | leaves.Long | leaves.DocumentedOption):
         memo.append(node)
       return memo
-    return self.usage.reduce(get_opts, [])
+    return self._usage.reduce(get_opts, [])
 
   @property
   def section_options(self) -> T.List[leaves.DocumentedOption]:
@@ -69,12 +84,12 @@ class Doc(base.AstElement):
     raise DocoptError(f'Unable to find option: {needle}')
 
   def __repr__(self) -> str:
-    items = T.cast(T.List[base.AstNode], [self.usage]) + T.cast(T.List[base.AstNode], self.option_sections)
+    items = T.cast(T.List[base.AstNode], [self._usage]) + T.cast(T.List[base.AstNode], self.option_sections)
     return f'''{self.indent(items, lvl=0)}'''
 
   def __iter__(self) -> base.DictGenerator:
     yield 'type', str(type(self).__name__).lower()
-    yield 'usage', dict(self.usage)
+    yield 'usage', dict(self._usage)
     yield 'options', [dict(option) for option in self.option_sections]
 
 

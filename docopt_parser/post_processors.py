@@ -37,25 +37,17 @@ def populate_shortcuts(ast: doc.Doc, text: str) -> None:
   ast.usage = T.cast(base.AstGroup, ast.usage.replace(populate))
 
 def collapse_groups(ast: doc.Doc, text: str):
-  def ensure_root(usage: base.AstNode | None) -> base.AstGroup:
-    if usage is None:
-      items: T.List[base.AstNode] = []
-      return groups.Sequence(ast.usage.mark.wrap_element(items).to_marked_tuple())
-    if not isinstance(usage, base.AstGroup):
-      return groups.Sequence(ast.usage.mark.wrap_element([usage]).to_marked_tuple())
-    return usage
-
   def remove_empty_groups(node: TAstNode) -> TAstNode | None:
     if isinstance(node, (base.AstGroup)) and len(node.items) == 0:
       return None
     return node
-  ast.usage = ensure_root(ast.usage.replace(remove_empty_groups))
+  ast.usage = ast.usage.replace(remove_empty_groups)
 
   def remove_intermediate_groups_with_one_item(node: base.AstNode) -> base.AstNode:
     if isinstance(node, (groups.Choice, groups.Sequence)) and len(node.items) == 1:
       return node.items[0]
     return node
-  ast.usage = ensure_root(ast.usage.replace(remove_intermediate_groups_with_one_item))
+  ast.usage = ast.usage.replace(remove_intermediate_groups_with_one_item)
 
   def merge_nested_sequences(node: base.AstNode) -> base.AstNode:
     if isinstance(node, groups.Sequence):
@@ -67,7 +59,7 @@ def collapse_groups(ast: doc.Doc, text: str):
           new_items.append(item)
       node.items = new_items
     return node
-  ast.usage = ensure_root(ast.usage.replace(merge_nested_sequences))
+  ast.usage = ast.usage.replace(merge_nested_sequences)
 
   def dissolve_groups(node: base.AstNode) -> base.AstNode:
     # Must run after merge_nested_sequences so that [(a b c)] does not become [a b c]
@@ -75,7 +67,7 @@ def collapse_groups(ast: doc.Doc, text: str):
       assert len(node.items) == 1
       return node.items[0]
     return node
-  ast.usage = ensure_root(ast.usage.replace(dissolve_groups))
+  ast.usage = ast.usage.replace(dissolve_groups)
 
   def merge_neighboring_sequences(node: base.AstNode) -> base.AstNode:
     new_items: T.List[base.AstNode] = []
@@ -95,14 +87,14 @@ def collapse_groups(ast: doc.Doc, text: str):
         left = right
       node.items = new_items
     return node
-  ast.usage = ensure_root(ast.usage.replace(merge_neighboring_sequences))
+  ast.usage = ast.usage.replace(merge_neighboring_sequences)
 
   def remove_intermediate_groups_in_optionals(node: base.AstNode) -> base.AstNode:
     if isinstance(node, groups.Optional):
       if isinstance(node.items[0], (groups.Sequence, groups.Optional)) and len(node.items) == 1:
         node.items = node.items[0].items
     return node
-  ast.usage = ensure_root(ast.usage.replace(remove_intermediate_groups_in_optionals))
+  ast.usage = ast.usage.replace(remove_intermediate_groups_in_optionals)
 
 def fail_duplicate_documented_options(ast: doc.Doc, text: str):
   # Fail when an option section defines an option twice, e.g.:
@@ -143,7 +135,7 @@ def set_usage_option_refs(ast: doc.Doc, text: str) -> None:
       if isinstance(definition, leaves.DocumentedOption):
         node.ref = definition
     return node
-  ast.usage = T.cast(base.AstGroup, ast.usage.replace(update))
+  ast.usage = ast.usage.replace(update)
 
 def match_args_with_options(ast: doc.Doc, text: str) -> None:
   # When parsing initially "-a ARG" is parsed as two unrelated nodes
@@ -181,7 +173,7 @@ def match_args_with_options(ast: doc.Doc, text: str) -> None:
       left = right
     node.items = new_items
     return node
-  ast.usage = T.cast(base.AstGroup, ast.usage.replace(match_opts))
+  ast.usage = ast.usage.replace(match_opts)
 
 
 def warn_unused_documented_options(ast: doc.Doc, text: str) -> None:
