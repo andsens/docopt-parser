@@ -5,7 +5,7 @@ from docopt_parser import base, leaves, marks, parsers, helpers
 
 illegal = parsers.non_symbol_chars | parsers.char(',=')
 
-inline_long_option_spec = (
+usage_long_option = (
   P.unit(
     parsers.string('--') + base.ident(illegal)
   ).parsecmap(helpers.join_string).mark() + P.optional(parsers.char('=') >> leaves.argument)

@@ -5,14 +5,19 @@ from docopt_parser import base, leaves, marks, parsers, helpers
 
 illegal = parsers.non_symbol_chars | parsers.char(',=-')
 
-inline_short_option_spec = (
-  P.unit(parsers.char('-') + parsers.char(illegal=illegal)).parsecmap(helpers.join_string).mark()
+no_equals = (
+  P.lookahead(parsers.char(illegal='='))
+  ^ P.fail_with('Short option arguments must be separated with a space')  # type: ignore
+).parsecmap(lambda _: '')  # type: ignore
+
+usage_short_option = (
+  (P.unit(parsers.char('-') + parsers.char(illegal=illegal)) + no_equals).parsecmap(helpers.join_string).mark()
 ).desc('short option (-a)').parsecmap(lambda n: Short(n, None))
 
 # Usage parser without the leading "-" to allow parsing "-abc" style option specs
 # Prefix the parse result with a "-" in order to forward the proper identifier to Short()
-inline_shortlist_short_option_spec = (
-  parsers.char(illegal=illegal).parsecmap(lambda n: '-' + n).mark()
+usage_shortlist_option = (
+  (parsers.char(illegal=illegal) + no_equals).parsecmap(lambda n: '-' + n[0]).mark()
 ).desc('short option (-a)').parsecmap(lambda n: Short(n, None))
 
 
