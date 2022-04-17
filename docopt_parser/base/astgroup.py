@@ -18,8 +18,8 @@ class AstGroup(base.AstNode):
         memo = item.reduce(function, memo)
     return memo
 
-  _U = T.TypeVar('_U', bound=base.AstNode | None)
-  _V = T.TypeVar('_V', bound=base.AstNode | None)
+  _U = T.TypeVar('_U', bound="base.AstNode | None")
+  _V = T.TypeVar('_V', bound="base.AstNode | None")
 
   def replace(self, function: T.Callable[[_U], _V]):
     new_items: T.List[base.AstNode] = []

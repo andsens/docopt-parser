@@ -30,16 +30,16 @@ def char(legal: "str | P.Parser[str]" = any_char, illegal: "P.Parser[T.Any] | st
 def string(s: str) -> "P.Parser[str]":
   '''Parses a string.'''
   @P.Parser
-  def string_parser(text: str, index: int = 0) -> P.Value[str]:
+  def string_parser(text: str, index: int = 0) -> "P.Value[str]":
     slen = len(s)
     if text[index:index + slen] == s:
       return P.Value.success(index + slen, s)
     else:
-      return T.cast(P.Value[str], P.Value.failure(index, s))
+      return T.cast("P.Value[str]", P.Value.failure(index, s))
   return string_parser
 
 @P.Parser
-def location(text: str, index: int = 0) -> P.Value[marks.LocInfo]:
+def location(text: str, index: int = 0) -> "P.Value[marks.LocInfo]":
   '''Returns the current location of the parser'''
   return P.Value.success(index, P.ParseError.loc_info(text, index))
 

@@ -1,9 +1,10 @@
 import typing as T
+import typing_extensions as TE
 import parsec as P
 
 from docopt_parser import base, groups, marks, sections, leaves, helpers, parsers
 
-AnyOption = leaves.Short | leaves.Long | leaves.DocumentedOption | leaves.OptionRef
+AnyOption = T.Union[leaves.Short, leaves.Long, leaves.DocumentedOption, leaves.OptionRef]
 
 def doc(strict: bool):
   @P.generate('docopt')
@@ -59,7 +60,7 @@ class Doc(base.AstElement):
     return self._usage
 
   @usage.setter
-  def usage(self, usage: base.AstNode | None):  # type: ignore
+  def usage(self, usage: "base.AstNode | None"):  # type: ignore
     # Ignoring because the type incompatibility is the point here
     if usage is None:
       items: T.List[base.AstNode] = []
@@ -72,7 +73,7 @@ class Doc(base.AstElement):
   @property
   def usage_options(self) -> T.List[AnyOption]:
     def get_opts(memo: T.List[AnyOption], node: base.AstNode):
-      if isinstance(node, AnyOption):
+      if isinstance(node, (leaves.Short, leaves.Long, leaves.DocumentedOption, leaves.OptionRef)):
         memo.append(node)
       return memo
     return self._usage.reduce(get_opts, [])
@@ -82,7 +83,7 @@ class Doc(base.AstElement):
     return sum([list(o.items) for o in self.option_sections], [])
 
   def get_option_definition(
-    self, needle: leaves.Short | leaves.Long) -> leaves.Short | leaves.Long | leaves.DocumentedOption:
+    self, needle: "leaves.Short | leaves.Long") -> "leaves.Short | leaves.Long | leaves.DocumentedOption":
     for option in self.section_options:
       if option == needle or (option.short is not None and option.short.ident == needle.ident):
         return option
@@ -101,14 +102,14 @@ class Doc(base.AstElement):
     yield 'options', [option.dict for option in self.option_sections]
 
 @T.overload
-def parse(text: str, strict: T.Literal[False]) -> T.Tuple[Doc, str]:
+def parse(text: str, strict: TE.Literal[False]) -> T.Tuple[Doc, str]:
   pass
 
 @T.overload
-def parse(text: str, strict: T.Literal[True] = True) -> T.Tuple[base.AstGroup, str]:
+def parse(text: str, strict: TE.Literal[True] = True) -> T.Tuple[base.AstGroup, str]:
   pass
 
-def parse(text: str, strict: bool = True) -> T.Tuple[base.AstGroup | Doc, str]:
+def parse(text: str, strict: bool = True) -> "T.Tuple[base.AstGroup | Doc, str]":
   from docopt_parser import post_processors
   try:
     parser = doc(strict)
@@ -138,8 +139,8 @@ class DocoptError(Exception):
     self.exit_code = exit_code
 
 class DocoptParseError(DocoptError):
-  mark: marks.Location | marks.Range | None
+  mark: "marks.Location | marks.Range | None"
 
-  def __init__(self, message: str, mark: marks.Location | marks.Range | None = None):
+  def __init__(self, message: str, mark: "marks.Location | marks.Range | None" = None):
     super().__init__(message, 1)
     self.mark = mark

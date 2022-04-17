@@ -110,7 +110,7 @@ def convert_root_to_optional_on_empty_lines(ast: doc.Doc):
 
 
 def collapse_groups(ast: doc.Doc):
-  def remove_empty_groups(node: TAstNode) -> TAstNode | None:
+  def remove_empty_groups(node: TAstNode) -> "TAstNode | None":
     if isinstance(node, (base.AstGroup)) and len(node.items) == 0:
       return None
     return node

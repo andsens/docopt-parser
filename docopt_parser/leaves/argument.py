@@ -15,7 +15,7 @@ wrapped_arg = (parsers.char('<') + base.ident(illegal | parsers.char('>')) + par
 @P.generate('ARG')
 def uppercase_arg() -> helpers.GeneratorParser[str]:
   name_p = P.many1(parsers.char(illegal=illegal)).parsecmap(helpers.join_string).desc('ARG')
-  name: str | None = yield P.lookahead(P.optional(name_p))
+  name = yield P.lookahead(P.optional(name_p))
   if name is not None and name.isupper():
     return (yield name_p)
   else:

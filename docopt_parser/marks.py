@@ -15,7 +15,7 @@ class LineNumber(int):
   def __repr__(self):
     return str(self + 1)
 
-  def show(self, text: T.List[str] | str):
+  def show(self, text: "T.List[str] | str"):
     lines = text if isinstance(text, list) else text.split('\n')
     return f'{(self + 1):02d} {lines[self]}'
 
@@ -44,7 +44,7 @@ class Location(object):
   def __repr__(self):
     return f'{self.line}:{self.col}'
 
-  def show(self, text: T.List[str] | str, message: str | None = None):
+  def show(self, text: "T.List[str] | str", message: "str | None" = None):
     message = f'\n{message}' if message is not None else ''
     col_offset = ' ' * (self.col + self.line.prefix_length)
     return f'{self.line.show(text)}\n{col_offset}^{message}'
@@ -76,7 +76,7 @@ class Range(object):
   def to_range_tuple(self) -> RangeTuple:
     return ((self.start.line, self.start.col), (self.end.line, self.end.col))
 
-  def show(self, text: str, message: str | None = None):
+  def show(self, text: str, message: "str | None" = None):
     lines = text.split('\n')
     start = Location((self.start.line, self.start.col))
     end = Location((self.end.line, self.end.col))

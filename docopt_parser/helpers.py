@@ -9,7 +9,8 @@ def debug(arg: _T) -> _T:
   sys.stderr.write('{}\n'.format(arg))
   return arg
 
-Nested = _T | T.Sequence["Nested[_T]"]
+Nested = T.Union[_T, T.Sequence["Nested[_T]"]]
+
 @T.overload
 def join_string(elm: Nested[str]) -> str:
   pass
@@ -17,14 +18,14 @@ def join_string(elm: Nested[str]) -> str:
 def join_string(elm: Nested[None]) -> None:
   pass
 @T.overload
-def join_string(elm: Nested[str | None]) -> str | None:
+def join_string(elm: Nested["str | None"]) -> "str | None":
   pass
 
-def join_string(elm: Nested[str | None]) -> str | None:
+def join_string(elm: Nested["str | None"]) -> "str | None":
   if elm is None or isinstance(elm, (str)):
     return elm
   else:
-    flat: T.List[str | None] = []
+    flat: T.List["str | None"] = []
     for item in elm:
       flat.append(join_string(item))
     filtered = list(e for e in flat if e is not None)

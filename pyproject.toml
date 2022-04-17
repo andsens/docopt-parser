@@ -2,9 +2,7 @@
 name = "docopt-parser"
 description = "A parser for the docopt language"
 version = "0.0.0-dev"
-authors = [
-  "Anders Ingemann <anders@ingemann.de>"
-]
+authors = ["Anders Ingemann <anders@ingemann.de>"]
 license = "MIT"
 readme = "README.adoc"
 homepage = "https://github.com/andsens/docopt-parser"
@@ -15,12 +13,10 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "License :: OSI Approved :: MIT License",
 ]
-packages = [
-  { include = "docopt_parser" },
-]
+packages = [{ include = "docopt_parser" }]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = ">=3.7"
 docopt = "^0.6.2"
 termcolor = "^1.1.0"
 parsec = "^3.13"

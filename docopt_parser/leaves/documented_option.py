@@ -6,28 +6,28 @@ from docopt_parser import leaves, base, marks, helpers, parsers
 
 
 class DocumentedOption(base.IdentNode):
-  short: leaves.Short | None
-  long: leaves.Long | None
+  short: "leaves.Short | None"
+  long: "leaves.Long | None"
   shortcut: bool
   expects_arg: bool
-  __default: marks.Marked[str] | None
-  __doc: marks.Marked[str] | None
+  __default: "marks.Marked[str] | None"
+  __doc: "marks.Marked[str] | None"
 
   @T.overload
   def __init__(self, range: marks.RangeTuple,
-               short: leaves.Short, long: leaves.Long | None,
-               default: marks.MarkedTuple[str] | None, doc: marks.MarkedTuple[str] | None):
+               short: leaves.Short, long: "leaves.Long | None",
+               default: "marks.MarkedTuple[str] | None", doc: "marks.MarkedTuple[str] | None"):
     pass
 
   @T.overload
   def __init__(self, range: marks.RangeTuple,
-               short: leaves.Short | None, long: leaves.Long,
-               default: marks.MarkedTuple[str] | None, doc: marks.MarkedTuple[str] | None):
+               short: "leaves.Short | None", long: leaves.Long,
+               default: "marks.MarkedTuple[str] | None", doc: "marks.MarkedTuple[str] | None"):
     pass
 
   def __init__(self, range: marks.RangeTuple,
-               short: leaves.Short | None, long: leaves.Long | None,
-               default: marks.MarkedTuple[str] | None, doc: marks.MarkedTuple[str] | None):
+               short: "leaves.Short | None", long: "leaves.Long | None",
+               default: "marks.MarkedTuple[str] | None", doc: "marks.MarkedTuple[str] | None"):
     if long:
       super().__init__((range[0], long.ident, range[1]))
     elif short:
@@ -103,9 +103,7 @@ def option_line_long() -> helpers.GeneratorParser[leaves.Long]:
 
 @P.generate('options')
 def option_line_opts() -> helpers.GeneratorParser[
-  T.Tuple[leaves.Short, leaves.Long]
-  | T.Tuple[leaves.Short, None]
-  | T.Tuple[None, leaves.Long]
+  "T.Tuple[leaves.Short, leaves.Long] | T.Tuple[leaves.Short, None] | T.Tuple[None, leaves.Long]"
 ]:
   first = yield option_line_long | option_line_short
   opt_sep = yield P.unit(
@@ -137,7 +135,7 @@ option_documentation = P.many1(
 @P.generate('documented option')
 def documented_option() -> helpers.GeneratorParser[DocumentedOption]:
   _doc = _default = None
-  start: marks.LocInfo = yield parsers.location
+  start = yield parsers.location
   (short, long) = yield option_line_opts
   if (yield P.optional(P.lookahead(parsers.eol))) is not None:
     # Consume trailing whitespaces
