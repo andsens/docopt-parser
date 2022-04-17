@@ -21,7 +21,7 @@ usage_shortlist_option = (
 ).desc('short option (-a)').parsecmap(lambda n: Short(n, None))
 
 
-class Short(base.IdentNode):
+class Short(base.AstLeaf):
   arg: "leaves.Argument | None"
   ref: "leaves.DocumentedOption | None"
 

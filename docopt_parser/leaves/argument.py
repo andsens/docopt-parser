@@ -3,7 +3,7 @@ import parsec as P
 
 from docopt_parser import base, helpers, marks, parsers
 
-class Argument(base.IdentNode):
+class Argument(base.AstLeaf):
   def __init__(self, name: marks.MarkedTuple[str]):
     super().__init__(name)
 

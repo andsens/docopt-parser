@@ -222,14 +222,14 @@ def warn_unused_documented_options(ast: doc.Doc, text: str) -> None:
 
 def mark_multiple(ast: doc.Doc) -> None:
   # Mark leaves that can be specified multiple times
-  marked_leaves: T.Set[base.IdentNode] = set()
+  marked_leaves: T.Set[base.AstLeaf] = set()
 
   def mark_from_repeatable(node: base.AstNode, multiple: bool = False):
     if isinstance(node, (base.AstGroup)):
       for item in node.items:
         mark_from_repeatable(item, multiple or isinstance(node, groups.Repeatable))
     else:
-      assert isinstance(node, (base.IdentNode))
+      assert isinstance(node, (base.AstLeaf))
       if multiple:
         node.multiple = multiple
         marked_leaves.add(node)
@@ -247,7 +247,7 @@ def mark_multiple(ast: doc.Doc) -> None:
       for item in node.items:
         possible_siblings = possible_siblings.union(mark_repeated(item, possible_siblings))
     else:
-      assert isinstance(node, (base.IdentNode))
+      assert isinstance(node, (base.AstLeaf))
       if any([node == leaf for leaf in possible_siblings]):
         node.multiple = True
         marked_leaves.add(node)

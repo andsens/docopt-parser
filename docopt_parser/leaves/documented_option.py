@@ -5,7 +5,7 @@ import re
 from docopt_parser import leaves, base, marks, helpers, parsers
 
 
-class DocumentedOption(base.IdentNode):
+class DocumentedOption(base.AstLeaf):
   short: "leaves.Short | None"
   long: "leaves.Long | None"
   shortcut: bool
