@@ -34,7 +34,7 @@ class AstGroup(base.AstNode):
     return function(self)
 
   def __repr__(self):
-    return f'''<{str(type(self).__name__).capitalize()}>{self.repeatable_suffix}
+    return f'''<{str(type(self).__name__).capitalize()}>
 {self.indent(self.items)}'''
 
 

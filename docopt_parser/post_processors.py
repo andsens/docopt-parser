@@ -19,9 +19,6 @@ def post_process_ast(ast: doc.Doc, text: str) -> doc.Doc:
   populate_shortcuts(ast)
   convert_root_to_optional_on_empty_lines(ast)
   collapse_groups(ast)
-  # merge_repeatable_into_children() must run before match_args_with_options() so that a repeated arg can be found
-  # e.g.: --long B...
-  merge_repeatable_into_children(ast)
   match_args_with_options(ast)
   warn_unused_documented_options(ast, text)
   mark_multiple(ast)
@@ -188,12 +185,20 @@ def match_args_with_options(ast: doc.Doc) -> None:
       if isinstance(left, (leaves.Short, leaves.Long)):
         definition = ast.get_option_definition(left)
         if definition.expects_arg and left.arg is None:
-          if isinstance(right, leaves.Argument):
+          if isinstance(right, groups.Repeatable) \
+            and len(right.items) == 1 and isinstance(right.items[0], leaves.Argument):
+            # Handle
+            #   Usage:
+            #     prog -a B...
+            #   Options:
+            #     -a B
+            # by moving the option into the repeatable
+            left.arg = right.items[0]
+            right.items = [left]
+            left = right
+            right = next(item_list, None)
+          elif isinstance(right, leaves.Argument):
             left.arg = right
-            if left.arg.repeatable:
-              # Take over the ellipsis from the arg. e.g.: -f B...
-              left.repeatable = True
-              left.arg.repeatable = False
             # Remove the argument from the list by skipping over it in the next iteration
             right = next(item_list, None)
           else:
@@ -215,16 +220,6 @@ def warn_unused_documented_options(ast: doc.Doc, text: str) -> None:
     warnings.warn(option.mark.show(text, message='this option is not referenced from the usage section.'))
 
 
-def merge_repeatable_into_children(ast: doc.Doc) -> None:
-  def merge(node: base.AstNode):
-    if isinstance(node, (groups.Repeatable)):
-      assert len(node.items) == 1
-      node.items[0].repeatable = True
-      return node.items[0]
-    return node
-  ast.usage = ast.usage.replace(merge)
-
-
 def mark_multiple(ast: doc.Doc) -> None:
   # Mark leaves that can be specified multiple times
   marked_leaves: T.Set[base.IdentNode] = set()
@@ -232,11 +227,11 @@ def mark_multiple(ast: doc.Doc) -> None:
   def mark_from_repeatable(node: base.AstNode, multiple: bool = False):
     if isinstance(node, (base.AstGroup)):
       for item in node.items:
-        mark_from_repeatable(item, node.repeatable or multiple)
+        mark_from_repeatable(item, multiple or isinstance(node, groups.Repeatable))
     else:
       assert isinstance(node, (base.IdentNode))
-      if node.repeatable or multiple:
-        node.multiple = True
+      if multiple:
+        node.multiple = multiple
         marked_leaves.add(node)
   mark_from_repeatable(ast.usage)
 

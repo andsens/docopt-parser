@@ -35,7 +35,7 @@ def doc(strict: bool):
     return Doc((start, end), prog, usage, option_sections, text)
   return p
 
-class Doc(base.AstElement):
+class Doc(base.AstNode):
   prog: str
   _usage: base.AstGroup
   option_sections: T.List[sections.OptionsSection]

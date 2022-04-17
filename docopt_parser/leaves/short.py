@@ -58,7 +58,7 @@ class Short(base.IdentNode):
 
   def __repr__(self):
     arg_suffix = ' ' + self.arg.ident if self.arg is not None else ''
-    return f'''{self.ident}{self.multiple_suffix}{self.repeatable_suffix}{arg_suffix}'''
+    return f'''{self.ident}{self.multiple_suffix}{arg_suffix}'''
 
   def __iter__(self):
     yield from super().__iter__()
