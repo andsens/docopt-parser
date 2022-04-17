@@ -30,4 +30,7 @@ class Long(base.IdentNode):
 
   def __iter__(self):
     yield from super().__iter__()
-    yield 'arg', dict(self.arg) if self.arg else None
+    if self.arg:
+      yield 'arg', self.arg.ident
+    if self.ref:
+      yield 'ref', self.ref.dict

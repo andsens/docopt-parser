@@ -30,13 +30,13 @@ def docopt_parser(params: Params):
     if params['-S']:
       ast, parsed_text = parse(text, strict=False)
       if params['ast']:
-        sys.stdout.write(yaml.dump(dict(ast), sort_keys=False) if params['--yaml'] else repr(ast) + '\n')
+        sys.stdout.write(yaml.dump(ast.dict, sort_keys=False) if params['--yaml'] else repr(ast) + '\n')
       if parsed_text != text:
         parse(text, strict=True)
     else:
       ast, parsed_text = parse(text, strict=True)
       if params['ast']:
-        sys.stdout.write(yaml.dump(dict(ast), sort_keys=False) if params['--yaml'] else repr(ast) + '\n')
+        sys.stdout.write(yaml.dump(ast.dict, sort_keys=False) if params['--yaml'] else repr(ast) + '\n')
   except DocoptError as e:
     log.error(str(e))
     sys.exit(e.exit_code)

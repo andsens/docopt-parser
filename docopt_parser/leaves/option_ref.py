@@ -21,3 +21,4 @@ class OptionRef(base.IdentNode):
 
   def __iter__(self):
     yield from super().__iter__()
+    yield 'ref', self.ref.dict

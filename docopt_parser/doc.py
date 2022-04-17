@@ -97,8 +97,8 @@ class Doc(base.AstElement):
 
   def __iter__(self) -> base.DictGenerator:
     yield 'type', str(type(self).__name__).lower()
-    yield 'usage', dict(self._usage)
-    yield 'options', [dict(option) for option in self.option_sections]
+    yield 'usage', self._usage.dict
+    yield 'options', [option.dict for option in self.option_sections]
 
 @T.overload
 def parse(text: str, strict: T.Literal[False]) -> T.Tuple[Doc, str]:

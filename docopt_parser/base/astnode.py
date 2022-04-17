@@ -10,4 +10,5 @@ class AstNode(AstElement):
 
   def __iter__(self):
     yield from super().__iter__()
-    yield 'repeatable', self.repeatable
+    if self.repeatable:
+      yield 'repeatable', self.repeatable

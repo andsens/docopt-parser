@@ -68,11 +68,15 @@ class DocumentedOption(base.IdentNode):
 
   def __iter__(self):
     yield from super().__iter__()
-    yield 'short', dict(self.short) if self.short else None
-    yield 'long', dict(self.long) if self.long else None
+    if self.short:
+      yield 'short', self.short.dict
+    if self.long:
+      yield 'long', self.long.dict
     yield 'expects_arg', self.expects_arg
-    yield 'default', self.default
-    yield 'doc', self.doc
+    if self.default is not None:
+      yield 'default', self.default
+    if self.doc is not None:
+      yield 'doc', self.doc
 
 
 @P.generate('short option (-s)')
