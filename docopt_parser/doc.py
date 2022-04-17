@@ -99,7 +99,7 @@ class Doc(base.AstElement):
     yield 'options', [dict(option) for option in self.option_sections]
 
 
-def parse(text: str, strict: bool = True) -> T.Tuple[Doc, str]:
+def parse(text: str, strict: bool = True) -> T.Tuple[base.AstGroup, str]:
   from docopt_parser import post_processors
   try:
     parser = doc(strict)
@@ -109,7 +109,7 @@ def parse(text: str, strict: bool = True) -> T.Tuple[Doc, str]:
     else:
       ast, parsed_doc = parser.parse_partial(text)
     ast = post_processors.post_process_ast(ast, text)
-    return ast, parsed_doc
+    return ast.usage, parsed_doc
   except DocoptParseError as e:
     if e.mark is not None:
       raise DocoptError(e.mark.show(text, e.message), e.exit_code) from e
