@@ -8,22 +8,26 @@ AnyOption = leaves.Short | leaves.Long | leaves.DocumentedOption | leaves.Option
 def doc(strict: bool):
   @P.generate('docopt')
   def p() -> helpers.GeneratorParser[Doc]:
+    usage_section = sections.usage_section(strict)
+    options_section = sections.options_section(strict)
+    prog: str | None = None
+    usage: base.AstGroup | None = None
+    option_sections: T.List[sections.OptionsSection] = []
+    text: T.List[leaves.Text] = []
     start = yield parsers.location
-    items: T.Tuple[
-      T.Tuple[
-        T.List[sections.OptionsSection | leaves.Text],
-        T.Tuple[str, groups.Choice | groups.Sequence]
-      ],
-      T.List[sections.OptionsSection | leaves.Text]
-    ] = yield (
-      P.many(sections.options_section(strict) | leaves.other_documentation)
-      + sections.usage_section(strict)
-      + P.many(sections.options_section(strict) | leaves.other_documentation)
-    )
+    while (yield P.optional(P.eof().result(True))) is None:
+      current = yield usage_section | options_section | leaves.other_documentation
+      if isinstance(current, sections.OptionsSection):
+        option_sections.append(current)
+      elif isinstance(current, leaves.Text):
+        text.append(current)
+      else:
+        if prog is not None:
+          raise DocoptParseError('Unexpected additional Usage:')
+        prog, usage = current
+    if prog is None or usage is None:
+      raise DocoptParseError('Expected Usage:')
     end = yield parsers.location
-    ((pre, (prog, usage)), post) = items
-    option_sections = list(n for n in pre + post if isinstance(n, sections.OptionsSection))
-    text = list(n for n in pre + post if isinstance(n, leaves.Text))
     return Doc((start, end), prog, usage, option_sections, text)
   return p
 

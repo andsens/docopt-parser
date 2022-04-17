@@ -100,12 +100,15 @@ def option_line_opts() -> helpers.GeneratorParser[
   | T.Tuple[None, leaves.Long]
 ]:
   first = yield option_line_long | option_line_short
+  opt_sep = yield P.unit(
+    P.optional((parsers.string(', ') | parsers.char(' ')) >> P.lookahead(parsers.char('-')))
+  )
   if isinstance(first, leaves.Long):
-    opt_short = yield P.optional((parsers.string(', ') | parsers.char(' ')) >> option_line_short)
+    opt_short = (yield option_line_short) if opt_sep is not None else None
     opt_long = first
   else:
     opt_short = first
-    opt_long = yield P.optional((parsers.string(', ') | parsers.char(' ')) >> option_line_long)
+    opt_long = (yield option_line_long) if opt_sep is not None else None
   if opt_short is not None and opt_long is not None:
     if opt_short.arg is not None and opt_long.arg is None:
       opt_long.arg = opt_short.arg
