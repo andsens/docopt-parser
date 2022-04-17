@@ -12,8 +12,8 @@ inline_short_option_spec = (
 # Usage parser without the leading "-" to allow parsing "-abc" style option specs
 # Prefix the parse result with a "-" in order to forward the proper identifier to Short()
 inline_shortlist_short_option_spec = (
-  parsers.char(illegal=illegal).parsecmap(lambda n: '-' + n).mark() + P.optional((parsers.char('=') >> leaves.argument))
-).desc('short option (-a)').parsecmap(lambda n: Short(*n))
+  parsers.char(illegal=illegal).parsecmap(lambda n: '-' + n).mark()
+).desc('short option (-a)').parsecmap(lambda n: Short(n, None))
 
 
 class Short(base.IdentNode):
