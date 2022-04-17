@@ -1,6 +1,6 @@
 import pytest
 from tests.lang import DocoptAst as DocoptAstGenerator
-from docopt_parser import doc, parse
+from docopt_parser import base, parse
 import unittest
 from hypothesis import given, settings  # type: ignore
 
@@ -10,8 +10,9 @@ class TestParser(unittest.TestCase):
   @settings(max_examples=500)
   @given(DocoptAstGenerator.asts)
   def test_parse(self, text: str):
-    assert isinstance(parse(str(text))[0], doc.Doc)
-
+    assert isinstance(parse(str(text))[0], base.AstGroup)
+  # TODO: Make sure only groups and leaves are in the ast
+  # TODO: No <Repeatable> or <Group>
   # TODO: Never expect <None> or <nl>
 
 if __name__ == "__main__":
