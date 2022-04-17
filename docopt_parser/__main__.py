@@ -26,15 +26,15 @@ Params = TypedDict('Params', {'-S': bool, '--yaml': bool, 'ast': bool})
 
 def docopt_parser(params: Params):
   try:
-    doc = sys.stdin.read()
+    text = sys.stdin.read()
     if params['-S']:
-      ast, parsed_doc = parse(doc, strict=False)
+      ast, parsed_text = parse(text, strict=False)
       if params['ast']:
         sys.stdout.write(yaml.dump(dict(ast), sort_keys=False) if params['--yaml'] else repr(ast) + '\n')
-      if parsed_doc != doc:
-        parse(doc, strict=True)
+      if parsed_text != text:
+        parse(text, strict=True)
     else:
-      ast, parsed_doc = parse(doc, strict=True)
+      ast, parsed_text = parse(text, strict=True)
       if params['ast']:
         sys.stdout.write(yaml.dump(dict(ast), sort_keys=False) if params['--yaml'] else repr(ast) + '\n')
   except DocoptError as e:

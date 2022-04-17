@@ -100,8 +100,15 @@ class Doc(base.AstElement):
     yield 'usage', dict(self._usage)
     yield 'options', [dict(option) for option in self.option_sections]
 
+@T.overload
+def parse(text: str, strict: T.Literal[False]) -> T.Tuple[Doc, str]:
+  pass
 
-def parse(text: str, strict: bool = True) -> T.Tuple[base.AstGroup, str]:
+@T.overload
+def parse(text: str, strict: T.Literal[True]) -> T.Tuple[base.AstGroup, str]:
+  pass
+
+def parse(text: str, strict: bool = True) -> T.Tuple[base.AstGroup | Doc, str]:
   from docopt_parser import post_processors
   try:
     parser = doc(strict)
@@ -111,7 +118,10 @@ def parse(text: str, strict: bool = True) -> T.Tuple[base.AstGroup, str]:
     else:
       ast, parsed_doc = parser.parse_partial(text)
     ast = post_processors.post_process_ast(ast, text)
-    return ast.usage, parsed_doc
+    if strict:
+      return ast.usage, parsed_doc
+    else:
+      return ast, parsed_doc
   except DocoptParseError as e:
     if e.mark is not None:
       raise DocoptError(e.mark.show(text, e.message), e.exit_code) from e
