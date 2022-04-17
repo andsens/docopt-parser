@@ -1,3 +1,4 @@
+import typing as T
 import parsec as P
 
 from docopt_parser import base, leaves, marks, parsers, helpers
@@ -24,12 +25,17 @@ class Short(base.IdentNode):
     self.arg = arg
     self.ref = None
 
-  @property
-  def ident(self):
+  def __hash__(self) -> int:
     if self.ref is not None:
-      return self.ref.ident
+      return self.ref.__hash__()
     else:
-      return self._ident
+      return super().__hash__()
+
+  def __eq__(self, other: T.Any) -> bool:
+    if self.ref is not None:
+      return self.ref.__eq__(other)
+    else:
+      return super().__eq__(other)
 
   @property
   def expects_arg(self):

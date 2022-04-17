@@ -21,13 +21,6 @@ class Long(base.IdentNode):
     self.ref = None
 
   @property
-  def ident(self):
-    if self.ref is not None:
-      return self.ref.ident
-    else:
-      return self._ident
-
-  @property
   def expects_arg(self):
     return self.arg is not None
 

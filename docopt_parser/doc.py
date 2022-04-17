@@ -61,7 +61,7 @@ class Doc(base.AstElement):
   def get_option_definition(
     self, needle: leaves.Short | leaves.Long) -> leaves.Short | leaves.Long | leaves.DocumentedOption:
     for option in self.section_options:
-      if option.ident == needle.ident or (option.short is not None and option.short.ident == needle.ident):
+      if option == needle or (option.short is not None and option.short.ident == needle.ident):
         return option
     for option in self.usage_options:
       if option.ident == needle.ident:
