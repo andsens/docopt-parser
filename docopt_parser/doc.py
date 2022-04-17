@@ -105,7 +105,7 @@ def parse(text: str, strict: T.Literal[False]) -> T.Tuple[Doc, str]:
   pass
 
 @T.overload
-def parse(text: str, strict: T.Literal[True]) -> T.Tuple[base.AstGroup, str]:
+def parse(text: str, strict: T.Literal[True] = True) -> T.Tuple[base.AstGroup, str]:
   pass
 
 def parse(text: str, strict: bool = True) -> T.Tuple[base.AstGroup | Doc, str]:
