@@ -10,7 +10,7 @@ def usage_section(strict: bool):
     start = yield parsers.location
     yield P.regex(r'usage:', re.I)  # type: ignore
     yield P.optional(parsers.nl + parsers.indent)
-    prog = yield P.lookahead(P.optional(base.ident(parsers.non_symbol_chars)))
+    prog = yield parsers.whitespaces >> P.lookahead(base.ident(parsers.non_symbol_chars).desc('a program name'))
     lines: T.List[groups.Choice | groups.Sequence] = []
     if prog is not None:
       while True:
