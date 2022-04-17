@@ -66,5 +66,16 @@ def test_unexpected_arg_from_usage():
   prog --long=B
 ''')
 
+
+def test_repated_option_with_arg():
+  with warnings.catch_warnings():
+    warnings.simplefilter("error")
+    parse('''Usage:
+  prog -f B...
+
+Options:
+  -f ARG
+''')
+
 if __name__ == "__main__":
   unittest.main()

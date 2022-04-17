@@ -20,6 +20,9 @@ def post_process_ast(ast: doc.Doc, text: str) -> doc.Doc:
   set_usage_option_refs(ast, text)
   populate_shortcuts(ast, text)
   collapse_groups(ast, text)
+  # merge_repeatable_into_children() run before match_args_with_options() so that a repeated arg can be found
+  # e.g.: --long B...
+  merge_repeatable_into_children(ast, text)
   match_args_with_options(ast, text)
   # mark_multiple(doc)
   warn_unused_documented_options(ast, text)
@@ -157,6 +160,10 @@ def match_args_with_options(ast: doc.Doc, text: str) -> None:
         if definition.expects_arg and left.arg is None:
           if isinstance(right, leaves.Argument):
             left.arg = right
+            if left.arg.repeatable:
+              # Take over the ellipsis from the arg. e.g.: -f B...
+              left.repeatable = True
+              left.arg.repeatable = False
             # Remove the argument from the list by skipping over it in the next iteration
             right = next(item_list, None)
           else:
@@ -180,6 +187,16 @@ def warn_unused_documented_options(ast: doc.Doc, text: str) -> None:
   unused_options = OrderedSet(ast.section_options) - OrderedSet(ast.usage_options)
   for option in unused_options:
     warnings.warn(option.mark.show(text, message='this option is not referenced from the usage section.'))
+
+
+def merge_repeatable_into_children(ast: doc.Doc, text: str) -> None:
+  def update(node: base.AstNode):
+    if isinstance(node, (groups.Repeatable)):
+      assert len(node.items) == 1
+      node.items[0].repeatable = True
+      return node.items[0]
+    return node
+  ast.usage = ast.usage.replace(update)
 
 # def mark_multiple(node, repeatable=False, siblings=[]):
 #   if hasattr(node, 'multiple') and not node.multiple:
