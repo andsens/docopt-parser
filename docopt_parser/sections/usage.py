@@ -2,7 +2,7 @@ import typing as T
 import parsec as P
 import re
 
-from docopt_parser import base, groups, parsers, helpers
+from docopt_parser import base, groups, doc, parsers, helpers, marks
 
 def usage_section(strict: bool):
   @P.generate('usage section')
@@ -19,10 +19,12 @@ def usage_section(strict: bool):
           lines.append(line)
         if (yield P.optional(parsers.nl + parsers.indent)) is None:
           break
-    if strict:
-      yield (parsers.nl + parsers.nl) ^ P.many(parsers.char(' \t') | parsers.nl) + P.eof()
-    else:
-      yield P.optional((parsers.nl + parsers.nl) ^ P.many(parsers.char(' \t') | parsers.nl) + P.eof())
+    section_ended = yield P.optional(
+      ((parsers.nl + parsers.nl) ^ P.many(parsers.char(' \t') | parsers.nl) + P.eof()).result(True)
+    )
+    if strict and not section_ended:
+      err_start, err_char, err_end = yield parsers.char().mark()
+      raise doc.DocoptParseError(f'Unexpected {helpers.describe_value(err_char)}', marks.Range((err_start, err_end)))
     end = yield parsers.location
     return (prog, groups.Choice((start, lines, end)))
   return p
