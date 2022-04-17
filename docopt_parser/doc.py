@@ -3,6 +3,7 @@ import parsec as P
 
 from docopt_parser import base, groups, marks, sections, leaves, helpers, parsers
 
+AnyOption = leaves.Short | leaves.Long | leaves.DocumentedOption | leaves.OptionRef
 
 def doc(strict: bool):
   @P.generate('docopt')
@@ -62,9 +63,9 @@ class Doc(base.AstElement):
       self._usage = usage
 
   @property
-  def usage_options(self) -> T.List[leaves.Short | leaves.Long | leaves.DocumentedOption]:
-    def get_opts(memo: T.List[leaves.Short | leaves.Long | leaves.DocumentedOption], node: base.AstNode):
-      if isinstance(node, leaves.Short | leaves.Long | leaves.DocumentedOption):
+  def usage_options(self) -> T.List[AnyOption]:
+    def get_opts(memo: T.List[AnyOption], node: base.AstNode):
+      if isinstance(node, AnyOption):
         memo.append(node)
       return memo
     return self._usage.reduce(get_opts, [])
@@ -79,7 +80,7 @@ class Doc(base.AstElement):
       if option == needle or (option.short is not None and option.short.ident == needle.ident):
         return option
     for option in self.usage_options:
-      if option.ident == needle.ident:
+      if not isinstance(option, leaves.OptionRef) and option.ident == needle.ident:
         return option
     raise DocoptError(f'Unable to find option: {needle}')
 

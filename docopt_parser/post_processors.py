@@ -17,16 +17,58 @@ def post_process_ast(ast: doc.Doc, text: str) -> doc.Doc:
   #     prog cmd <--
 
   fail_duplicate_documented_options(ast, text)
-  set_usage_option_refs(ast, text)
+  set_option_refs(ast, text)
   populate_shortcuts(ast, text)
   collapse_groups(ast, text)
   # merge_repeatable_into_children() run before match_args_with_options() so that a repeated arg can be found
   # e.g.: --long B...
   merge_repeatable_into_children(ast, text)
   match_args_with_options(ast, text)
-  # mark_multiple(doc)
   warn_unused_documented_options(ast, text)
+  # mark_multiple(doc)
   return ast
+
+
+def fail_duplicate_documented_options(ast: doc.Doc, text: str):
+  # Fail when an option section defines an option twice, e.g.:
+  # Options:
+  #   -f, --long
+  #   -a, --long
+  seen_shorts: dict[str, leaves.Short] = dict()
+  seen_longs: dict[str, leaves.Long] = dict()
+  messages: T.List[str] = []
+  for option in ast.section_options:
+    if option.short is not None:
+      previous_short = seen_shorts.get(option.short.ident, None)
+      if previous_short is not None:
+        messages.append(option.short.mark.show(
+            text, message=f'{option.short.ident} has already been specified on line {previous_short.mark.start.line}'
+        ))
+      else:
+        seen_shorts[option.short.ident] = option.short
+    if option.long is not None:
+      previous_long = seen_longs.get(option.long.ident, None)
+      if previous_long is not None:
+        messages.append(option.long.mark.show(
+            text, message=f'{option.long.ident} has already been specified on line {previous_long.mark.start.line}'
+        ))
+      else:
+        seen_longs[option.long.ident] = option.long
+  if len(messages):
+    raise doc.DocoptParseError('\n'.join(messages))
+
+
+def set_option_refs(ast: doc.Doc, text: str) -> None:
+  # Set the refs on short options
+
+  def update(node: TAstNode) -> TAstNode:
+    if isinstance(node, (leaves.Short, leaves.Long)):
+      definition = ast.get_option_definition(node)
+      if isinstance(definition, leaves.DocumentedOption):
+        node.ref = definition
+    return node
+  ast.usage = ast.usage.replace(update)
+
 
 def populate_shortcuts(ast: doc.Doc, text: str) -> None:
   # Option shortcuts contain to all documented options except the ones
@@ -35,7 +77,10 @@ def populate_shortcuts(ast: doc.Doc, text: str) -> None:
 
   def populate(node: base.AstNode):
     if isinstance(node, leaves.OptionsShortcut):
-      return groups.Optional(node.mark.wrap_element(list(shortcut_options)).to_marked_tuple())
+      return groups.Optional(node.mark.wrap_element([
+        leaves.OptionRef(node.mark.to_range_tuple(), o)
+        for o in shortcut_options
+      ]).to_marked_tuple())
     return node
   ast.usage = T.cast(base.AstGroup, ast.usage.replace(populate))
 
@@ -99,46 +144,6 @@ def collapse_groups(ast: doc.Doc, text: str):
     return node
   ast.usage = ast.usage.replace(remove_intermediate_groups_in_optionals)
 
-def fail_duplicate_documented_options(ast: doc.Doc, text: str):
-  # Fail when an option section defines an option twice, e.g.:
-  # Options:
-  #   -f, --long
-  #   -a, --long
-  seen_shorts: dict[str, leaves.Short] = dict()
-  seen_longs: dict[str, leaves.Long] = dict()
-  messages: T.List[str] = []
-  for option in ast.section_options:
-    if option.short is not None:
-      previous_short = seen_shorts.get(option.short.ident, None)
-      if previous_short is not None:
-        messages.append(option.short.mark.show(
-            text, message=f'{option.short.ident} has already been specified on line {previous_short.mark.start.line}'
-        ))
-      else:
-        seen_shorts[option.short.ident] = option.short
-    if option.long is not None:
-      previous_long = seen_longs.get(option.long.ident, None)
-      if previous_long is not None:
-        messages.append(option.long.mark.show(
-            text, message=f'{option.long.ident} has already been specified on line {previous_long.mark.start.line}'
-        ))
-      else:
-        seen_longs[option.long.ident] = option.long
-  if len(messages):
-    raise doc.DocoptParseError('\n'.join(messages))
-
-
-def set_usage_option_refs(ast: doc.Doc, text: str) -> None:
-  # Change the identifiers of short option to their long counterpart (if any)
-  # in order to ease comparisons for processing further down the line
-
-  def update(node: TAstNode) -> TAstNode:
-    if isinstance(node, (leaves.Short, leaves.Long)):
-      definition = ast.get_option_definition(node)
-      if isinstance(definition, leaves.DocumentedOption):
-        node.ref = definition
-    return node
-  ast.usage = ast.usage.replace(update)
 
 def match_args_with_options(ast: doc.Doc, text: str) -> None:
   # When parsing initially "-a ARG" is parsed as two unrelated nodes
