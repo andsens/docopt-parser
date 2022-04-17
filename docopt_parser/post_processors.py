@@ -17,6 +17,7 @@ def post_process_ast(ast: doc.Doc, text: str) -> doc.Doc:
   fail_duplicate_documented_options(ast, text)
   set_option_refs(ast)
   populate_shortcuts(ast)
+  convert_root_to_optional_on_empty_lines(ast)
   collapse_groups(ast)
   # merge_repeatable_into_children() must run before match_args_with_options() so that a repeated arg can be found
   # e.g.: --long B...
@@ -82,8 +83,33 @@ def populate_shortcuts(ast: doc.Doc) -> None:
     return node
   ast.usage = T.cast(base.AstGroup, ast.usage.replace(populate))
 
+
+def convert_root_to_optional_on_empty_lines(ast: doc.Doc):
+  # Ensure the root is optional when giving no parameters is valid.
+  # e.g.
+  #   Usage:
+  #     prog
+  #     prog a
+  #
+  # A less obvious example (options will end up as an empty optional, because -f is used in the next line):
+  #   Usage:
+  #     prog options
+  #     prog -f
+  #   Options:
+  #     -f
+
+  def get_leaves(memo: T.List[base.AstLeaf], node: base.AstNode):
+    if isinstance(node, base.AstLeaf):
+      memo.append(node)
+    return memo
+
+  for item in ast.usage.items:
+    if isinstance(item, base.AstGroup) and len(item.reduce(get_leaves, [])) == 0:
+      ast.usage = groups.Optional(ast.usage.mark.wrap_element([ast.usage]).to_marked_tuple())
+  return ast
+
+
 def collapse_groups(ast: doc.Doc):
-  # TODO: Don't remove empty sequence under Choice. That's a valid option
   def remove_empty_groups(node: TAstNode) -> TAstNode | None:
     if isinstance(node, (base.AstGroup)) and len(node.items) == 0:
       return None
