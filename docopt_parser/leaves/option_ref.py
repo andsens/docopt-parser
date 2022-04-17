@@ -1,6 +1,6 @@
 from docopt_parser import base, leaves, marks
 
-class OptionRef(base.AstLeaf):
+class OptionRef(base.Option):
   ref: leaves.DocumentedOption
 
   def __init__(self, range: marks.RangeTuple, ref: leaves.DocumentedOption):

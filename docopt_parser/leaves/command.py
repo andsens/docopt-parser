@@ -2,7 +2,7 @@ from docopt_parser import base, marks, parsers
 
 illegal = parsers.non_symbol_chars
 
-class Command(base.AstLeaf):
+class Command(base.Leaf):
   def __init__(self, name: marks.MarkedTuple[str]):
     super().__init__(name)
 

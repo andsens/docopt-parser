@@ -26,7 +26,7 @@ def options_section(strict: bool):
     return OptionsSection((start, options, end), title)
   return p
 
-class OptionsSection(base.AstGroup):
+class OptionsSection(base.Group):
   items: T.Sequence[leaves.DocumentedOption]
   __title: marks.Marked[str]
 

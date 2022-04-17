@@ -13,7 +13,7 @@ def ident(illegal: "str | P.Parser[str | None] | None", starts_with: "P.Parser[s
   ).parsecmap(helpers.join_string)
   return p ^ P.fail_with('identifier')  # type: ignore
 
-class AstLeaf(base.AstNode):
+class Leaf(base.Node):
   ident: str
   _multiple: bool = False
 
@@ -37,7 +37,7 @@ class AstLeaf(base.AstNode):
     return hash(self.ident)
 
   def __eq__(self, other: T.Any) -> bool:
-    return isinstance(other, AstLeaf) and self.ident == other.ident
+    return isinstance(other, Leaf) and self.ident == other.ident
 
   def __repr__(self):
     return f'{str(type(self).__name__)}{self.multiple_suffix}: {self.ident}'

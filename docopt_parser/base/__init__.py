@@ -1,4 +1,5 @@
-from docopt_parser.base.astnode import AstNode, DictGenerator, IterVal
-from docopt_parser.base.astgroup import AstGroup
-from docopt_parser.base.astleaf import AstLeaf, ident
-__all__ = ['AstNode', 'AstGroup', 'AstLeaf', 'ident', 'DictGenerator', 'IterVal']
+from docopt_parser.base.node import Node, DictGenerator, IterVal
+from docopt_parser.base.group import Group
+from docopt_parser.base.leaf import Leaf, ident
+from docopt_parser.base.option import Option
+__all__ = ['Node', 'Group', 'Leaf', 'ident', 'DictGenerator', 'IterVal', 'Option']

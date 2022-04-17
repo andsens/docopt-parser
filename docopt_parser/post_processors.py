@@ -4,7 +4,7 @@ from ordered_set import OrderedSet
 
 from docopt_parser import doc, base, leaves, groups
 
-TAstNode = T.TypeVar('TAstNode', bound=base.AstNode)
+TNode = T.TypeVar('TNode', bound=base.Node)
 
 
 def post_process_ast(ast: doc.Doc, text: str) -> doc.Doc:
@@ -21,7 +21,6 @@ def post_process_ast(ast: doc.Doc, text: str) -> doc.Doc:
   collapse_groups(ast)
   match_args_with_options(ast)
   warn_unused_documented_options(ast, text)
-  merge_identical_leaves(ast)
   mark_multiple(ast)
   return ast
 
@@ -58,7 +57,7 @@ def fail_duplicate_documented_options(ast: doc.Doc, text: str):
 def set_option_refs(ast: doc.Doc) -> None:
   # Set the refs on short options
 
-  def set_refs(node: TAstNode) -> TAstNode:
+  def set_refs(node: TNode) -> TNode:
     if isinstance(node, (leaves.Short, leaves.Long)):
       definition = ast.get_option_definition(node)
       if isinstance(definition, leaves.DocumentedOption):
@@ -72,14 +71,14 @@ def populate_shortcuts(ast: doc.Doc) -> None:
   # that are explicitly mentioned in the usage section
   shortcut_options = OrderedSet(ast.section_options) - OrderedSet(ast.usage_options)
 
-  def populate(node: base.AstNode):
+  def populate(node: base.Node):
     if isinstance(node, leaves.OptionsShortcut):
       return groups.Optional(node.mark.wrap_element([
         leaves.OptionRef(node.mark.to_range_tuple(), o)
         for o in shortcut_options
       ]).to_marked_tuple())
     return node
-  ast.usage = T.cast(base.AstGroup, ast.usage.replace(populate))
+  ast.usage = T.cast(base.Group, ast.usage.replace(populate))
 
 
 def convert_root_to_optional_on_empty_lines(ast: doc.Doc):
@@ -96,33 +95,33 @@ def convert_root_to_optional_on_empty_lines(ast: doc.Doc):
   #   Options:
   #     -f
 
-  def get_leaves(memo: T.List[base.AstLeaf], node: base.AstNode):
-    if isinstance(node, base.AstLeaf):
+  def get_leaves(memo: T.List[base.Leaf], node: base.Node):
+    if isinstance(node, base.Leaf):
       memo.append(node)
     return memo
 
   for item in ast.usage.items:
-    if isinstance(item, base.AstGroup) and len(item.reduce(get_leaves, [])) == 0:
+    if isinstance(item, base.Group) and len(item.reduce(get_leaves, [])) == 0:
       ast.usage = groups.Optional(ast.usage.mark.wrap_element([ast.usage]).to_marked_tuple())
   return ast
 
 
 def collapse_groups(ast: doc.Doc):
-  def remove_empty_groups(node: TAstNode) -> "TAstNode | None":
-    if isinstance(node, (base.AstGroup)) and len(node.items) == 0:
+  def remove_empty_groups(node: TNode) -> "TNode | None":
+    if isinstance(node, (base.Group)) and len(node.items) == 0:
       return None
     return node
   ast.usage = ast.usage.replace(remove_empty_groups)
 
-  def remove_intermediate_groups_with_one_item(node: base.AstNode) -> base.AstNode:
+  def remove_intermediate_groups_with_one_item(node: base.Node) -> base.Node:
     if isinstance(node, (groups.Choice, groups.Sequence)) and len(node.items) == 1:
       return node.items[0]
     return node
   ast.usage = ast.usage.replace(remove_intermediate_groups_with_one_item)
 
-  def merge_nested_sequences(node: base.AstNode) -> base.AstNode:
+  def merge_nested_sequences(node: base.Node) -> base.Node:
     if isinstance(node, groups.Sequence):
-      new_items: T.List[base.AstNode] = []
+      new_items: T.List[base.Node] = []
       for item in node.items:
         if isinstance(item, groups.Sequence):
           new_items += item.items
@@ -132,7 +131,7 @@ def collapse_groups(ast: doc.Doc):
     return node
   ast.usage = ast.usage.replace(merge_nested_sequences)
 
-  def dissolve_groups(node: base.AstNode) -> base.AstNode:
+  def dissolve_groups(node: base.Node) -> base.Node:
     # Must run after merge_nested_sequences so that [(a b c)] does not become [a b c]
     if isinstance(node, groups.Group):
       assert len(node.items) == 1
@@ -140,10 +139,10 @@ def collapse_groups(ast: doc.Doc):
     return node
   ast.usage = ast.usage.replace(dissolve_groups)
 
-  def merge_neighboring_sequences(node: base.AstNode) -> base.AstNode:
-    new_items: T.List[base.AstNode] = []
+  def merge_neighboring_sequences(node: base.Node) -> base.Node:
+    new_items: T.List[base.Node] = []
     if isinstance(node, groups.Sequence):
-      new_items: T.List[base.AstNode] = []
+      new_items: T.List[base.Node] = []
       # Go through the list pairwise, have each element be "left" once
       item_list = iter(node.items)
       left = next(item_list, None)
@@ -160,7 +159,7 @@ def collapse_groups(ast: doc.Doc):
     return node
   ast.usage = ast.usage.replace(merge_neighboring_sequences)
 
-  def remove_intermediate_groups_in_optionals(node: base.AstNode) -> base.AstNode:
+  def remove_intermediate_groups_in_optionals(node: base.Node) -> base.Node:
     if isinstance(node, groups.Optional):
       if isinstance(node.items[0], (groups.Sequence, groups.Optional)) and len(node.items) == 1:
         node.items = node.items[0].items
@@ -174,10 +173,10 @@ def match_args_with_options(ast: doc.Doc) -> None:
   # Usage: prog -a ARG
   # Options:
   #   -a ARG
-  def match(node: TAstNode) -> TAstNode:
-    if not isinstance(node, base.AstGroup):
+  def match(node: TNode) -> TNode:
+    if not isinstance(node, base.Group):
       return node
-    new_items: T.List[base.AstNode] = []
+    new_items: T.List[base.Node] = []
     item_list = iter(node.items)
     # Go through the list pairwise, have each element be "left" once
     left = next(item_list, None)
@@ -221,50 +220,34 @@ def warn_unused_documented_options(ast: doc.Doc, text: str) -> None:
     warnings.warn(option.mark.show(text, message='this option is not referenced from the usage section.'))
 
 
-def merge_identical_leaves(ast: doc.Doc) -> None:
-  known_leaves: T.Set[base.AstLeaf] = set()
-
-  def merge(node: base.AstNode):
-    if isinstance(node, base.AstLeaf):
-      for leaf in known_leaves:
-        if node == leaf:
-          if isinstance(node, (leaves.Short, leaves.Long)) and node.arg != leaf.arg:  # type: ignore
-            # Preserve argument names of options
-            return node
-          return leaf
-      known_leaves.add(node)
-    return node
-  ast.usage = ast.usage.replace(merge)
-
-
 def mark_multiple(ast: doc.Doc) -> None:
   # Mark leaves that can be specified multiple times
-  marked_leaves: T.Set[base.AstLeaf] = set()
+  marked_leaves: T.Set[base.Leaf] = set()
 
-  def mark_from_repeatable(node: base.AstNode, multiple: bool = False):
-    if isinstance(node, (base.AstGroup)):
+  def mark_from_repeatable(node: base.Node, multiple: bool = False):
+    if isinstance(node, (base.Group)):
       for item in node.items:
         mark_from_repeatable(item, multiple or isinstance(node, groups.Repeatable))
     else:
-      assert isinstance(node, (base.AstLeaf))
+      assert isinstance(node, (base.Leaf))
       if multiple:
         node.multiple = multiple
         marked_leaves.add(node)
   mark_from_repeatable(ast.usage)
 
-  def mark_repeated(node: base.AstNode, possible_siblings: T.Set[base.AstLeaf]) -> T.Set[base.AstLeaf]:
+  def mark_repeated(node: base.Node, possible_siblings: T.Set[base.Leaf]) -> T.Set[base.Leaf]:
     # Mark nodes that are mentioned more than once on a path through the tree
     if isinstance(node, (groups.Choice)):
       # Siblings between choice do not affect each other. e.g. (a | a) does not mean a can be specified multiple times
-      new_siblings: T.Set[base.AstLeaf] = set()
+      new_siblings: T.Set[base.Leaf] = set()
       for item in node.items:
         new_siblings |= mark_repeated(item, possible_siblings)
       possible_siblings = possible_siblings.union(new_siblings)
-    elif isinstance(node, (base.AstGroup)):
+    elif isinstance(node, (base.Group)):
       for item in node.items:
         possible_siblings = possible_siblings.union(mark_repeated(item, possible_siblings))
     else:
-      assert isinstance(node, (base.AstLeaf))
+      assert isinstance(node, (base.Leaf))
       if any([node == leaf for leaf in possible_siblings]):
         node.multiple = True
         marked_leaves.add(node)
@@ -273,10 +256,27 @@ def mark_multiple(ast: doc.Doc) -> None:
     return possible_siblings
   mark_repeated(ast.usage, set())
 
-  def mark_identical_nodes(node: base.AstNode):
+  def mark_identical_nodes(node: base.Node):
     # For some reason we can't use "node in set()"
     # Also the reason for the type ignore
     if any([node == leaf for leaf in marked_leaves]):
       node.multiple = True  # type: ignore
     return node
   ast.usage = ast.usage.replace(mark_identical_nodes)
+
+
+def merge_identical_leaves(usage: base.Group, ignore_option_args: bool = False) -> base.Group:
+  known_leaves: T.Set[base.Leaf] = set()
+
+  def merge(node: base.Node):
+    if isinstance(node, base.Leaf):
+      for leaf in known_leaves:
+        if node == leaf:
+          if not ignore_option_args \
+            and isinstance(node, (leaves.Short, leaves.Long)) and node.arg != leaf.arg:  # type: ignore
+            # Preserve argument names of options
+            return node
+          return leaf
+      known_leaves.add(node)
+    return node
+  return T.cast(base.Group, usage.replace(merge))

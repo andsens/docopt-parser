@@ -12,10 +12,10 @@ def doc(strict: bool):
     usage_section = sections.usage_section(strict)
     options_section = sections.options_section(strict)
     prog: str | None = None
-    usage: base.AstGroup | None = None
+    usage: base.Group | None = None
     option_sections: T.List[sections.OptionsSection] = []
     text: T.List[leaves.Text] = []
-    current: T.Tuple[str, base.AstGroup] | sections.OptionsSection | leaves.Text
+    current: T.Tuple[str, base.Group] | sections.OptionsSection | leaves.Text
     start = yield parsers.location
     # We don't use the many parser here, since any errors would be swallowed by it
     # (same as in the groups parsers)
@@ -35,9 +35,9 @@ def doc(strict: bool):
     return Doc((start, end), prog, usage, option_sections, text)
   return p
 
-class Doc(base.AstNode):
+class Doc(base.Node):
   prog: str
-  _usage: base.AstGroup
+  _usage: base.Group
   option_sections: T.List[sections.OptionsSection]
   text: T.List[leaves.Text]
 
@@ -45,7 +45,7 @@ class Doc(base.AstNode):
     self,
     range: marks.RangeTuple,
     prog: str,
-    usage: base.AstGroup,
+    usage: base.Group,
     option_sections: T.Sequence[sections.OptionsSection],
     text: T.Sequence[leaves.Text]
   ):
@@ -56,23 +56,23 @@ class Doc(base.AstNode):
     self.text = list(text)
 
   @property
-  def usage(self) -> base.AstGroup:
+  def usage(self) -> base.Group:
     return self._usage
 
   @usage.setter
-  def usage(self, usage: "base.AstNode | None"):  # type: ignore
+  def usage(self, usage: "base.Node | None"):  # type: ignore
     # Ignoring because the type incompatibility is the point here
     if usage is None:
-      items: T.List[base.AstNode] = []
+      items: T.List[base.Node] = []
       self._usage = groups.Sequence(self._usage.mark.wrap_element(items).to_marked_tuple())
-    elif not isinstance(usage, base.AstGroup):
+    elif not isinstance(usage, base.Group):
       self._usage = groups.Sequence(self._usage.mark.wrap_element([usage]).to_marked_tuple())
     else:
       self._usage = usage
 
   @property
   def usage_options(self) -> T.List[AnyOption]:
-    def get_opts(memo: T.List[AnyOption], node: base.AstNode):
+    def get_opts(memo: T.List[AnyOption], node: base.Node):
       if isinstance(node, (leaves.Short, leaves.Long, leaves.DocumentedOption, leaves.OptionRef)):
         memo.append(node)
       return memo
@@ -93,7 +93,7 @@ class Doc(base.AstNode):
     raise DocoptError(f'Unable to find option: {needle}')
 
   def __repr__(self) -> str:
-    items = T.cast(T.List[base.AstNode], [self._usage]) + T.cast(T.List[base.AstNode], self.option_sections)
+    items = T.cast(T.List[base.Node], [self._usage]) + T.cast(T.List[base.Node], self.option_sections)
     return f'''{self.indent(items, lvl=0)}'''
 
   def __iter__(self) -> base.DictGenerator:
@@ -106,10 +106,10 @@ def parse(text: str, strict: TE.Literal[False]) -> T.Tuple[Doc, str]:
   pass
 
 @T.overload
-def parse(text: str, strict: TE.Literal[True] = True) -> T.Tuple[base.AstGroup, str]:
+def parse(text: str, strict: TE.Literal[True] = True) -> T.Tuple[base.Group, str]:
   pass
 
-def parse(text: str, strict: bool = True) -> "T.Tuple[base.AstGroup | Doc, str]":
+def parse(text: str, strict: bool = True) -> "T.Tuple[base.Group | Doc, str]":
   from docopt_parser import post_processors
   try:
     parser = doc(strict)

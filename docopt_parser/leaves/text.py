@@ -7,7 +7,7 @@ other_documentation = P.many1(parsers.char(
   illegal=P.regex(r'[^\n]*(options:|usage:)', re.I))  # type: ignore
   ).desc('Text').parsecmap(helpers.join_string).mark().parsecmap(lambda n: Text(n))
 
-class Text(base.AstNode):
+class Text(base.Node):
   text: str
 
   def __init__(self, text: marks.MarkedTuple[str]):

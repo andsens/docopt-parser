@@ -7,7 +7,9 @@ import logging
 import termcolor
 import yaml
 
-from docopt_parser import DocoptError, parse, __doc__ as pkg_doc, __name__ as root_name, __version__  # type: ignore
+# pyright: reportUnknownVariableType=false
+from docopt_parser import DocoptError, parse, __doc__ as pkg_doc, \
+  __name__ as root_name, __version__, merge_identical_leaves
 
 log = logging.getLogger(root_name)
 
@@ -31,12 +33,14 @@ def docopt_parser(params: Params):
     if params['-S']:
       ast, parsed_text = parse(text, strict=False)
       if params['ast']:
+        merge_identical_leaves(ast.usage)
         sys.stdout.write(yaml.dump(ast.dict, sort_keys=False) if params['--yaml'] else repr(ast) + '\n')
       if parsed_text != text:
         parse(text, strict=True)
     else:
       ast, parsed_text = parse(text, strict=True)
       if params['ast']:
+        ast = merge_identical_leaves(ast)
         sys.stdout.write(yaml.dump(ast.dict, sort_keys=False) if params['--yaml'] else repr(ast) + '\n')
   except DocoptError as e:
     log.error(str(e))
@@ -64,7 +68,7 @@ def setup_logging():
 
 def main():
   setup_logging()
-  params = T.cast(Params, docopt.docopt(__doc__, version=T.cast(str, __version__)))
+  params = T.cast(Params, docopt.docopt(__doc__, version=__version__))
   docopt_parser(params)
 
 

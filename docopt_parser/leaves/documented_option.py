@@ -5,11 +5,9 @@ import re
 from docopt_parser import leaves, base, marks, helpers, parsers
 
 
-class DocumentedOption(base.AstLeaf):
+class DocumentedOption(base.Option):
   short: "leaves.Short | None"
   long: "leaves.Long | None"
-  shortcut: bool
-  expects_arg: bool
   __default: "marks.Marked[str] | None"
   __doc: "marks.Marked[str] | None"
 
@@ -34,9 +32,12 @@ class DocumentedOption(base.AstLeaf):
       super().__init__((range[0], short.ident, range[1]))
     self.short = short
     self.long = long
-    self.expects_arg = any([o.arg for o in [short, long] if o is not None])
     self.__default = marks.Marked(default) if default else None
     self.__doc = marks.Marked(doc) if doc else None
+
+  @property
+  def expects_arg(self) -> bool:
+    return any([o.arg for o in [self.short, self.long] if o is not None])
 
   @property
   def multiple(self) -> bool:

@@ -11,7 +11,7 @@ usage_long_option = (
   ).parsecmap(helpers.join_string).mark() + P.optional(parsers.char('=') >> leaves.argument)
 ).desc('long option (--long)').parsecmap(lambda n: Long(*n))
 
-class Long(base.AstLeaf):
+class Long(base.Option):
   arg: "leaves.Argument | None"
   ref: "leaves.DocumentedOption | None"
 

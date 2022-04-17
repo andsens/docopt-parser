@@ -19,13 +19,13 @@ def usage_section(strict: bool):
           lines.append(line)
         if (yield P.optional(parsers.nl + parsers.indent)) is None:
           break
+    end = yield parsers.location
     section_ended = yield P.optional(
       ((parsers.nl + parsers.nl) ^ P.many(parsers.char(' \t') | parsers.nl) + P.eof()).result(True)
     )
     if strict and not section_ended:
       err_start, err_char, err_end = yield parsers.char().mark()
       raise doc.DocoptParseError(f'Unexpected {helpers.describe_value(err_char)}', marks.Range((err_start, err_end)))
-    end = yield parsers.location
     return (prog, groups.Choice((start, lines, end)))
   return p
 

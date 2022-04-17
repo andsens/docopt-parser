@@ -13,9 +13,9 @@ class TestParser(unittest.TestCase):
     usage = parse(str(text))[0]
 
   # Make sure only Choice, Sequence, Optional, Repeatable and IdentNodes are in the ast
-    def walk(node: base.AstNode):
-      assert isinstance(node, (groups.Choice, groups.Sequence, groups.Optional, groups.Repeatable, base.AstLeaf))
-      if isinstance(node, (base.AstGroup)):
+    def walk(node: base.Node):
+      assert isinstance(node, (groups.Choice, groups.Sequence, groups.Optional, groups.Repeatable, base.Leaf))
+      if isinstance(node, (base.Group)):
         for item in node.items:
           walk(item)
     walk(usage)

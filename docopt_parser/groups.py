@@ -3,19 +3,19 @@ import parsec as P
 
 from docopt_parser import base, leaves, parsers, helpers
 
-class Choice(base.AstGroup):
+class Choice(base.Group):
   pass
 
-class Sequence(base.AstGroup):
+class Sequence(base.Group):
   pass
 
-class Group(base.AstGroup):
+class Group(base.Group):
   pass
 
-class Optional(base.AstGroup):
+class Optional(base.Group):
   pass
 
-class Repeatable(base.AstGroup):
+class Repeatable(base.Group):
   pass
 
 
@@ -25,7 +25,7 @@ class Repeatable(base.AstGroup):
 
 @P.generate('sequence')
 def sequence() -> helpers.GeneratorParser[Sequence]:
-  nodes: T.List[base.AstNode] = []
+  nodes: T.List[base.Node] = []
   start = yield parsers.location
   while (yield P.lookahead(P.optional((parsers.either | parsers.nl | P.eof()).result(True)))) is None:
     node, repeat = yield (atom + P.optional(P.unit(parsers.whitespaces >> parsers.ellipsis.mark())))
@@ -40,7 +40,7 @@ def sequence() -> helpers.GeneratorParser[Sequence]:
 @P.generate('expression')
 def expr() -> helpers.GeneratorParser[Choice]:
   start = yield parsers.location
-  nodes: T.List[base.AstNode] = [(yield sequence)]
+  nodes: T.List[base.Node] = [(yield sequence)]
   while (yield P.optional((parsers.either << parsers.whitespaces))) is not None:
     nodes.append((yield sequence))
   end = yield parsers.location

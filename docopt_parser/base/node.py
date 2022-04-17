@@ -6,7 +6,7 @@ from docopt_parser import marks
 IterVal = T.Union[str, bool, T.List["IterVal"], T.Dict[str, "IterVal"], None]
 DictGenerator = T.Generator[T.Tuple[str, IterVal], None, None]
 
-class AstNode(ABC):
+class Node(ABC):
   mark: marks.Range
   _previous_dict: "T.Dict[str, IterVal] | None" = None
 
@@ -17,8 +17,8 @@ class AstNode(ABC):
   def __iter__(self) -> DictGenerator:
     yield 'type', str(type(self).__name__).lower()
 
-  def indent(self, child: "AstNode | T.Sequence[AstNode]", lvl: int = 1) -> str:
-    if isinstance(child, AstNode):
+  def indent(self, child: "Node | T.Sequence[Node]", lvl: int = 1) -> str:
+    if isinstance(child, Node):
       lines = repr(child).split('\n')
       lines = [lines[0]] + ['  ' * lvl + line for line in lines[1:]]
       return '\n'.join(lines)
