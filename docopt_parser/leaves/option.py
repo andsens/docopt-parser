@@ -110,13 +110,13 @@ no_equals = (
 
 usage_short_option = (
   (P.unit(parsers.char('-') + parsers.char(illegal=short_illegal)) + no_equals).parsecmap(helpers.join_string).mark()
-).desc('short option (-a)').parsecmap(lambda n: Option(n, None))
+).desc('short option (-a)').parsecmap(lambda n: Option(n, None, short_alias=n))
 
 # Usage parser without the leading "-" to allow parsing "-abc" style option specs
 # Prefix the parse result with a "-" in order to forward the proper identifier to Short()
 usage_shortlist_option = (
   parsers.char(illegal=short_illegal) + no_equals
-).parsecmap(lambda n: '-' + n[0]).mark().desc('short option (-a)').parsecmap(lambda n: Option(n, None))
+).parsecmap(lambda n: '-' + n[0]).mark().desc('short option (-a)').parsecmap(lambda n: Option(n, None, short_alias=n))
 
 
 def option(options: T.List[Option]):
