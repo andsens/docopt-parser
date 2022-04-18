@@ -15,7 +15,9 @@ def usage(options: T.List[leaves.Option]):
     start = yield parsers.location
     yield section_title
     yield P.optional(parsers.nl + parsers.indent)
-    prog = yield parsers.whitespaces >> P.lookahead(base.ident(parsers.whitespaces1).desc('a program name'))
+    prog = yield parsers.whitespaces >> P.lookahead(
+      base.ident(parsers.whitespaces1 | parsers.eol).parsecmap(helpers.join_string).desc('a program name')
+    )
 
     lines: T.List[groups.Choice] = []
     while True:
