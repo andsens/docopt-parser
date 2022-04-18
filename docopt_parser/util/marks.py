@@ -1,5 +1,4 @@
 import typing as T
-import parsec as P
 from functools import total_ordering
 
 from docopt_parser.util import errors
@@ -143,9 +142,3 @@ class Marked(Range, T.Generic[_T]):
   def __init__(self, mark: MarkedTuple[_T]):
     super().__init__((mark[0], mark[2]))
     self.elm = mark[1]
-
-
-def explain_error(e: P.ParseError, text: str) -> str:
-  (line, col) = e.loc_info(e.text, e.index)
-  loc = Location((line, col))
-  return f'{loc.show(text)}\n{str(e)}'

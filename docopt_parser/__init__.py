@@ -1,6 +1,8 @@
 """
 docopt-parser - A parsing library for the docopt helptext
 """
+import re
+
 from docopt_parser.base import Group, Leaf, Node
 from docopt_parser.groups import Choice, Optional, Repeatable, Sequence
 from docopt_parser.leaves import Argument, ArgumentSeparator, Command, OptionsShortcut, Option
@@ -40,5 +42,7 @@ def parse(text: str) -> Group:
     else:
       raise errors.DocoptError(e.message, e.exit_code) from e
   except P.ParseError as e:
-    loc = marks.Location(e.loc_info(e.text, e.index))
-    raise errors.DocoptError(loc.show(text, str(e))) from e
+    (line, col) = e.loc_info(e.text, e.index)
+    loc = marks.Location((line, col))
+    err = re.sub(f'{line}:{col}$', str(loc), str(e))
+    raise errors.DocoptError(loc.show(text, err)) from e
