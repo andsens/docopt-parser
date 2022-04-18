@@ -8,7 +8,7 @@ def usage_section(strict: bool):
   @P.generate('usage section')
   def p() -> helpers.GeneratorParser[T.Tuple[str, groups.Choice]]:
     start = yield parsers.location
-    yield P.regex(r'usage:', re.I)  # type: ignore
+    yield P.regex(r'[^\n]*usage:', re.I)  # type: ignore
     yield P.optional(parsers.nl + parsers.indent)
     prog = yield parsers.whitespaces >> P.lookahead(base.ident(parsers.non_symbol_chars).desc('a program name'))
     lines: T.List[groups.Choice | groups.Sequence] = []
