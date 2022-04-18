@@ -37,10 +37,10 @@ def populate_shortcuts(root: base.Group, documented_options: T.List[leaves.Optio
 
   def populate(node: base.Node):
     if isinstance(node, leaves.OptionsShortcut):
-      return groups.Optional(node.mark.wrap_element([
-        leaves.Option(node.mark.wrap_element(o.ident).to_marked_tuple(), None, definition=o)
+      return groups.Optional(node.mark << [
+        leaves.Option(node.mark << o.ident, None, definition=o)
         for o in shortcut_options
-      ]).to_marked_tuple())
+      ])
     return node
   root.replace(populate)
 
@@ -70,7 +70,7 @@ def convert_root_to_optional_on_empty_lines(root: base.Group) -> base.Group:
 
   for item in root.items:
     if isinstance(item, base.Group) and len(item.reduce(get_leaves, [])) == 0:
-      return groups.Optional(root.mark.wrap_element([root]).to_marked_tuple())
+      return groups.Optional(root.mark << [root])
   return root
 
 
@@ -80,9 +80,9 @@ def collapse_groups(root: base.Group) -> base.Group:
   def coerce_to_sequence(node: "base.Node | None") -> base.Group:
     if node is None:
       items: T.List[base.Node] = []
-      return groups.Sequence(root_mark.wrap_element(items).to_marked_tuple())
+      return groups.Sequence(root_mark << items)
     elif not isinstance(node, base.Group):
-      return groups.Sequence(root_mark.wrap_element([node]).to_marked_tuple())
+      return groups.Sequence(root_mark << [node])
     return node
 
   def remove_empty_groups(node: TNode) -> "TNode | None":
@@ -93,11 +93,12 @@ def collapse_groups(root: base.Group) -> base.Group:
 
   def remove_intermediate_groups_with_one_item(node: base.Node) -> base.Node:
     if isinstance(node, (groups.Choice, groups.Sequence)) and len(node.items) == 1:
+      node.items[0].mark = node.mark
       return node.items[0]
     return node
   root = coerce_to_sequence(root.replace(remove_intermediate_groups_with_one_item))
 
-  def merge_nested_sequences(node: base.Node) -> base.Node:
+  def merge_nested_sequences(node: base.Node):
     if isinstance(node, groups.Sequence):
       new_items: T.List[base.Node] = []
       for item in node.items:
@@ -106,18 +107,18 @@ def collapse_groups(root: base.Group) -> base.Group:
         else:
           new_items.append(item)
       node.items = new_items
-    return node
-  root = coerce_to_sequence(root.replace(merge_nested_sequences))
+  root.walk(merge_nested_sequences)
 
   def dissolve_groups(node: base.Node) -> base.Node:
     # Must run after merge_nested_sequences so that [(a b c)] does not become [a b c]
     if isinstance(node, groups.Group):
       assert len(node.items) == 1
+      node.items[0].mark = node.mark
       return node.items[0]
     return node
   root = coerce_to_sequence(root.replace(dissolve_groups))
 
-  def merge_neighboring_sequences(node: base.Node) -> base.Node:
+  def merge_neighboring_sequences(node: base.Node):
     new_items: T.List[base.Node] = []
     if isinstance(node, groups.Sequence):
       new_items: T.List[base.Node] = []
@@ -128,14 +129,14 @@ def collapse_groups(root: base.Group) -> base.Group:
         right = next(item_list, None)
         if isinstance(left, groups.Sequence) and isinstance(right, groups.Sequence):
           left.items = list(left.items) + list(right.items)
+          left.mark.end = right.mark.end
           # Skip the right Sequence in the next iteration, but repeat for the left Sequence
           # so we can merge with another potential Sequence
           right = left
         new_items.append(left)
         left = right
       node.items = new_items
-    return node
-  root = coerce_to_sequence(root.replace(merge_neighboring_sequences))
+  root.walk(merge_neighboring_sequences)
 
   def remove_intermediate_groups_in_optionals(node: base.Node) -> base.Node:
     if isinstance(node, groups.Optional):

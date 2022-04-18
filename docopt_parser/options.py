@@ -7,7 +7,7 @@ from docopt_parser.util import errors, helpers, marks, parsers
 
 
 @P.generate('short option (-s)')
-def option_line_short() -> helpers.GeneratorParser[T.Tuple[marks.MarkedTuple[str], leaves.Argument | None]]:
+def option_line_short() -> helpers.GeneratorParser[T.Tuple[marks.MarkedTuple[str], "leaves.Argument | None"]]:
   argspec = (parsers.char(' =') >> leaves.argument).desc('argument')
   name = yield (parsers.char('-') + parsers.char(illegal=leaves.short_illegal)).parsecmap(helpers.join_string).mark()
   if (yield P.optional(P.lookahead(parsers.char('=')))) is not None:
@@ -18,7 +18,7 @@ def option_line_short() -> helpers.GeneratorParser[T.Tuple[marks.MarkedTuple[str
   return (name, arg)
 
 @P.generate('long option (--long)')
-def option_line_long() -> helpers.GeneratorParser[T.Tuple[marks.MarkedTuple[str], leaves.Argument | None]]:
+def option_line_long() -> helpers.GeneratorParser[T.Tuple[marks.MarkedTuple[str], "leaves.Argument | None"]]:
   argspec = (parsers.char(' =') >> leaves.argument).desc('argument')
   name = yield (parsers.string('--') + base.ident(leaves.long_illegal)).parsecmap(helpers.join_string).mark()
   if (yield P.optional(P.lookahead(parsers.char('=')))) is not None:
@@ -48,8 +48,8 @@ def documented_option(options: T.List[leaves.Option]):
   @P.generate('documented option')
   def p() -> helpers.GeneratorParser[None]:
     short_alias: "marks.MarkedTuple[str] | None" = None
-    opts: T.List[T.Tuple[marks.MarkedTuple[str], leaves.Argument | None]] = []
-    opt_def: T.Tuple[marks.MarkedTuple[str], leaves.Argument | None] | None = None
+    opts: T.List[T.Tuple[marks.MarkedTuple[str], "leaves.Argument | None"]] = []
+    opt_def: T.Tuple[marks.MarkedTuple[str], "leaves.Argument | None"] | None = None
     while True:
       opt = yield option_line_long | option_line_short
       ((_, name, _), _) = opt
@@ -70,7 +70,7 @@ def documented_option(options: T.List[leaves.Option]):
       )
       if next_opt is None:
         break
-    opt_def = T.cast(T.Tuple[marks.MarkedTuple[str], leaves.Argument | None], opt_def)
+    opt_def = T.cast(T.Tuple[marks.MarkedTuple[str], "leaves.Argument | None"], opt_def)
     opts.remove(opt_def)
 
     _doc: "marks.MarkedTuple[str] | None" = None

@@ -41,13 +41,18 @@ class Option(base.Leaf):
     return self.__arg or self.definition.__arg
 
   def __repr__(self):
-    arg_suffix = ' ' + self.arg.ident if self.arg is not None else ''
+    arg_suffix = ' ' + self.arg.ident if self.arg else ''
     return f'{self.ident}{self.multiple_suffix}{arg_suffix}'
 
   def __iter__(self):
     yield from super().__iter__()
     if not self.__is_definition:
       yield 'definition', self.definition.dict
+    else:
+      if self.default:
+        yield 'default', self.default
+      if self.doc:
+        yield 'doc', self.doc
     if self.arg:
       yield 'arg', self.arg.dict
 
@@ -130,7 +135,7 @@ def option(options: T.List[Option]):
     while not opt.arg:
       # Recalculate this parser, the definitions change every iteration
       opt = (yield P.optional(reduce(
-        lambda mem, p: p | mem if p is not None else mem,
+        lambda mem, p: p | mem if p else mem,
         [o.atom_parser_shortlist for o in options],
         usage_shortlist_option
       )))

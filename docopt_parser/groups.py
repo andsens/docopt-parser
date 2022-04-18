@@ -40,7 +40,8 @@ def sequence(options: T.List[leaves.Option]):
     while (yield P.lookahead(P.optional((parsers.either | parsers.nl | P.eof()).result(True)))) is None:
       node, repeat = yield (atom(options) + P.optional(P.unit(parsers.whitespaces >> parsers.ellipsis.mark())))
       if repeat is not None:
-        node = Repeatable((repeat[0], [node], repeat[2]))
+        # The node.mark.start is not a typo, we want it's start to span across the entire repeatable group
+        node = Repeatable((node.mark.start.to_tuple(), [node], repeat[2]))
       nodes.append(node)
       if (yield P.optional(parsers.whitespaces1)) is None:
         break
