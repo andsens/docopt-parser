@@ -40,6 +40,11 @@ class Short(base.Option):
     if self.ref:
       self.ref.multiple = val
 
+  @property
+  def default(self) -> "str | None":
+    if self.ref is not None:
+      return self.ref.default
+
   def __hash__(self) -> int:
     if self.ref is not None:
       return self.ref.__hash__()

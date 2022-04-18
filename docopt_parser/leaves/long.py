@@ -24,6 +24,11 @@ class Long(base.Option):
   def expects_arg(self):
     return self.arg is not None
 
+  @property
+  def default(self) -> "str | None":
+    if self.ref is not None:
+      return self.ref.default
+
   def __repr__(self):
     arg_suffix = ' ' + self.arg.ident if self.arg is not None else ''
     return f'''{self.ident}{self.multiple_suffix}{arg_suffix}'''

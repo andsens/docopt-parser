@@ -16,6 +16,14 @@ class OptionRef(base.Option):
     self._multiple = val
     self.ref.multiple = val
 
+  @property
+  def expects_arg(self) -> bool:
+    return self.ref.expects_arg
+
+  @property
+  def default(self) -> "str | None":
+    return self.ref.default
+
   def __repr__(self):
     return f'<OptionRef{self.multiple_suffix}> {self.ident}'
 
