@@ -7,7 +7,7 @@ from docopt_parser import base, groups, marks, sections, leaves, helpers, parser
 AnyOption = T.Union[leaves.Short, leaves.Long, leaves.DocumentedOption, leaves.OptionRef]
 
 def doc(strict: bool):
-  @P.generate('docopt')
+  @P.generate('docopt help text')
   def p() -> helpers.GeneratorParser[Doc]:
     usage_section = sections.usage_section(strict)
     options_section = sections.options_section(strict)
