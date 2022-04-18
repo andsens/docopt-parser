@@ -32,12 +32,14 @@ def atom(options: T.List[leaves.Option]):
 # works by relying on the parser failing. This would result in those parsers
 # not being able to fail meaningfully and the error simply happening further upstream
 
+sequence_terminators = parsers.char('|)]\n\r\b\f\x1B\x07\0') | P.eof()
+
 def sequence(options: T.List[leaves.Option]):
   @P.generate('sequence')
   def p() -> helpers.GeneratorParser[Sequence]:
     nodes: T.List[base.Node] = []
     start = yield parsers.location
-    while (yield P.lookahead(P.optional((parsers.either | parsers.nl | P.eof()).result(True)))) is None:
+    while (yield P.lookahead(P.optional(sequence_terminators.result(True)))) is None:
       node, repeat = yield (atom(options) + P.optional(P.unit(parsers.whitespaces >> parsers.ellipsis.mark())))
       if repeat is not None:
         # The node.mark.start is not a typo, we want it's start to span across the entire repeatable group
@@ -62,10 +64,10 @@ def expr(options: T.List[leaves.Option]):
 
 def group(options: T.List[leaves.Option]):
   return (
-    parsers.char('(') >> expr(options).parsecmap(lambda n: [n]) << parsers.char(')')
+    parsers.char('(') >> parsers.whitespaces >> expr(options).parsecmap(lambda n: [n]) << parsers.char(')')
   ).mark().desc('group').parsecmap(lambda n: Group(n))
 
 def optional(options: T.List[leaves.Option]):
   return (
-    parsers.char('[') >> expr(options).parsecmap(lambda n: [n]) << parsers.char(']')
+    parsers.char('[') >> parsers.whitespaces >> expr(options).parsecmap(lambda n: [n]) << parsers.char(']')
   ).mark().desc('optional').parsecmap(lambda n: Optional(n))
