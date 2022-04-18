@@ -68,10 +68,10 @@ class Option(base.Leaf):
       # The lookahead is to ensure that we don't consume a prefix of another option
       # e.g. --ab matching --abc
       name_p = P.unit(parsers.string(self.ident) << P.lookahead(long_illegal)).mark()
-      arg_p = parsers.char(' =') >> leaves.argument
+      arg_p = parsers.char(' =') >> leaves.option_argument
     else:
       name_p = parsers.string(self.ident).mark()
-      arg_p = P.optional(parsers.char(' =')) >> leaves.argument
+      arg_p = P.optional(parsers.char(' =')) >> leaves.option_argument
     if self.arg:
       return (name_p + arg_p.desc('argument')).parsecmap(lambda n: Option(*n, self.definition))
     else:
@@ -87,7 +87,7 @@ class Option(base.Leaf):
       return None
     name_p = parsers.string(self.ident[1]).mark()
     if self.arg:
-      arg_p = P.optional(parsers.char(' =')) >> leaves.argument
+      arg_p = P.optional(parsers.char(' =')) >> leaves.option_argument
       return (name_p + arg_p).parsecmap(lambda n: Option(*n, self.definition))
     else:
       return name_p.parsecmap(lambda n: Option(n, None, self.definition))
@@ -98,7 +98,7 @@ long_illegal = parsers.non_symbol_chars | parsers.char(',=')
 usage_long_option = (
   P.unit(
     parsers.string('--') + base.ident(long_illegal)
-  ).parsecmap(helpers.join_string).mark() + P.optional(parsers.char('=') >> leaves.argument)
+  ).parsecmap(helpers.join_string).mark() + P.optional(parsers.char('=') >> leaves.option_argument)
 ).desc('long option (--long)').parsecmap(lambda n: Option(*n))
 
 short_illegal = parsers.non_symbol_chars | parsers.char(',=-')
