@@ -9,7 +9,7 @@ class Argument(base.Leaf):
 
 illegal = parsers.non_symbol_chars
 
-wrapped_arg = (parsers.char('<') + base.ident(illegal | parsers.char('>')) + parsers.char('>')) \
+wrapped_arg = (parsers.char('<') + base.ident(parsers.char('>')) + parsers.char('>')) \
   .desc('<arg>').parsecmap(helpers.join_string)
 
 @P.generate('ARG')
