@@ -1,87 +1,54 @@
 import typing as T
-import warnings
 from ordered_set import OrderedSet
 
-from docopt_parser import doc, base, leaves, groups
+from docopt_parser import base, leaves, groups, errors
 
 TNode = T.TypeVar('TNode', bound=base.Node)
 
 
-def post_process_ast(ast: doc.Doc, text: str) -> doc.Doc:
+def post_process_ast(root: base.Group, documented_options: T.List[leaves.Option], text: str):
   # TODO:
   # Find unreachable lines, e.g.:
   #   Usage:
   #     prog ARG
   #     prog cmd <--
+  # TODO: Merge nested Repeatables with only one child
 
-  fail_duplicate_documented_options(ast, text)
-  set_option_refs(ast)
-  populate_shortcuts(ast)
-  convert_root_to_optional_on_empty_lines(ast)
-  collapse_groups(ast)
-  match_args_with_options(ast)
-  warn_unused_documented_options(ast, text)
-  mark_multiple(ast)
-  return ast
+  populate_shortcuts(root, documented_options)
+  root = convert_root_to_optional_on_empty_lines(root)
+  root = collapse_groups(root)
+  mark_multiple(root)
+  merge_identical_leaves(root)
+  return root
 
 
-def fail_duplicate_documented_options(ast: doc.Doc, text: str):
-  # Fail when an option section defines an option twice, e.g.:
-  # Options:
-  #   -f, --long
-  #   -a, --long
-  seen_shorts: dict[str, leaves.Short] = dict()
-  seen_longs: dict[str, leaves.Long] = dict()
-  messages: T.List[str] = []
-  for option in ast.section_options:
-    if option.short is not None:
-      previous_short = seen_shorts.get(option.short.ident, None)
-      if previous_short is not None:
-        messages.append(option.short.mark.show(
-            text, message=f'{option.short.ident} has already been specified on line {previous_short.mark.start.line}'
-        ))
-      else:
-        seen_shorts[option.short.ident] = option.short
-    if option.long is not None:
-      previous_long = seen_longs.get(option.long.ident, None)
-      if previous_long is not None:
-        messages.append(option.long.mark.show(
-            text, message=f'{option.long.ident} has already been specified on line {previous_long.mark.start.line}'
-        ))
-      else:
-        seen_longs[option.long.ident] = option.long
-  if len(messages):
-    raise doc.DocoptParseError('\n'.join(messages))
-
-
-def set_option_refs(ast: doc.Doc) -> None:
-  # Set the refs on short options
-
-  def set_refs(node: TNode) -> TNode:
-    if isinstance(node, (leaves.Short, leaves.Long)):
-      definition = ast.get_option_definition(node)
-      if isinstance(definition, leaves.DocumentedOption):
-        node.ref = definition
-    return node
-  ast.usage = ast.usage.replace(set_refs)
-
-
-def populate_shortcuts(ast: doc.Doc) -> None:
+def populate_shortcuts(root: base.Group, documented_options: T.List[leaves.Option]) -> None:
   # Option shortcuts contain to all documented options except the ones
   # that are explicitly mentioned in the usage section
-  shortcut_options = OrderedSet(ast.section_options) - OrderedSet(ast.usage_options)
+
+  def get_opts(memo: T.List[leaves.Option], node: base.Node):
+    if isinstance(node, leaves.Option):
+      memo.append(node.definition)
+    return memo
+
+  shortcut_options = OrderedSet((o.definition for o in documented_options)) - OrderedSet(root.reduce(get_opts, []))
 
   def populate(node: base.Node):
     if isinstance(node, leaves.OptionsShortcut):
       return groups.Optional(node.mark.wrap_element([
-        leaves.OptionRef(node.mark.to_range_tuple(), o)
+        leaves.Option(node.mark.wrap_element(o.ident).to_marked_tuple(), None, definition=o)
         for o in shortcut_options
       ]).to_marked_tuple())
     return node
-  ast.usage = T.cast(base.Group, ast.usage.replace(populate))
+  root.replace(populate)
+
+  unused_options = OrderedSet((o.definition for o in documented_options)) - OrderedSet(root.reduce(get_opts, []))
+  if len(unused_options) > 0:
+    first_unused = next(iter(unused_options))
+    raise errors.DocoptParseError(f'{first_unused.ident} is not referenced from the usage section', first_unused.mark)
 
 
-def convert_root_to_optional_on_empty_lines(ast: doc.Doc):
+def convert_root_to_optional_on_empty_lines(root: base.Group) -> base.Group:
   # Ensure the root is optional when giving no parameters is valid.
   # e.g.
   #   Usage:
@@ -100,24 +67,34 @@ def convert_root_to_optional_on_empty_lines(ast: doc.Doc):
       memo.append(node)
     return memo
 
-  for item in ast.usage.items:
+  for item in root.items:
     if isinstance(item, base.Group) and len(item.reduce(get_leaves, [])) == 0:
-      ast.usage = groups.Optional(ast.usage.mark.wrap_element([ast.usage]).to_marked_tuple())
-  return ast
+      return groups.Optional(root.mark.wrap_element([root]).to_marked_tuple())
+  return root
 
 
-def collapse_groups(ast: doc.Doc):
+def collapse_groups(root: base.Group) -> base.Group:
+  root_mark = root.mark
+
+  def coerce_to_sequence(node: "base.Node | None") -> base.Group:
+    if node is None:
+      items: T.List[base.Node] = []
+      return groups.Sequence(root_mark.wrap_element(items).to_marked_tuple())
+    elif not isinstance(node, base.Group):
+      return groups.Sequence(root_mark.wrap_element([node]).to_marked_tuple())
+    return node
+
   def remove_empty_groups(node: TNode) -> "TNode | None":
     if isinstance(node, (base.Group)) and len(node.items) == 0:
       return None
     return node
-  ast.usage = ast.usage.replace(remove_empty_groups)
+  root = coerce_to_sequence(root.replace(remove_empty_groups))
 
   def remove_intermediate_groups_with_one_item(node: base.Node) -> base.Node:
     if isinstance(node, (groups.Choice, groups.Sequence)) and len(node.items) == 1:
       return node.items[0]
     return node
-  ast.usage = ast.usage.replace(remove_intermediate_groups_with_one_item)
+  root = coerce_to_sequence(root.replace(remove_intermediate_groups_with_one_item))
 
   def merge_nested_sequences(node: base.Node) -> base.Node:
     if isinstance(node, groups.Sequence):
@@ -129,7 +106,7 @@ def collapse_groups(ast: doc.Doc):
           new_items.append(item)
       node.items = new_items
     return node
-  ast.usage = ast.usage.replace(merge_nested_sequences)
+  root = coerce_to_sequence(root.replace(merge_nested_sequences))
 
   def dissolve_groups(node: base.Node) -> base.Node:
     # Must run after merge_nested_sequences so that [(a b c)] does not become [a b c]
@@ -137,7 +114,7 @@ def collapse_groups(ast: doc.Doc):
       assert len(node.items) == 1
       return node.items[0]
     return node
-  ast.usage = ast.usage.replace(dissolve_groups)
+  root = coerce_to_sequence(root.replace(dissolve_groups))
 
   def merge_neighboring_sequences(node: base.Node) -> base.Node:
     new_items: T.List[base.Node] = []
@@ -157,70 +134,27 @@ def collapse_groups(ast: doc.Doc):
         left = right
       node.items = new_items
     return node
-  ast.usage = ast.usage.replace(merge_neighboring_sequences)
+  root = coerce_to_sequence(root.replace(merge_neighboring_sequences))
 
   def remove_intermediate_groups_in_optionals(node: base.Node) -> base.Node:
     if isinstance(node, groups.Optional):
       if isinstance(node.items[0], (groups.Sequence, groups.Optional)) and len(node.items) == 1:
         node.items = node.items[0].items
     return node
-  ast.usage = ast.usage.replace(remove_intermediate_groups_in_optionals)
+  root = coerce_to_sequence(root.replace(remove_intermediate_groups_in_optionals))
 
-
-def match_args_with_options(ast: doc.Doc) -> None:
-  # When parsing initially "-a ARG" is parsed as two unrelated nodes
-  # This method moves that "ARG" into the option, when e.g. the doc looks like this:
-  # Usage: prog -a ARG
-  # Options:
-  #   -a ARG
-  def match(node: TNode) -> TNode:
-    if not isinstance(node, base.Group):
-      return node
-    new_items: T.List[base.Node] = []
-    item_list = iter(node.items)
-    # Go through the list pairwise, have each element be "left" once
-    left = next(item_list, None)
-    while left is not None:
-      right = next(item_list, None)
-      if isinstance(left, (leaves.Short, leaves.Long)):
-        definition = ast.get_option_definition(left)
-        if definition.expects_arg and left.arg is None:
-          if isinstance(right, groups.Repeatable) \
-            and len(right.items) == 1 and isinstance(right.items[0], leaves.Argument):
-            # Handle
-            #   Usage:
-            #     prog -a B...
-            #   Options:
-            #     -a B
-            # by moving the option into the repeatable
-            left.arg = right.items[0]
-            right.items = [left]
-            left = right
-            right = next(item_list, None)
-          elif isinstance(right, leaves.Argument):
-            left.arg = right
-            # Remove the argument from the list by skipping over it in the next iteration
-            right = next(item_list, None)
-          else:
-            raise doc.DocoptParseError(
-              f'{left.ident} expects an argument (defined at {definition.mark})', left.mark)
-        elif not definition.expects_arg and left.arg is not None:
-          raise doc.DocoptParseError(
-            f'{left.ident} does not expect an argument (defined at {definition.mark})', left.arg.mark)
-      new_items.append(left)
-      left = right
-    node.items = new_items
+  def remove_nested_repeatables(node: base.Node) -> base.Node:
+    if isinstance(node, (groups.Repeatable)):
+      assert len(node.items) == 1
+      if isinstance(node.items[0], (groups.Repeatable)):
+        return node.items[0]
     return node
-  ast.usage = ast.usage.replace(match)
+  root = coerce_to_sequence(root.replace(remove_nested_repeatables))
+
+  return root
 
 
-def warn_unused_documented_options(ast: doc.Doc, text: str) -> None:
-  unused_options = OrderedSet(ast.section_options) - OrderedSet(ast.usage_options)
-  for option in unused_options:
-    warnings.warn(option.mark.show(text, message='this option is not referenced from the usage section.'))
-
-
-def mark_multiple(ast: doc.Doc) -> None:
+def mark_multiple(root: base.Group) -> None:
   # Mark leaves that can be specified multiple times
   marked_leaves: T.Set[base.Leaf] = set()
 
@@ -233,7 +167,7 @@ def mark_multiple(ast: doc.Doc) -> None:
       if multiple:
         node.multiple = multiple
         marked_leaves.add(node)
-  mark_from_repeatable(ast.usage)
+  mark_from_repeatable(root)
 
   def mark_repeated(node: base.Node, possible_siblings: T.Set[base.Leaf]) -> T.Set[base.Leaf]:
     # Mark nodes that are mentioned more than once on a path through the tree
@@ -254,7 +188,7 @@ def mark_multiple(ast: doc.Doc) -> None:
       # set.add(node) would mutate the set from parent calls
       possible_siblings = possible_siblings.union(set([node]))
     return possible_siblings
-  mark_repeated(ast.usage, set())
+  mark_repeated(root, set())
 
   def mark_identical_nodes(node: base.Node):
     # For some reason we can't use "node in set()"
@@ -262,10 +196,10 @@ def mark_multiple(ast: doc.Doc) -> None:
     if any([node == leaf for leaf in marked_leaves]):
       node.multiple = True  # type: ignore
     return node
-  ast.usage = ast.usage.replace(mark_identical_nodes)
+  root.replace(mark_identical_nodes)
 
 
-def merge_identical_leaves(usage: base.Group, ignore_option_args: bool = False) -> base.Group:
+def merge_identical_leaves(root: base.Group, ignore_option_args: bool = False) -> base.Group:
   known_leaves: T.Set[base.Leaf] = set()
 
   def merge(node: base.Node):
@@ -273,10 +207,10 @@ def merge_identical_leaves(usage: base.Group, ignore_option_args: bool = False) 
       for leaf in known_leaves:
         if node == leaf:
           if not ignore_option_args \
-            and isinstance(node, (leaves.Short, leaves.Long)) and node.arg != leaf.arg:  # type: ignore
+            and isinstance(node, leaves.Option) and node.arg != leaf.arg:  # type: ignore
             # Preserve argument names of options
             return node
           return leaf
       known_leaves.add(node)
     return node
-  return T.cast(base.Group, usage.replace(merge))
+  return T.cast(base.Group, root.replace(merge))

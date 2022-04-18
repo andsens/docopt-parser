@@ -2,10 +2,28 @@ import typing as T
 import parsec as P
 from functools import total_ordering
 
+from docopt_parser import errors
+
 _T = T.TypeVar('_T')
 LocInfo = T.Tuple[int, int]
 RangeTuple = T.Tuple[LocInfo, LocInfo]
 MarkedTuple = T.Tuple[LocInfo, _T, LocInfo]
+
+class ByteCount(int):
+
+  def show(self, text: "T.List[str] | str", message: "str | None" = None):
+    lines = text if isinstance(text, list) else text.split('\n')
+    return self.to_location(lines).show(lines, message)
+
+  def to_location(self, text: "T.List[str] | str") -> "Location":
+    lines = text if isinstance(text, list) else text.split('\n')
+    count = self
+    for line_no, line in enumerate(lines):
+      length = len(line) + 1
+      if length > count:
+        return Location((line_no, count))
+      count -= length
+    raise errors.DocoptError(f'Unable to convert bytecount {self} into location with the given text')
 
 # All text editors use 1 indexed lines, so we simply subclass int for linenumbers
 class LineNumber(int):

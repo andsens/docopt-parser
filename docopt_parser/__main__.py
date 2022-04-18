@@ -9,39 +9,31 @@ import yaml
 
 # pyright: reportUnknownVariableType=false
 from docopt_parser import DocoptError, parse, __doc__ as pkg_doc, \
-  __name__ as root_name, __version__, merge_identical_leaves
+  __name__ as root_name, __version__
+# , merge_identical_leaves
 
 log = logging.getLogger(root_name)
 
 __doc__: str = T.cast(str, pkg_doc) + """
 Usage:
-  docopt-parser [-Sy] ast
+  docopt-parser [-y] ast
   docopt-parser -h
   docopt-parser --version
 
 Options:
-  -S         Disable strict parsing and show the partial AST
   -y --yaml  Output the AST in YAML format
   --help -h  Show this help screen
   --version  Show the docopt.sh version
 """
-Params = T.TypedDict('Params', {'-S': bool, '--yaml': bool, 'ast': bool})
+Params = T.TypedDict('Params', {'--yaml': bool, 'ast': bool})
 
 def docopt_parser(params: Params):
   try:
     text = sys.stdin.read()
-    if params['-S']:
-      ast, parsed_text = parse(text, strict=False)
-      if params['ast']:
-        merge_identical_leaves(ast.usage)
-        sys.stdout.write(yaml.dump(ast.dict, sort_keys=False) if params['--yaml'] else repr(ast) + '\n')
-      if parsed_text != text:
-        parse(text, strict=True)
-    else:
-      ast, parsed_text = parse(text, strict=True)
-      if params['ast']:
-        ast = merge_identical_leaves(ast)
-        sys.stdout.write(yaml.dump(ast.dict, sort_keys=False) if params['--yaml'] else repr(ast) + '\n')
+    ast = parse(text)
+    if params['ast']:
+      # ast = merge_identical_leaves(ast)
+      sys.stdout.write(yaml.dump(ast.dict, sort_keys=False) if params['--yaml'] else repr(ast) + '\n')
   except DocoptError as e:
     log.error(str(e))
     sys.exit(e.exit_code)

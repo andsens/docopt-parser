@@ -4,7 +4,10 @@ import parsec as P
 from docopt_parser import base, helpers, marks, parsers
 
 
-def ident(illegal: "str | P.Parser[str | None] | P.Parser[str] | None", starts_with: "P.Parser[str] | None" = None) -> "P.Parser[str]":
+def ident(
+  illegal: "str | P.Parser[str | None] | P.Parser[str] | None",
+  starts_with: "P.Parser[str] | None" = None
+) -> "P.Parser[str]":
   if starts_with is None:
     starts_with = parsers.char(illegal=illegal)
   p = (

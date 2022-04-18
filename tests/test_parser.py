@@ -10,7 +10,7 @@ class TestParser(unittest.TestCase):
   @settings(max_examples=500)
   @given(DocoptAstGenerator.asts)
   def test_parse(self, text: str):
-    usage = parse(str(text))[0]
+    usage = parse(str(text))
 
   # Make sure only Choice, Sequence, Optional, Repeatable and IdentNodes are in the ast
     def walk(node: base.Node):
@@ -19,6 +19,9 @@ class TestParser(unittest.TestCase):
         for item in node.items:
           walk(item)
     walk(usage)
+  # TODO: Choice should never have only one child unless it's the root
+  # TODO: Sequence should never have only one child?
+  # TODO: Repeatable should always only have one child
   # TODO: Never expect <None> or <nl>
 
 if __name__ == "__main__":

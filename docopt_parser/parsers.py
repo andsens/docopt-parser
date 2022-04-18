@@ -1,7 +1,7 @@
 import typing as T
 import parsec as P
 
-from docopt_parser import helpers, marks
+from docopt_parser import helpers, marks, errors
 
 any_char = P.regex(r'.|\n').desc('any char')  # type: ignore
 def char(legal: "str | P.Parser[str]" = any_char, illegal: "P.Parser[T.Any] | str | None" = None) -> "P.Parser[str]":
@@ -27,6 +27,9 @@ def char(legal: "str | P.Parser[str]" = any_char, illegal: "P.Parser[T.Any] | st
   else:
     return a
 
+def text(illegal: "P.Parser[T.Any] | str"):
+  return P.many1(char(illegal=illegal)).desc('Text').parsecmap(helpers.join_string).mark()
+
 def string(s: str) -> "P.Parser[str]":
   '''Parses a string.'''
   @P.Parser
@@ -42,6 +45,13 @@ def string(s: str) -> "P.Parser[str]":
 def location(text: str, index: int = 0) -> "P.Value[marks.LocInfo]":
   '''Returns the current location of the parser'''
   return P.Value.success(index, P.ParseError.loc_info(text, index))
+
+def throw(message: str) -> "P.Parser[None]":
+  @P.Parser
+  def throw_parser(text: str, index: int = 0) -> "P.Value[None]":
+    '''raises a DocoptParseError'''
+    raise errors.DocoptParseError(message, marks.ByteCount(index))
+  return throw_parser
 
 nl = char('\n')
 whitespaces1 = P.many1(char(' \t', nl)).parsecmap(helpers.join_string).desc('<whitespace>')
