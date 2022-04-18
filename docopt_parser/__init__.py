@@ -1,12 +1,12 @@
 """
 docopt-parser - A parsing library for the docopt helptext
 """
-from docopt_parser.errors import DocoptError, DocoptParseError
 from docopt_parser.base import Group, Leaf, Node
 from docopt_parser.groups import Choice, Optional, Repeatable, Sequence
 from docopt_parser.leaves import Argument, ArgumentSeparator, Command, OptionsShortcut, Option
-from docopt_parser.marks import LineNumber, Location, LocInfo, Marked, MarkedTuple, Range, RangeTuple
-from docopt_parser.post_processors import merge_identical_leaves
+from docopt_parser.util import DocoptError, DocoptParseError, \
+  LineNumber, Location, LocInfo, Marked, MarkedTuple, Range, RangeTuple
+from docopt_parser.util.post_processors import merge_identical_leaves
 
 __version__: str
 try:
@@ -26,7 +26,8 @@ __all__ = [
 
 def parse(text: str) -> Group:
   import parsec as P
-  from docopt_parser import usage, leaves, errors, marks, post_processors
+  from docopt_parser import usage, leaves
+  from docopt_parser.util import post_processors, errors, marks
   try:
     options = leaves.documented_options.parse_strict(text)
     documented_options = options.copy()

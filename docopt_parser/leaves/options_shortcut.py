@@ -1,4 +1,5 @@
-from docopt_parser import base, marks, parsers
+from docopt_parser import base
+from docopt_parser.util import marks, parsers
 
 options_shortcut = parsers.string('options').mark()\
   .desc('options shortcut').parsecmap(lambda n: OptionsShortcut((n[0], n[2])))

@@ -1,7 +1,8 @@
 import typing as T
 import parsec as P
 
-from docopt_parser import base, helpers, marks, parsers
+from docopt_parser import base
+from docopt_parser.util import helpers, marks, parsers
 
 
 def ident(

@@ -2,7 +2,8 @@ from functools import reduce
 import typing as T
 import parsec as P
 
-from docopt_parser import base, leaves, groups, marks, helpers, parsers
+from docopt_parser import base, leaves, groups
+from docopt_parser.util import helpers, marks, parsers
 
 class Option(base.Leaf):
   definition: "Option"

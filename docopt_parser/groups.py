@@ -1,7 +1,8 @@
 import typing as T
 import parsec as P
 
-from docopt_parser import base, leaves, parsers, helpers
+from docopt_parser import base, leaves
+from docopt_parser.util import helpers, parsers
 
 class Choice(base.Group):
   pass

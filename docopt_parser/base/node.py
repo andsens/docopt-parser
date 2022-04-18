@@ -1,7 +1,7 @@
 import typing as T
 from abc import ABC
 
-from docopt_parser import marks
+from docopt_parser.util import marks
 
 IterVal = T.Union[str, bool, T.List["IterVal"], T.Dict[str, "IterVal"], None]
 DictGenerator = T.Generator[T.Tuple[str, IterVal], None, None]

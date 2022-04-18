@@ -1,7 +1,8 @@
 import typing as T
 import parsec as P
 
-from docopt_parser import helpers, marks, errors
+from docopt_parser.util import helpers
+from docopt_parser.util import errors, marks
 
 any_char = P.regex(r'.|\n').desc('any char')  # type: ignore
 def char(legal: "str | P.Parser[str]" = any_char, illegal: "P.Parser[T.Any] | str | None" = None) -> "P.Parser[str]":

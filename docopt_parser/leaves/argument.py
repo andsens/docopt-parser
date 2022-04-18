@@ -1,6 +1,7 @@
 import parsec as P
 
-from docopt_parser import base, helpers, marks, parsers
+from docopt_parser import base
+from docopt_parser.util import helpers, marks, parsers
 
 class Argument(base.Leaf):
   def __init__(self, name: marks.MarkedTuple[str]):

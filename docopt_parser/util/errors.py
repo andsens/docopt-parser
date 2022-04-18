@@ -1,4 +1,4 @@
-from docopt_parser import marks
+from docopt_parser.util import marks
 
 class DocoptError(Exception):
   def __init__(self, message: str, exit_code: int = 1):

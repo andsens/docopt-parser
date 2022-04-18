@@ -1,6 +1,7 @@
 import typing as T
 
-from docopt_parser import base, marks
+from docopt_parser import base
+from docopt_parser.util import marks
 
 class Group(base.Node):
   items: T.Sequence[base.Node]

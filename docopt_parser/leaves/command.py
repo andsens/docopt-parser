@@ -1,4 +1,5 @@
-from docopt_parser import base, marks, parsers
+from docopt_parser import base
+from docopt_parser.util import marks, parsers
 
 illegal = parsers.non_symbol_chars
 

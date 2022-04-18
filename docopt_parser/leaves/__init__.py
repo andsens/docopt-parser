@@ -3,7 +3,7 @@ from docopt_parser.leaves.argumentseparator import ArgumentSeparator, arg_separa
 from docopt_parser.leaves.command import Command, command
 from docopt_parser.leaves.options_shortcut import OptionsShortcut, options_shortcut
 from docopt_parser.leaves.option import Option, option, long_illegal, short_illegal
-from docopt_parser.leaves.documented_option import documented_options
+from docopt_parser.options import documented_options
 
 __all__ = [
   'Argument', 'argument', 'ArgumentSeparator', 'arg_separator', 'Command', 'command',

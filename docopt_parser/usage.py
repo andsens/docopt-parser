@@ -2,7 +2,8 @@ import typing as T
 import parsec as P
 import re
 
-from docopt_parser import base, groups, leaves, parsers, helpers
+from docopt_parser import base, groups, leaves
+from docopt_parser.util import helpers, parsers
 
 def usage(options: T.List[leaves.Option]):
   @P.generate('usage section')

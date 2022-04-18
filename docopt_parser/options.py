@@ -2,7 +2,8 @@ import typing as T
 import parsec as P
 import re
 
-from docopt_parser import leaves, base, helpers, parsers, marks, errors
+from docopt_parser import leaves, base
+from docopt_parser.util import errors, helpers, marks, parsers
 
 
 @P.generate('short option (-s)')

@@ -2,7 +2,7 @@ import typing as T
 import parsec as P
 from functools import total_ordering
 
-from docopt_parser import errors
+from docopt_parser.util import errors
 
 _T = T.TypeVar('_T')
 LocInfo = T.Tuple[int, int]
