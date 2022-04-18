@@ -1,36 +1,39 @@
-from hypothesis.strategies import one_of, characters, just, text, from_regex, \
-  tuples, none, sampled_from
+import typing as T
+import hypothesis.strategies as HS
+import re
 
-def debug(ret, *args):
+_T = T.TypeVar('_T')
+
+def debug(ret: T.Any, *args: T.Any):
   print(args)
   return ret
 
-def maybe(strategy):
-  return one_of(none(), strategy)
+def maybe(strategy: HS.SearchStrategy[_T]) -> "HS.SearchStrategy[None | _T]":
+  return HS.one_of(HS.none(), strategy)
 
-def chars(legal=None, illegal=None):
+def chars(legal: "str | None" = None, illegal: "str | None" = None):
   if (legal is None) == (illegal is None):
     raise Exception('char(): legal and illegal parameters are mutually exclusive')
   if legal is not None:
     if len(legal) == 1:
-      return just(legal)
+      return HS.just(legal)
     else:
-      return sampled_from(legal)
+      return HS.sampled_from(legal)
   else:
-    return characters(blacklist_characters=illegal)
+    return HS.characters(blacklist_characters=illegal)
 
-def idents(illegal, starts_with=None):
+def idents(illegal: str, starts_with: "HS.SearchStrategy[str] | None" = None):
   if starts_with is not None:
-    return tuples(starts_with, text(alphabet=chars(illegal=illegal))).map(lambda t: ''.join(t))
+    return HS.tuples(starts_with, HS.text(alphabet=chars(illegal=illegal))).map(lambda t: ''.join(t))
   else:
-    return text(alphabet=chars(illegal=illegal), min_size=1)
+    return HS.text(alphabet=chars(illegal=illegal), min_size=1)
 
-def not_re(*args):
-  def check(s):
+def not_re(*args: re.Pattern[str]):
+  def check(s: str):
     return all((r.search(s) is None for r in args))
   return check
 
 nl = chars('\n')
-indents = one_of(text(alphabet=chars(' '), min_size=1), chars('\t'))
-nl_indent = tuples(chars('\n'), indents).map(''.join)
-whitespaces = from_regex(r'\s').filter(lambda s: s != '\n')
+indents = HS.one_of(HS.text(alphabet=chars(' '), min_size=1), chars('\t'))
+nl_indent = HS.tuples(chars('\n'), indents).map(''.join)
+whitespaces = HS.from_regex(r'\s').filter(lambda s: s != '\n')

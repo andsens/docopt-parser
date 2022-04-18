@@ -1,4 +1,3 @@
-import pytest
 from tests.lang import DocoptAst as DocoptAstGenerator
 from docopt_parser import base, groups, parse
 import unittest
@@ -6,7 +5,6 @@ from hypothesis import given, settings
 
 
 class TestParser(unittest.TestCase):
-  @pytest.mark.filterwarnings('ignore:(.|\n)*this option is not referenced from the usage section.')
   @settings(max_examples=500)
   @given(DocoptAstGenerator.asts)
   def test_parse(self, text: str):

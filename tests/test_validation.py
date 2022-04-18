@@ -1,5 +1,5 @@
 import warnings
-import pytest
+import pytest as PT
 from docopt_parser import parse, DocoptError
 import unittest
 import re
@@ -13,17 +13,17 @@ Options:
   -f, --long
 ''')
 
-def test_unused_options():
-  with pytest.raises(DocoptError, match=r'.*' + re.escape('-f is not referenced from the usage section')):
-    parse('''Usage:
+def test_unused_options(caplog: PT.LogCaptureFixture):
+  parse('''Usage:
   prog
 
 Options:
   -f
 ''')
+  assert '-f is not referenced from the usage section' in caplog.text
 
 def test_duplicate_options():
-  with pytest.raises(DocoptError, match=r'.*' + re.escape('-f has already been specified') + r'.*'):
+  with PT.raises(DocoptError, match=r'.*' + re.escape('-f has already been specified') + r'.*'):
     parse('''Usage:
   prog options
 
@@ -33,7 +33,7 @@ Options:
 ''')
 
 def test_missing_arg_from_doc():
-  with pytest.raises(DocoptError, match=r'.*' + re.escape('expected: argument at') + r'.*'):
+  with PT.raises(DocoptError, match=r'.*' + re.escape('expected: argument at') + r'.*'):
     parse('''Usage:
   prog -a
 
@@ -42,14 +42,14 @@ Options:
 ''')
 
 def test_missing_arg_from_usage():
-  with pytest.raises(DocoptError, match=r'.*' + re.escape('expected: argument at') + r'.*'):
+  with PT.raises(DocoptError, match=r'.*' + re.escape('expected: argument at') + r'.*'):
     parse('''Usage:
   prog --long=F
   prog --long
 ''')
 
 def test_unexpected_arg_from_doc():
-  with pytest.raises(DocoptError, match=r'.*' + re.escape('--long does not expect an argument')):
+  with PT.raises(DocoptError, match=r'.*' + re.escape('--long does not expect an argument')):
     parse('''Usage:
   prog --long=B
 
@@ -58,7 +58,7 @@ Options:
 ''')
 
 def test_unexpected_arg_from_usage():
-  with pytest.raises(DocoptError, match=r'.*' + re.escape('--long does not expect an argument')):
+  with PT.raises(DocoptError, match=r'.*' + re.escape('--long does not expect an argument')):
     parse('''Usage:
   prog --long
   prog --long=B

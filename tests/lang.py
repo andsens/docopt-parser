@@ -1,4 +1,5 @@
-from typing import Iterable
+import typing as T
+import hypothesis.strategies as HS
 from tests import chars, idents, maybe, not_re
 from hypothesis.strategies import one_of, just, text, from_regex, tuples, none, lists, integers, shared, booleans, \
   fixed_dictionaries, recursive, sampled_from, permutations
@@ -29,7 +30,7 @@ def partition_options(sizes):
   known_longs = []
   unused_longs = long_idents.filter(lambda s: s not in known_longs)
 
-  def register_drawn(o):
+  def register_drawn(o: T.Tuple[str, str, bool]):
     short, long, _ = o
     if short:
       known_shorts.append(short)
@@ -57,7 +58,7 @@ def partition_options(sizes):
     ))
   })
 
-section_sizes = lists(
+section_sizes: HS.SearchStrategy[T.List[int]] = lists(
   integers(min_value=0, max_value=20), min_size=1, unique=True
 ).map(lambda indices: reduce(lambda sizes, i: sizes + [i - sum(sizes)], sorted(indices), []))
 
@@ -65,10 +66,8 @@ partitioned_options = shared(section_sizes.flatmap(partition_options))
 
 
 class AstNode(object):
-  pass
-
-  def indent(self, node, lvl=1):
-    if isinstance(node, Iterable):
+  def indent(self, node: "AstNode", lvl: int = 1):
+    if isinstance(node, T.Iterable):
       lines = '\n'.join(map(repr, node)).split('\n')
       return '\n'.join(['  ' * lvl + line for line in lines])
     else:
@@ -77,14 +76,16 @@ class AstNode(object):
       return '\n'.join(lines)
 
 class IdentNode(AstNode):
-  def __init__(self, ident):
+
+  def __init__(self, ident: str):
+    super().__init__()
     self.ident = ident
 
   def __hash__(self):
     return hash(self.ident)
 
 class Option(IdentNode):
-  def __init__(self, short, long, has_arg):
+  def __init__(self, short: str, long: str, has_arg: bool):
     super().__init__(f'--{long}' if long else f'-{short}')
     self.short = short
     self.long = long
@@ -108,9 +109,6 @@ class DocumentedOption(Option):
   all = partitioned_options.flatmap(lambda p: just(p['documented']))
 
 class UsageOption(Option):
-  def __init__(self, short, long, has_arg):
-    super().__init__(short, long, has_arg)
-
   def __repr__(self):
     arg = ' <ARG>' if self.has_arg else ''
     return f'<Option>: {self.ident}{arg}'
@@ -123,7 +121,7 @@ class UsageOption(Option):
   options = all.flatmap(sampled_from)
 
 class OptionRef(Option):
-  def __init__(self, option):
+  def __init__(self, option: Option):
     super().__init__(option.short, option.long, option.has_arg)
     self.option = option
 
@@ -141,7 +139,8 @@ class OptionRef(Option):
 
 class OptionSequence(AstNode):
 
-  def __init__(self, argless_shorts, short_with_arg):
+  def __init__(self, argless_shorts: T.List[Option], short_with_arg: Option):
+    super().__init__()
     self.argless_shorts = argless_shorts
     self.short_with_arg = short_with_arg
 
@@ -177,7 +176,7 @@ class OptionSequence(AstNode):
   all_argless_shorts = all_shorts.map(lambda opts: list(filter(lambda o: not o.has_arg, opts)))
   all_shorts_with_arg = all_shorts.map(lambda opts: list(filter(lambda o: o.has_arg, opts)))
 
-  sequences = all_options.flatmap(
+  sequences: HS.SearchStrategy["OptionSequence"] = all_options.flatmap(
     lambda opts: tuples(
       lists(OptionSequence.all_argless_shorts.flatmap(sampled_from), min_size=1, unique=True),
       one_of(none(), OptionSequence.all_shorts_with_arg.flatmap(sampled_from))
@@ -230,7 +229,8 @@ class OptionsShortcut(AstNode):
   shortcuts = just('options').map(lambda _: OptionsShortcut())
 
 class Choice(AstNode):
-  def __init__(self, items):
+  def __init__(self, items: T.List[AstNode]):
+    super().__init__()
     self.items = items
 
   def __repr__(self):
@@ -246,7 +246,8 @@ class Choice(AstNode):
       return str(self.items[0])
 
 class Sequence(AstNode):
-  def __init__(self, items):
+  def __init__(self, items: T.List[AstNode]):
+    super().__init__()
     self.items = items
 
   def __repr__(self):
@@ -257,7 +258,8 @@ class Sequence(AstNode):
     return ' '.join(map(str, self.items))
 
 class Optional(AstNode):
-  def __init__(self, items):
+  def __init__(self, items: T.List[AstNode]):
+    super().__init__()
     self.items = items
 
   def __repr__(self):
@@ -268,7 +270,8 @@ class Optional(AstNode):
     return f"[{' '.join(map(str, self.items))}]"
 
 class OptionSection(AstNode):
-  def __init__(self, options):
+  def __init__(self, options: T.List[Option]):
+    super().__init__()
     self.options = options
 
   def __repr__(self):
@@ -284,7 +287,8 @@ class OptionSection(AstNode):
   sections = DocumentedOption.all.map(lambda sections: list(map(OptionSection, sections)))
 
 class UsageSection(AstNode):
-  def __init__(self, root):
+  def __init__(self, root: AstNode):
+    super().__init__()
     self.root = root
 
   def __repr__(self):

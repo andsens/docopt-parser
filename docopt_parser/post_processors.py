@@ -1,8 +1,10 @@
 import typing as T
 from ordered_set import OrderedSet
+import logging
 
-from docopt_parser import base, leaves, groups, errors
+from docopt_parser import base, leaves, groups
 
+log = logging.getLogger(__name__)
 TNode = T.TypeVar('TNode', bound=base.Node)
 
 
@@ -14,7 +16,7 @@ def post_process_ast(root: base.Group, documented_options: T.List[leaves.Option]
   #     prog cmd <--
   # TODO: Merge nested Repeatables with only one child
 
-  populate_shortcuts(root, documented_options)
+  populate_shortcuts(root, documented_options, text)
   root = convert_root_to_optional_on_empty_lines(root)
   root = collapse_groups(root)
   mark_multiple(root)
@@ -22,7 +24,7 @@ def post_process_ast(root: base.Group, documented_options: T.List[leaves.Option]
   return root
 
 
-def populate_shortcuts(root: base.Group, documented_options: T.List[leaves.Option]) -> None:
+def populate_shortcuts(root: base.Group, documented_options: T.List[leaves.Option], text: str) -> None:
   # Option shortcuts contain to all documented options except the ones
   # that are explicitly mentioned in the usage section
 
@@ -43,9 +45,8 @@ def populate_shortcuts(root: base.Group, documented_options: T.List[leaves.Optio
   root.replace(populate)
 
   unused_options = OrderedSet((o.definition for o in documented_options)) - OrderedSet(root.reduce(get_opts, []))
-  if len(unused_options) > 0:
-    first_unused = next(iter(unused_options))
-    raise errors.DocoptParseError(f'{first_unused.ident} is not referenced from the usage section', first_unused.mark)
+  for option in unused_options:
+    log.warning(option.mark.show(text, f'{option.ident} is not referenced from the usage section'))
 
 
 def convert_root_to_optional_on_empty_lines(root: base.Group) -> base.Group:
