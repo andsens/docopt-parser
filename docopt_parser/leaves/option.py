@@ -47,6 +47,11 @@ class Option(base.Leaf):
   def arg(self):
     return self.__arg or self.definition.__arg
 
+  @base.Leaf.multiple.setter
+  def multiple(self, val: bool):
+    self._multiple = val
+    self.definition._multiple = val
+
   def __repr__(self):
     arg_suffix = ' ' + self.arg.ident if self.arg else ''
     return f'{self.ident}{self.multiple_suffix}{arg_suffix}'
