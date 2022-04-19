@@ -85,12 +85,14 @@ def collapse_groups(root: base.Group) -> base.Group:
       return groups.Sequence(root_mark << [node])
     return node
 
+  # A () B -> A B
   def remove_empty_groups(node: TNode) -> "TNode | None":
     if isinstance(node, (base.Group)) and len(node.items) == 0:
       return None
     return node
   root = coerce_to_sequence(root.replace(remove_empty_groups))
 
+  # (A) -> A
   def remove_intermediate_groups_with_one_item(node: base.Node) -> base.Node:
     if isinstance(node, (groups.Choice, groups.Sequence)) and len(node.items) == 1:
       node.items[0].mark = node.mark
@@ -98,6 +100,7 @@ def collapse_groups(root: base.Group) -> base.Group:
     return node
   root = coerce_to_sequence(root.replace(remove_intermediate_groups_with_one_item))
 
+  # A (B C) -> A B C
   def merge_nested_sequences(node: base.Node):
     if isinstance(node, groups.Sequence):
       new_items: T.List[base.Node] = []
@@ -108,6 +111,8 @@ def collapse_groups(root: base.Group) -> base.Group:
           new_items.append(item)
       node.items = new_items
   root.walk(merge_nested_sequences)
+
+  # TODO: A|(B|C) -> A|B|C
 
   def dissolve_groups(node: base.Node) -> base.Node:
     # Must run after merge_nested_sequences so that [(a b c)] does not become [a b c]
