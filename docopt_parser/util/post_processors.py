@@ -112,9 +112,29 @@ def collapse_groups(root: base.Group) -> base.Group:
       node.items = new_items
   root.walk(merge_nested_sequences)
 
+  # [A [B [C]]] -> [A B C]
+  def merge_nested_optionals(node: base.Node):
+    if isinstance(node, groups.Optional):
+      new_items: T.List[base.Node] = []
+      for item in node.items:
+        if isinstance(item, groups.Optional):
+          new_items += item.items
+        else:
+          new_items.append(item)
+      node.items = new_items
+  root.walk(merge_nested_optionals)
+
+  # Not represented in the usage, but just a result of how the parser works
+  def remove_root_sequence_in_optionals(node: base.Node):
+    if isinstance(node, groups.Optional):
+      if isinstance(node.items[0], groups.Sequence):
+        assert len(node.items) == 1
+        node.items = node.items[0].items
+  root.walk(remove_root_sequence_in_optionals)
+
   # (A) -> A
+  # Must run after remove_root_sequence_in_optionals so that [(a b c)] does not become [a b c]
   def dissolve_groups(node: base.Node) -> base.Node:
-    # Must run after merge_nested_sequences so that [(a b c)] does not become [a b c]
     if isinstance(node, groups.Group):
       assert len(node.items) == 1
       node.items[0].mark = node.mark
@@ -122,6 +142,7 @@ def collapse_groups(root: base.Group) -> base.Group:
     return node
   root = coerce_to_sequence(root.replace(dissolve_groups))
 
+  # (A B C) (D E F) -> A B C D E F
   def merge_neighboring_sequences(node: base.Node):
     new_items: T.List[base.Node] = []
     if isinstance(node, groups.Sequence):
@@ -142,13 +163,6 @@ def collapse_groups(root: base.Group) -> base.Group:
       node.items = new_items
   root.walk(merge_neighboring_sequences)
 
-  def remove_intermediate_groups_in_optionals(node: base.Node) -> base.Node:
-    if isinstance(node, groups.Optional):
-      if isinstance(node.items[0], (groups.Sequence, groups.Optional)) and len(node.items) == 1:
-        node.items = node.items[0].items
-    return node
-  root = coerce_to_sequence(root.replace(remove_intermediate_groups_in_optionals))
-
   # A|(B|C) -> A|B|C
   def merge_nested_choices(node: base.Node):
     if isinstance(node, groups.Choice):
@@ -161,6 +175,7 @@ def collapse_groups(root: base.Group) -> base.Group:
       node.items = new_items
   root.walk(merge_nested_choices)
 
+  # (A...)... -> A...
   def remove_nested_repeatables(node: base.Node) -> base.Node:
     if isinstance(node, (groups.Repeatable)):
       assert len(node.items) == 1
