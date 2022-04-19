@@ -19,14 +19,15 @@ def usage(options: T.List[leaves.Option]):
       base.ident(illegal=(parsers.whitespaces1 | parsers.eol)).parsecmap(helpers.join_string).desc('a program name')
     )
 
+    next_line = parsers.eol + parsers.indent
     lines: T.List[groups.Choice] = []
     while True:
-      line = yield usage_line(prog, options)
-      if line is not None:
-        lines.append(line)
-      if (yield P.optional(parsers.indent)) is None:
+      lines.append((yield usage_line(prog, options)))
+      if (yield P.lookahead(P.optional(next_line))) is None:
         break
+      yield next_line
     end = yield parsers.location
+    yield parsers.eol
     yield non_usage_section_text
     return groups.Choice((start, lines, end))
   return p
@@ -40,4 +41,4 @@ def usage_line(prog: str, options: T.List[leaves.Option]) -> "P.Parser[groups.Ch
     ) | (
       parsers.whitespaces1 >> groups.expr(options)
     )
-  ) << parsers.eol
+  ) << P.lookahead(parsers.eol)
