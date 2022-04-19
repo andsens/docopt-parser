@@ -141,6 +141,7 @@ def option(options: T.List[Option]):
       )))
       if opt is None:
         break
+      opts.append(opt)
       if opt not in options:
         options.append(opt)
     end = yield parsers.location
