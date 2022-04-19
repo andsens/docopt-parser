@@ -62,7 +62,8 @@ def documented_option(options: T.List[leaves.Option]):
           opt_def = opt
         if short_alias is not None:
           raise errors.DocoptParseError(
-            f'An option may only have one short option alias (previously defined at {short_alias})', name)
+            f'An option may only have one short option alias (previously defined at {short_alias})',
+            marks.Marked(opt[0]))
         short_alias = opt[0]
       opts.append(opt)
       next_opt = yield P.unit(
