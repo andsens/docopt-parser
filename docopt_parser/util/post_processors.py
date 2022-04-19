@@ -228,6 +228,9 @@ def mark_multiple(root: base.Group) -> None:
     # Also the reason for the type ignore
     if any([node == leaf for leaf in marked_leaves]):
       node.multiple = True  # type: ignore
+    if isinstance(node, leaves.Option) and node.multiple:
+      # Mark option definitions that are specified in options sections
+      node.definition.multiple = True
     return node
   root.replace(mark_identical_nodes)
 
