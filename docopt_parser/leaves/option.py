@@ -93,7 +93,7 @@ class Option(base.Leaf):
       return name_p.parsecmap(lambda n: Option(n, None, self.definition))
 
 
-long_illegal = parsers.non_symbol_chars | parsers.char(',=')
+long_illegal = parsers.non_symbol_chars | parsers.char('=')
 
 usage_long_option = (
   P.unit(
@@ -101,21 +101,16 @@ usage_long_option = (
   ).parsecmap(helpers.join_string).mark() + P.optional(parsers.char('=') >> leaves.option_argument)
 ).desc('long option (--long)').parsecmap(lambda n: Option(*n))
 
-short_illegal = parsers.non_symbol_chars | parsers.char(',=-')
-
-no_equals = (
-  P.lookahead(parsers.char(illegal='='))
-  ^ P.fail_with('Short options with arguments must be specified in the Options: section')  # type: ignore
-).parsecmap(lambda _: '')  # type: ignore
+short_illegal = parsers.non_symbol_chars
 
 usage_short_option = (
-  (P.unit(parsers.char('-') + parsers.char(illegal=short_illegal)) + no_equals).parsecmap(helpers.join_string).mark()
+  (P.unit(parsers.char('-') + parsers.char(illegal=short_illegal))).parsecmap(helpers.join_string).mark()
 ).desc('short option (-a)').parsecmap(lambda n: Option(n, None, short_alias=n))
 
 # Usage parser without the leading "-" to allow parsing "-abc" style option specs
 # Prefix the parse result with a "-" in order to forward the proper identifier to Short()
 usage_shortlist_option = (
-  parsers.char(illegal=short_illegal) + no_equals
+  parsers.char(illegal=short_illegal)
 ).parsecmap(lambda n: '-' + n[0]).mark().desc('short option (-a)').parsecmap(lambda n: Option(n, None, short_alias=n))
 
 
@@ -126,7 +121,7 @@ def option(options: T.List[Option]):
     opt = yield reduce(
       lambda mem, p: p | mem,
       [o.atom_parser for o in options],
-      usage_short_option | usage_long_option
+      usage_long_option | usage_short_option
     )
     options.append(opt)
     opts = [opt]

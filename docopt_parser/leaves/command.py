@@ -6,5 +6,5 @@ class Command(base.Leaf):
     super().__init__(name)
 
 command = base.ident(
-  parsers.non_symbol_chars, starts_with=parsers.char(illegal=parsers.non_symbol_chars | parsers.char('-'))
+  parsers.non_symbol_chars, starts_with=parsers.char(illegal=parsers.non_symbol_chars)
 ).mark().parsecmap(lambda n: Command(n))
