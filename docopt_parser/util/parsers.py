@@ -61,4 +61,12 @@ eol = (whitespaces + (nl | P.eof())).desc('<end of line>')
 indent = (P.many1(char(' ')) | char('\t')).parsecmap(helpers.join_string).desc('<indent> (spaces or tabs)')
 either = char('|').desc('<pipe> (|)')
 ellipsis = string('...').desc('ellipsis (...)')
+# \t -> Tab
+# \n -> Newline
+# \r -> Carriage return
+# \b -> Backspace
+# \f -> Form feed
+# \x1B -> ESC
+# \x07 -> BEL
+# \0 -> NUL
 non_symbol_chars = char('|()[] \t\n\r\b\f\x1B\x07\0') | P.eof() | ellipsis
