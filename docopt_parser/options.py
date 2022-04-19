@@ -8,7 +8,7 @@ from docopt_parser.util import errors, helpers, marks, parsers
 
 @P.generate('short option (-s)')
 def option_line_short() -> helpers.GeneratorParser[T.Tuple[marks.MarkedTuple[str], "leaves.Argument | None"]]:
-  argspec = (parsers.char(' =') >> leaves.argument).desc('argument')
+  argspec = (parsers.char(' =') >> leaves.documented_option_argument).desc('argument')
   name = yield (parsers.char('-') + parsers.char(illegal=leaves.short_illegal)).parsecmap(helpers.join_string).mark()
   if (yield P.optional(P.lookahead(parsers.char('=')))) is not None:
     # Definitely an argument, make sure we fail with "argument expected"
@@ -19,7 +19,7 @@ def option_line_short() -> helpers.GeneratorParser[T.Tuple[marks.MarkedTuple[str
 
 @P.generate('long option (--long)')
 def option_line_long() -> helpers.GeneratorParser[T.Tuple[marks.MarkedTuple[str], "leaves.Argument | None"]]:
-  argspec = (parsers.char(' =') >> leaves.argument).desc('argument')
+  argspec = (parsers.char(' =') >> leaves.documented_option_argument).desc('argument')
   name = yield (parsers.string('--') + base.ident(leaves.long_illegal)).parsecmap(helpers.join_string).mark()
   if (yield P.optional(P.lookahead(parsers.char('=')))) is not None:
     # Definitely an argument, make sure we fail with "argument expected"

@@ -10,7 +10,7 @@ class Argument(base.Leaf):
 wrapped_arg = (parsers.char('<') + base.ident(parsers.char('>')) + parsers.char('>')) \
   .desc('<arg>').parsecmap(helpers.join_string).mark()
 
-arg_letters = P.many1(parsers.char(illegal=parsers.non_symbol_chars)).parsecmap(helpers.join_string).mark()
+arg_letters = base.ident(illegal=parsers.non_symbol_chars).parsecmap(helpers.join_string).mark()
 
 @P.generate('ARG')
 def uppercase_arg() -> helpers.GeneratorParser[marks.MarkedTuple[str]]:
@@ -24,3 +24,6 @@ def uppercase_arg() -> helpers.GeneratorParser[marks.MarkedTuple[str]]:
 argument = (wrapped_arg ^ uppercase_arg).desc('argument').parsecmap(lambda n: Argument(n))
 
 option_argument = (wrapped_arg ^ arg_letters).desc('argument').parsecmap(lambda n: Argument(n))
+documented_option_argument = (
+  wrapped_arg ^ base.ident(parsers.char(' ,'), starts_with=parsers.char(illegal=parsers.char(' ,-'))).mark()
+).desc('argument').parsecmap(lambda n: Argument(n))
