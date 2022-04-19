@@ -85,9 +85,9 @@ def collapse_groups(root: base.Group) -> base.Group:
       return groups.Sequence(root_mark << [node])
     return node
 
-  # A () B -> A B
+  # A [] B () -> A B
   def remove_empty_groups(node: TNode) -> "TNode | None":
-    if isinstance(node, (base.Group)) and len(node.items) == 0:
+    if isinstance(node, base.Group) and len(node.items) == 0:
       return None
     return node
   root = coerce_to_sequence(root.replace(remove_empty_groups))
