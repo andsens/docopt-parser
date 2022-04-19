@@ -92,7 +92,7 @@ def collapse_groups(root: base.Group) -> base.Group:
     return node
   root = coerce_to_sequence(root.replace(remove_empty_groups))
 
-  # (A) -> A
+  # A (B) C -> A B C
   def remove_intermediate_groups_with_one_item(node: base.Node) -> base.Node:
     if isinstance(node, (groups.Choice, groups.Sequence)) and len(node.items) == 1:
       node.items[0].mark = node.mark
@@ -112,8 +112,7 @@ def collapse_groups(root: base.Group) -> base.Group:
       node.items = new_items
   root.walk(merge_nested_sequences)
 
-  # TODO: A|(B|C) -> A|B|C
-
+  # (A) -> A
   def dissolve_groups(node: base.Node) -> base.Node:
     # Must run after merge_nested_sequences so that [(a b c)] does not become [a b c]
     if isinstance(node, groups.Group):
@@ -149,6 +148,18 @@ def collapse_groups(root: base.Group) -> base.Group:
         node.items = node.items[0].items
     return node
   root = coerce_to_sequence(root.replace(remove_intermediate_groups_in_optionals))
+
+  # A|(B|C) -> A|B|C
+  def merge_nested_choices(node: base.Node):
+    if isinstance(node, groups.Choice):
+      new_items: T.List[base.Node] = []
+      for item in node.items:
+        if isinstance(item, groups.Choice):
+          new_items += item.items
+        else:
+          new_items.append(item)
+      node.items = new_items
+  root.walk(merge_nested_choices)
 
   def remove_nested_repeatables(node: base.Node) -> base.Node:
     if isinstance(node, (groups.Repeatable)):
