@@ -25,8 +25,15 @@ class Option(base.Leaf):
     self.__doc = marks.Marked(doc) if doc else None
 
   @property
-  def default(self):
-    return self.definition.__default.elm if self.definition.__default else None
+  def default(self) -> "T.List[str] | str | None | T.Literal[0] | T.Literal[False]":
+    if self.arg and self.multiple:
+      return self.definition.__default.elm.split(' ') if self.definition.__default else []
+    elif self.arg:
+      return self.definition.__default.elm if self.definition.__default else None
+    elif self.multiple:
+      return 0
+    else:
+      return False
 
   @property
   def doc(self):

@@ -3,7 +3,10 @@ from abc import ABC
 
 from docopt_parser.util import marks
 
-IterVal = T.Union[str, bool, T.List["IterVal"], T.Dict[str, "IterVal"], None]
+IterVal = T.Union[
+  str, bool, T.Literal[0], T.Literal[False], T.List[str], None,
+  T.List["IterVal"], T.Dict[str, "IterVal"]
+]
 DictGenerator = T.Generator[T.Tuple[str, IterVal], None, None]
 
 class Node(ABC):

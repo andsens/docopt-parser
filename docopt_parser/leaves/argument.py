@@ -1,11 +1,20 @@
+import typing as T
 import parsec as P
 
 from docopt_parser import base
 from docopt_parser.util import helpers, marks, parsers
 
 class Argument(base.Leaf):
-  def __init__(self, name: marks.MarkedTuple[str]):
-    super().__init__(name)
+  @property
+  def default(self) -> "T.List[str] | None":
+    if self.multiple:
+      return []
+    else:
+      return None
+
+  def __iter__(self):
+    yield from super().__iter__()
+    yield 'default', self.default
 
 wrapped_arg = (parsers.char('<') + base.ident(parsers.char('>')) + parsers.char('>')) \
   .desc('<arg>').parsecmap(helpers.join_string).mark()
