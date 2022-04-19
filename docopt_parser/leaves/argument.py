@@ -7,7 +7,7 @@ from docopt_parser.util import helpers, marks, parsers
 class Argument(base.Leaf):
   @property
   def default(self) -> "T.List[str] | None":
-    if self.multiple:
+    if self._multiple:
       return []
     else:
       return None
@@ -32,7 +32,3 @@ def uppercase_arg() -> helpers.GeneratorParser[marks.MarkedTuple[str]]:
 
 argument = (wrapped_arg ^ uppercase_arg).desc('argument').parsecmap(lambda n: Argument(n))
 
-option_argument = (wrapped_arg ^ arg_letters).desc('argument').parsecmap(lambda n: Argument(n))
-documented_option_argument = (
-  wrapped_arg ^ base.ident(parsers.char(' ,'), starts_with=parsers.char(illegal=parsers.char(' ,-'))).mark()
-).desc('argument').parsecmap(lambda n: Argument(n))

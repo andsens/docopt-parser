@@ -198,7 +198,7 @@ def mark_multiple(root: base.Group) -> None:
     else:
       assert isinstance(node, (base.Leaf))
       if multiple:
-        node.multiple = multiple
+        node.set_multiple(True)
         marked_leaves.add(node)
   mark_from_repeatable(root)
 
@@ -216,7 +216,7 @@ def mark_multiple(root: base.Group) -> None:
     else:
       assert isinstance(node, (base.Leaf))
       if any([node == leaf for leaf in possible_siblings]):
-        node.multiple = True
+        node.set_multiple(True)
         marked_leaves.add(node)
       # set.add(node) would mutate the set from parent calls
       possible_siblings = possible_siblings.union(set([node]))
@@ -227,7 +227,7 @@ def mark_multiple(root: base.Group) -> None:
     # For some reason we can't use "node in set()"
     # Also the reason for the type ignore
     if any([node == leaf for leaf in marked_leaves]):
-      node.multiple = True  # type: ignore
+      node.set_multiple(True)  # type: ignore
     return node
   root.replace(mark_identical_nodes)
 
@@ -240,7 +240,7 @@ def merge_identical_leaves(root: base.Group, ignore_option_args: bool = False) -
       for leaf in known_leaves:
         if node == leaf:
           if not ignore_option_args \
-            and isinstance(node, leaves.Option) and node.arg != leaf.arg:  # type: ignore
+            and isinstance(node, leaves.Option) and node.argname != leaf.argname:  # type: ignore
             # Preserve argument names of options
             return node
           return leaf

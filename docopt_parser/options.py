@@ -7,8 +7,8 @@ from docopt_parser.util import errors, helpers, marks, parsers
 
 
 @P.generate('short option (-s)')
-def option_line_short() -> helpers.GeneratorParser[T.Tuple[marks.MarkedTuple[str], "leaves.Argument | None"]]:
-  argspec = (parsers.char(' =') >> leaves.documented_option_argument).desc('argument')
+def option_line_short() -> helpers.GeneratorParser[T.Tuple[marks.MarkedTuple[str], "marks.MarkedTuple[str] | None"]]:
+  argspec = (parsers.char(' =') >> documented_option_argument).desc('argument')
   name = yield (parsers.char('-') + parsers.char(illegal=leaves.short_illegal)).parsecmap(helpers.join_string).mark()
   if (yield P.optional(P.lookahead(parsers.char('=')))) is not None:
     # Definitely an argument, make sure we fail with "argument expected"
@@ -18,9 +18,11 @@ def option_line_short() -> helpers.GeneratorParser[T.Tuple[marks.MarkedTuple[str
   return (name, arg)
 
 @P.generate('long option (--long)')
-def option_line_long() -> helpers.GeneratorParser[T.Tuple[marks.MarkedTuple[str], "leaves.Argument | None"]]:
-  argspec = (parsers.char(' =') >> leaves.documented_option_argument).desc('argument')
-  name = yield (parsers.string('--') + base.ident(leaves.long_illegal)).parsecmap(helpers.join_string).mark()
+def option_line_long() -> helpers.GeneratorParser[T.Tuple[marks.MarkedTuple[str], "marks.MarkedTuple[str] | None"]]:
+  argspec = (parsers.char(' =') >> documented_option_argument).desc('argument')
+  name = yield (
+    parsers.string('--') + base.ident(leaves.long_illegal | parsers.char(','))
+  ).parsecmap(helpers.join_string).mark()
   if (yield P.optional(P.lookahead(parsers.char('=')))) is not None:
     # Definitely an argument, make sure we fail with "argument expected"
     arg = yield argspec
@@ -37,6 +39,9 @@ default_value = default.parsecmap(lambda n: n[0][1]).parsecmap(helpers.join_stri
 option_documentation = P.many1(
   parsers.char(illegal=default ^ terminator)
 ).desc('option documentation').parsecmap(helpers.join_string)
+documented_option_argument = (
+  leaves.wrapped_arg ^ base.ident(parsers.char(' ,'), starts_with=parsers.char(illegal=parsers.char(' ,-'))).mark()
+).desc('argument')
 
 
 def get_option_definition(name: str, options: T.List[leaves.Option]) -> "leaves.Option | None":
@@ -48,12 +53,11 @@ def documented_option(options: T.List[leaves.Option]):
   @P.generate('documented option')
   def p() -> helpers.GeneratorParser[None]:
     short_alias: "marks.MarkedTuple[str] | None" = None
-    opts: T.List[T.Tuple[marks.MarkedTuple[str], "leaves.Argument | None"]] = []
-    opt_def: T.Tuple[marks.MarkedTuple[str], "leaves.Argument | None"] | None = None
+    opts: T.List[T.Tuple[marks.MarkedTuple[str], "marks.MarkedTuple[str] | None"]] = []
+    opt_def: T.Tuple[marks.MarkedTuple[str], "marks.MarkedTuple[str] | None"] | None = None
     while True:
       opt = yield option_line_long | option_line_short
-      ((_, name, _), _) = opt
-      if name.startswith('--'):
+      if opt[0][1].startswith('--'):
         # The last long option is the definition
         opt_def = opt
       else:
@@ -71,7 +75,7 @@ def documented_option(options: T.List[leaves.Option]):
       )
       if next_opt is None:
         break
-    opt_def = T.cast(T.Tuple[marks.MarkedTuple[str], "leaves.Argument | None"], opt_def)
+    opt_def = T.cast(T.Tuple[marks.MarkedTuple[str], "marks.MarkedTuple[str] | None"], opt_def)
     opts.remove(opt_def)
 
     _doc: "marks.MarkedTuple[str] | None" = None

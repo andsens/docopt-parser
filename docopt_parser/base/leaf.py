@@ -25,17 +25,14 @@ class Leaf(base.Node):
     super().__init__((ident[0], ident[2]))
     self.ident = ident[1]
 
-  @property
-  def multiple(self) -> bool:
-    return self._multiple
-
-  @multiple.setter
-  def multiple(self, val: bool):
+  # Intentionally not specifying a getter, it's an internal variable
+  def set_multiple(self, val: bool):
     self._multiple = val
 
   @property
-  def multiple_suffix(self) -> str:
-    return '*' if self.multiple else ''
+  def _multiple_suffix(self) -> str:
+    # Remove multiple and use a setter instead
+    return '*' if self._multiple else ''
 
   def __hash__(self) -> int:
     return hash(self.ident)
@@ -44,10 +41,8 @@ class Leaf(base.Node):
     return isinstance(other, Leaf) and self.ident == other.ident
 
   def __repr__(self):
-    return f'{str(type(self).__name__)}{self.multiple_suffix}: {self.ident}'
+    return f'{str(type(self).__name__)}{self._multiple_suffix}: {self.ident}'
 
   def __iter__(self):
     yield from super().__iter__()
     yield 'ident', self.ident
-    if self.multiple:
-      yield 'multiple', self.multiple

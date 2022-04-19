@@ -7,17 +7,18 @@ from docopt_parser.util import helpers, marks, parsers
 
 class Option(base.Leaf):
   definition: "Option"
-  __arg: "leaves.Argument | None"
+  __argname: "marks.Marked[str] | None"
   __short_alias: "marks.Marked[str] | None"
   __default: "marks.Marked[str] | None"
   __doc: "marks.Marked[str] | None"
   __is_definition: bool
 
-  def __init__(self, name: marks.MarkedTuple[str], arg: "leaves.Argument | None", definition: "Option | None" = None,
+  def __init__(self, name: marks.MarkedTuple[str], argname: "marks.MarkedTuple[str] | None",
+               definition: "Option | None" = None,
                short_alias: "marks.MarkedTuple[str] | None" = None,
                default: "marks.MarkedTuple[str] | None" = None, doc: "marks.MarkedTuple[str] | None" = None):
     super().__init__(name)
-    self.__arg = arg
+    self.__argname = marks.Marked(argname) if argname else None
     self.definition = definition or self
     self.__is_definition = definition is None
     self.__short_alias = marks.Marked(short_alias) if short_alias else None
@@ -26,11 +27,11 @@ class Option(base.Leaf):
 
   @property
   def default(self) -> "T.List[str] | str | None | T.Literal[0] | T.Literal[False]":
-    if self.arg and self.multiple:
+    if self.argname and self._multiple:
       return self.definition.__default.elm.split(' ') if self.definition.__default else []
-    elif self.arg:
+    elif self.argname:
       return self.definition.__default.elm if self.definition.__default else None
-    elif self.multiple:
+    elif self._multiple:
       return 0
     else:
       return False
@@ -44,17 +45,17 @@ class Option(base.Leaf):
     return self.definition.__short_alias.elm if self.definition.__short_alias else None
 
   @property
-  def arg(self):
-    return self.__arg or self.definition.__arg
+  def argname(self):
+    return self.__argname or self.definition.__argname
 
-  @base.Leaf.multiple.setter
-  def multiple(self, val: bool):
-    self._multiple = val
-    self.definition._multiple = val
+  def set_multiple(self, val: bool):
+    super().set_multiple(val)
+    if not self.__is_definition:
+      self.definition.set_multiple(val)
 
   def __repr__(self):
-    arg_suffix = ' ' + self.arg.ident if self.arg else ''
-    return f'{self.ident}{self.multiple_suffix}{arg_suffix}'
+    arg_suffix = ' ' + self.argname.elm if self.argname else ''
+    return f'{self.ident}{self._multiple_suffix}{arg_suffix}'
 
   def __iter__(self):
     yield from super().__iter__()
@@ -65,8 +66,8 @@ class Option(base.Leaf):
         yield 'default', self.default
       if self.doc:
         yield 'doc', self.doc
-    if self.arg:
-      yield 'arg', self.arg.dict
+    if self.argname:
+      yield 'argname', self.argname.elm
 
   def __hash__(self) -> int:
     return hash(self.definition.ident)
@@ -80,11 +81,11 @@ class Option(base.Leaf):
       # The lookahead is to ensure that we don't consume a prefix of another option
       # e.g. --ab matching --abc
       name_p = P.unit(parsers.string(self.ident) << P.lookahead(long_illegal)).mark()
-      arg_p = parsers.char(' =') >> leaves.option_argument
+      arg_p = parsers.char(' =') >> option_argument
     else:
       name_p = parsers.string(self.ident).mark()
-      arg_p = P.optional(parsers.char(' =')) >> leaves.option_argument
-    if self.arg:
+      arg_p = P.optional(parsers.char(' =')) >> option_argument
+    if self.argname:
       return (name_p + arg_p.desc('argument')).parsecmap(lambda n: Option(*n, self.definition))
     else:
       return (
@@ -98,19 +99,20 @@ class Option(base.Leaf):
     if self.ident.startswith('--'):
       return None
     name_p = parsers.string(self.ident[1]).mark()
-    if self.arg:
-      arg_p = P.optional(parsers.char(' =')) >> leaves.option_argument
+    if self.argname:
+      arg_p = P.optional(parsers.char(' =')) >> option_argument
       return (name_p + arg_p).parsecmap(lambda n: Option(*n, self.definition))
     else:
       return name_p.parsecmap(lambda n: Option(n, None, self.definition))
 
-
 long_illegal = parsers.non_symbol_chars | parsers.char('=')
+
+option_argument = (leaves.wrapped_arg ^ leaves.arg_letters).desc('option argument')
 
 usage_long_option = (
   P.unit(
     parsers.string('--') + base.ident(long_illegal)
-  ).parsecmap(helpers.join_string).mark() + P.optional(parsers.char('=') >> leaves.option_argument)
+  ).parsecmap(helpers.join_string).mark() + P.optional(parsers.char('=') >> option_argument)
 ).desc('long option (--long)').parsecmap(lambda n: Option(*n))
 
 short_illegal = parsers.non_symbol_chars
@@ -139,7 +141,7 @@ def option(options: T.List[Option]):
     opts = [opt]
     # multiple short options can be specified like "-abc".
     # Keep parsing if the previously parsed option does not have an argument
-    while not opt.arg:
+    while not opt.argname:
       # Recalculate this parser, the definitions change every iteration
       opt = (yield P.optional(reduce(
         lambda mem, p: p | mem if p else mem,

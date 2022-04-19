@@ -6,7 +6,7 @@ from docopt_parser.util import parsers
 class Command(base.Leaf):
   @property
   def default(self) -> "T.Literal[0] | T.Literal[False]":
-    if self.multiple:
+    if self._multiple:
       return 0
     else:
       return False
