@@ -3,26 +3,36 @@ import parsec as P
 import re
 
 from docopt_parser import base, groups, leaves
-from docopt_parser.util import helpers, parsers
+from docopt_parser.util import helpers, parsers, marks
+
+section_title = P.regex(r'[^\n]*usage:', re.I)  # type: ignore
+non_usage_section_text = P.optional(parsers.text(section_title))
+prog = (
+  base.ident(illegal=(parsers.whitespaces1 | parsers.eol))
+  .desc('a program name').parsecmap(helpers.join_string).mark()
+  .parsecmap(lambda n: marks.Marked(n))
+)
+prog_in_usage = (
+  non_usage_section_text >> section_title
+  >> P.optional(parsers.nl + parsers.indent) >> parsers.whitespaces
+  >> prog << parsers.text(None)
+)
+
 
 def usage(options: T.List[leaves.Option]):
   @P.generate('usage section')
   def p() -> helpers.GeneratorParser[groups.Choice]:
-    section_title = P.regex(r'[^\n]*usage:', re.I)  # type: ignore
-    non_usage_section_text = P.optional(parsers.text(section_title))
 
     yield non_usage_section_text
     start = yield parsers.location
     yield section_title
     yield P.optional(parsers.nl + parsers.indent)
-    prog = yield parsers.whitespaces >> P.lookahead(
-      base.ident(illegal=(parsers.whitespaces1 | parsers.eol)).parsecmap(helpers.join_string).desc('a program name')
-    )
+    prog_name = yield parsers.whitespaces >> P.lookahead(prog)
 
     next_line = parsers.eol + parsers.indent
     lines: T.List[groups.Choice] = []
     while True:
-      lines.append((yield usage_line(prog, options)))
+      lines.append((yield usage_line(prog_name.elm, options)))
       if (yield P.lookahead(P.optional(next_line))) is None:
         break
       yield next_line

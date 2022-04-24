@@ -17,7 +17,7 @@ except ImportError:
   __version__ = '0.0.0-dev'
 
 __all__ = [
-  'parse', 'DocoptError', 'DocoptParseError', '__version__', '__doc__',
+  'parse', 'get_prog', 'DocoptError', 'DocoptParseError', '__version__', '__doc__',
   'Group', 'Leaf', 'Node',
   'Choice', 'Optional', 'Repeatable', 'Sequence',
   'Argument', 'ArgumentSeparator', 'Command', 'OptionsShortcut', 'Option',
@@ -36,6 +36,24 @@ def parse(text: str) -> Group:
     root = usage.usage(options).parse_strict(text)
     root = post_processors.post_process_ast(root, documented_options, text)
     return root
+  except errors.DocoptParseError as e:
+    if e.mark is not None:
+      raise errors.DocoptError(e.mark.show(text, e.message), e.exit_code) from e
+    else:
+      raise errors.DocoptError(e.message, e.exit_code) from e
+  except P.ParseError as e:
+    (line, col) = e.loc_info(e.text, e.index)
+    loc = marks.Location((line, col))
+    err = re.sub(f'{line}:{col}$', str(loc), str(e))
+    raise errors.DocoptError(loc.show(text, err)) from e
+
+
+def get_prog(text: str) -> Marked[str]:
+  import parsec as P
+  from docopt_parser import usage
+  from docopt_parser.util import errors, marks
+  try:
+    return usage.prog_in_usage.parse_strict(text)
   except errors.DocoptParseError as e:
     if e.mark is not None:
       raise errors.DocoptError(e.mark.show(text, e.message), e.exit_code) from e

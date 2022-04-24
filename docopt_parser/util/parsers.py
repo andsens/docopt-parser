@@ -28,7 +28,7 @@ def char(legal: "str | P.Parser[str]" = any_char, illegal: "P.Parser[T.Any] | st
   else:
     return a
 
-def text(illegal: "P.Parser[T.Any] | str"):
+def text(illegal: "P.Parser[T.Any] | str | None"):
   return P.many1(char(illegal=illegal)).desc('Text').parsecmap(helpers.join_string).mark()
 
 def string(s: str) -> "P.Parser[str]":
