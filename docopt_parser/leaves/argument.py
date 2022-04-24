@@ -31,4 +31,3 @@ def uppercase_arg() -> helpers.GeneratorParser[marks.MarkedTuple[str]]:
   return (((0, 0), '', (0, 0)))  # Will never return, this is just to make the typechecker happy
 
 argument = (wrapped_arg ^ uppercase_arg).desc('argument').parsecmap(lambda n: Argument(n))
-

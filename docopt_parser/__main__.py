@@ -10,7 +10,6 @@ import yaml
 # pyright: reportUnknownVariableType=false
 from docopt_parser import DocoptError, parse, __doc__ as pkg_doc, \
   __name__ as root_name, __version__
-# , merge_identical_leaves
 
 log = logging.getLogger(root_name)
 
@@ -23,7 +22,7 @@ Usage:
 Options:
   -y --yaml  Output the AST in YAML format
   --help -h  Show this help screen
-  --version  Show the docopt.sh version
+  --version  Show the docopt-parser version
 """
 Params = T.TypedDict('Params', {'--yaml': bool, 'ast': bool})
 
@@ -32,7 +31,6 @@ def docopt_parser(params: Params):
     text = sys.stdin.read()
     ast = parse(text)
     if params['ast']:
-      # ast = merge_identical_leaves(ast)
       sys.stdout.write(yaml.dump(ast.dict, sort_keys=False) if params['--yaml'] else repr(ast) + '\n')
   except DocoptError as e:
     log.error(str(e))
