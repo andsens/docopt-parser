@@ -8,7 +8,7 @@ from docopt_parser.groups import Choice, Optional, Repeatable, Sequence
 from docopt_parser.leaves import Argument, ArgumentSeparator, Command, OptionsShortcut, Option
 from docopt_parser.util import DocoptError, DocoptParseError, \
   LineNumber, Location, LocInfo, Marked, MarkedTuple, Range, RangeTuple
-from docopt_parser.util.post_processors import merge_identical_leaves
+from docopt_parser.util.post_processors import merge_identical_leaves, merge_identical_groups
 
 __version__: str
 try:
@@ -22,7 +22,7 @@ __all__ = [
   'Choice', 'Optional', 'Repeatable', 'Sequence',
   'Argument', 'ArgumentSeparator', 'Command', 'OptionsShortcut', 'Option',
   'LineNumber', 'Location', 'LocInfo', 'Marked', 'MarkedTuple', 'Range', 'RangeTuple',
-  'merge_identical_leaves',
+  'merge_identical_leaves', 'merge_identical_groups'
 ]
 
 

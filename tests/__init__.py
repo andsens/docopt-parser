@@ -28,7 +28,7 @@ def idents(illegal: str, starts_with: "HS.SearchStrategy[str] | None" = None):
   else:
     return HS.text(alphabet=chars(illegal=illegal), min_size=1)
 
-def not_re(*args: re.Pattern[str]):
+def not_re(*args: "re.Pattern[str]"):
   def check(s: str):
     return all((r.search(s) is None for r in args))
   return check

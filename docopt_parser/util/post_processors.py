@@ -247,3 +247,16 @@ def merge_identical_leaves(root: base.Group, ignore_option_args: bool = False) -
       known_leaves.add(node)
     return node
   return T.cast(base.Group, root.replace(merge))
+
+
+def merge_identical_groups(root: base.Group) -> base.Group:
+  known_groups: T.Set[base.Group] = set()
+
+  def merge(node: base.Node):
+    if isinstance(node, base.Group):
+      for group in known_groups:
+        if type(node) == type(group) and node.items == group.items:
+          return group
+      known_groups.add(node)
+    return node
+  return T.cast(base.Group, root.replace(merge))
