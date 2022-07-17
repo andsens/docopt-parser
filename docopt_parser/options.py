@@ -54,7 +54,7 @@ def documented_option(options: T.List[leaves.Option]):
   def p() -> helpers.GeneratorParser[None]:
     short_alias: "marks.MarkedTuple[str] | None" = None
     opts: T.List[T.Tuple[marks.MarkedTuple[str], "marks.MarkedTuple[str] | None"]] = []
-    opt_def: T.Tuple[marks.MarkedTuple[str], "marks.MarkedTuple[str] | None"] | None = None
+    opt_def: "T.Tuple[marks.MarkedTuple[str], marks.MarkedTuple[str] | None] | None" = None
     while True:
       opt = yield option_line_long | option_line_short
       if opt[0][1].startswith('--'):

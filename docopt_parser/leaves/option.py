@@ -2,7 +2,7 @@ from functools import reduce
 import typing as T
 import parsec as P
 
-from docopt_parser import base, leaves, groups
+from docopt_parser import base, leaves
 from docopt_parser.util import helpers, marks, parsers
 
 class Option(base.Leaf):
@@ -130,8 +130,7 @@ usage_shortlist_option = (
 
 def option(options: T.List[Option]):
   @P.generate('option')
-  def p() -> helpers.GeneratorParser[groups.Sequence]:
-    start = yield parsers.location
+  def p() -> helpers.GeneratorParser[T.List[leaves.Option]]:
     opt = yield reduce(
       lambda mem, p: p | mem,
       [o.atom_parser for o in options],
@@ -153,6 +152,5 @@ def option(options: T.List[Option]):
       opts.append(opt)
       if opt not in options:
         options.append(opt)
-    end = yield parsers.location
-    return groups.Sequence((start, opts, end))
+    return opts
   return p

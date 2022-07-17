@@ -17,7 +17,7 @@ class Group(base.Node):
       memo = function(memo, item)
       if isinstance(item, Group):
         memo = item.reduce(function, memo)
-    return memo
+    return function(memo, self)
 
   _U = T.TypeVar('_U', bound=base.Node)
   _V = T.TypeVar('_V', bound="base.Node | None")

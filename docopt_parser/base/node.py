@@ -1,5 +1,5 @@
 import typing as T
-from abc import ABC
+import abc
 
 from docopt_parser.util import marks
 
@@ -9,7 +9,7 @@ IterVal = T.Union[
 ]
 DictGenerator = T.Generator[T.Tuple[str, IterVal], None, None]
 
-class Node(ABC):
+class Node(abc.ABC):
   mark: marks.Range
   _previous_dict: "T.Dict[str, IterVal] | None" = None
 
@@ -35,3 +35,18 @@ class Node(ABC):
     if self._previous_dict is None or new_dict != self._previous_dict:
       self._previous_dict = new_dict
     return self._previous_dict
+
+  _T = T.TypeVar('_T')
+
+  @abc.abstractmethod
+  def reduce(self, function: "T.Callable[[_T, Node], _T]", memo: _T) -> _T:
+    pass
+
+  _U = T.TypeVar('_U', bound="Node")
+  _V = T.TypeVar('_V', bound="Node | None")
+
+  def replace(self, function: T.Callable[[_U], _V]) -> _V:
+    return function(self)
+
+  def walk(self, function: T.Callable[[_U], None]):
+    pass

@@ -21,12 +21,19 @@ class Repeatable(base.Group):
 
 
 def atom(options: T.List[leaves.Option]):
-  return (
-    group(options) | optional(options)
-    | leaves.options_shortcut | leaves.arg_separator
-    | leaves.option(options)
-    | leaves.argument | leaves.command
-  ).desc('any element (cmd, ARG, options, --option, (group), [optional], --)')
+  @P.generate('any element (cmd, ARG, options, --option, (group), [optional], --)')
+  def p() -> helpers.GeneratorParser[T.List[base.Node]]:
+    nodes = yield (
+      group(options) | optional(options)
+      | leaves.options_shortcut | leaves.arg_separator
+      | leaves.option(options)
+      | leaves.argument | leaves.command
+    )
+    if isinstance(nodes, base.Node):
+      return [nodes]
+    else:
+      return nodes
+  return p
 
 # We don't use sepBy and sepEndBy in sequence and expr because their termination
 # works by relying on the parser failing. This would result in those parsers
@@ -36,30 +43,36 @@ sequence_terminators = parsers.char('|)]\n\r\b\f\x1B\x07\0') | P.eof()
 
 def sequence(options: T.List[leaves.Option]):
   @P.generate('sequence')
-  def p() -> helpers.GeneratorParser[Sequence]:
+  def p() -> helpers.GeneratorParser[base.Node]:
     nodes: T.List[base.Node] = []
     start = yield parsers.location
     while (yield P.lookahead(P.optional(sequence_terminators.result(True)))) is None:
-      node, repeat = yield (atom(options) + P.optional(P.unit(parsers.whitespaces >> parsers.ellipsis.mark())))
+      atoms, repeat = yield (atom(options) + P.optional(P.unit(parsers.whitespaces >> parsers.ellipsis.mark())))
       if repeat is not None:
         # The node.mark.start is not a typo, we want it's start to span across the entire repeatable group
-        node = Repeatable((node.mark.start.to_tuple(), [node], repeat[2]))
-      nodes.append(node)
+        atoms = [Repeatable((atoms[-1].mark.start.to_tuple(), atoms, repeat[2]))]
+      nodes += atoms
       if (yield P.optional(parsers.whitespaces1)) is None:
         break
     end = yield parsers.location
-    return Sequence(((start, nodes, end)))
+    if len(nodes) == 1:
+      return nodes[0]
+    else:
+      return Sequence(((start, nodes, end)))
   return p
 
 def expr(options: T.List[leaves.Option]):
   @P.generate('expression')
-  def p() -> helpers.GeneratorParser[Choice]:
+  def p() -> helpers.GeneratorParser[base.Node]:
     start = yield parsers.location
-    nodes: T.List[base.Node] = [(yield sequence(options))]
+    nodes: T.List[base.Group] = [(yield sequence(options))]
     while (yield P.optional((parsers.either << parsers.whitespaces))) is not None:
       nodes.append((yield sequence(options)))
     end = yield parsers.location
-    return Choice(((start, nodes, end)))
+    if len(nodes) == 1:
+      return nodes[0]
+    else:
+      return Choice(((start, nodes, end)))
   return p
 
 def group(options: T.List[leaves.Option]):
@@ -69,5 +82,8 @@ def group(options: T.List[leaves.Option]):
 
 def optional(options: T.List[leaves.Option]):
   return (
-    parsers.char('[') >> parsers.whitespaces >> expr(options).parsecmap(lambda n: [n]) << parsers.char(']')
-  ).mark().desc('optional').parsecmap(lambda n: Optional(n))
+    parsers.char('[') >> parsers.whitespaces >> expr(options) << parsers.char(']')
+  ).mark().desc('optional').parsecmap(
+    # Strip the implicit <Sequence> if one exists, it is easier to parse this way but semantically incorrect
+    lambda n: Optional((n[0], n[1].items if isinstance(n[1], Sequence) else [n[1]], n[2]))
+  )

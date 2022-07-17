@@ -10,6 +10,7 @@ import yaml
 # pyright: reportUnknownVariableType=false
 from docopt_parser import DocoptError, parse, __doc__ as pkg_doc, \
   __name__ as root_name, __version__
+from docopt_parser.util.post_processors import collapse_groups, merge_identical_groups, merge_identical_leaves
 
 log = logging.getLogger(root_name)
 
@@ -30,6 +31,9 @@ def docopt_parser(params: Params):
   try:
     text = sys.stdin.read()
     ast = parse(text)
+    ast = merge_identical_leaves(ast, ignore_option_args=True)
+    ast = merge_identical_groups(ast)
+    ast = collapse_groups(ast)
     if params['ast']:
       sys.stdout.write(yaml.dump(ast.dict, sort_keys=False) if params['--yaml'] else repr(ast) + '\n')
   except DocoptError as e:

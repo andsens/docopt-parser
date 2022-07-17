@@ -43,7 +43,7 @@ def usage(options: T.List[leaves.Option]):
   return p
 
 
-def usage_line(prog: str, options: T.List[leaves.Option]) -> "P.Parser[groups.Choice]":
+def usage_line(prog: str, options: T.List[leaves.Option]):
   return parsers.string(prog) >> (
     (
       P.lookahead(parsers.eol) >> parsers.whitespaces

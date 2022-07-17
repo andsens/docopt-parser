@@ -46,3 +46,17 @@ class Leaf(base.Node):
   def __iter__(self):
     yield from super().__iter__()
     yield 'ident', self.ident
+
+  _T = T.TypeVar('_T')
+
+  def reduce(self, function: "T.Callable[[_T, base.Node], _T]", memo: _T) -> _T:
+    return function(memo, self)
+
+  _U = T.TypeVar('_U', bound="base.Node")
+  _V = T.TypeVar('_V', bound="base.Node | None")
+
+  def replace(self, function: T.Callable[[_U], _V]):
+    return function(self)
+
+  def walk(self, function: T.Callable[[_U], None]):
+    function(self)

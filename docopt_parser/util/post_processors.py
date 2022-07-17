@@ -1,6 +1,7 @@
 import typing as T
 from ordered_set import OrderedSet
 import logging
+import inspect
 
 from docopt_parser import base, leaves, groups
 
@@ -15,13 +16,13 @@ def post_process_ast(root: base.Group, documented_options: T.List[leaves.Option]
   #     prog ARG
   #     prog cmd <--
   # TODO: Merge nested Repeatables with only one child
-
   populate_shortcuts(root, documented_options, text)
-  root = convert_root_to_optional_on_empty_lines(root)
-  root = collapse_groups(root)
-  mark_multiple(root)
-  merge_identical_leaves(root)
-  return root
+  # print(new_root)
+  new_root = convert_root_to_optional_on_empty_lines(root)
+  new_root = collapse_groups(new_root)
+  mark_multiple(new_root)
+  merge_identical_leaves(new_root)
+  return new_root
 
 
 def populate_shortcuts(root: base.Group, documented_options: T.List[leaves.Option], text: str) -> None:
@@ -74,76 +75,72 @@ def convert_root_to_optional_on_empty_lines(root: base.Group) -> base.Group:
   return root
 
 
-def collapse_groups(root: base.Group) -> base.Group:
+def collapse_groups(root: base.Node) -> base.Node:
+  changed = True
   root_mark = root.mark
-
-  def coerce_to_sequence(node: "base.Node | None") -> base.Group:
-    if node is None:
-      items: T.List[base.Node] = []
-      return groups.Sequence(root_mark << items)
-    elif not isinstance(node, base.Group):
-      return groups.Sequence(root_mark << [node])
-    return node
 
   # A [] B () -> A B
   def remove_empty_groups(node: TNode) -> "TNode | None":
+    nonlocal changed
     if isinstance(node, base.Group) and len(node.items) == 0:
+      changed = True
+      # print(inspect.stack()[0].function)
       return None
     return node
-  root = coerce_to_sequence(root.replace(remove_empty_groups))
 
   # A (B) C -> A B C
   def remove_intermediate_groups_with_one_item(node: base.Node) -> base.Node:
+    nonlocal changed
     if isinstance(node, (groups.Choice, groups.Sequence)) and len(node.items) == 1:
+      changed = True
+      # print(inspect.stack()[0].function)
       node.items[0].mark = node.mark
       return node.items[0]
     return node
-  root = coerce_to_sequence(root.replace(remove_intermediate_groups_with_one_item))
 
   # A (B C) -> A B C
   def merge_nested_sequences(node: base.Node):
+    nonlocal changed
     if isinstance(node, groups.Sequence):
       new_items: T.List[base.Node] = []
       for item in node.items:
         if isinstance(item, groups.Sequence):
+          changed = True
+          # print(inspect.stack()[0].function)
           new_items += item.items
         else:
           new_items.append(item)
       node.items = new_items
-  root.walk(merge_nested_sequences)
 
   # [A [B [C]]] -> [A B C]
   def merge_nested_optionals(node: base.Node):
+    nonlocal changed
     if isinstance(node, groups.Optional):
       new_items: T.List[base.Node] = []
       for item in node.items:
         if isinstance(item, groups.Optional):
+          changed = True
+          # print(inspect.stack()[0].function)
           new_items += item.items
         else:
           new_items.append(item)
       node.items = new_items
-  root.walk(merge_nested_optionals)
-
-  # Not represented in the usage, but just a result of how the parser works
-  def remove_root_sequence_in_optionals(node: base.Node):
-    if isinstance(node, groups.Optional):
-      if isinstance(node.items[0], groups.Sequence):
-        assert len(node.items) == 1
-        node.items = node.items[0].items
-  root.walk(remove_root_sequence_in_optionals)
 
   # (A) -> A
   # Must run after remove_root_sequence_in_optionals so that [(a b c)] does not become [a b c]
   def dissolve_groups(node: base.Node) -> base.Node:
+    nonlocal changed
     if isinstance(node, groups.Group):
+      changed = True
+      # print(inspect.stack()[0].function)
       assert len(node.items) == 1
       node.items[0].mark = node.mark
       return node.items[0]
     return node
-  root = coerce_to_sequence(root.replace(dissolve_groups))
 
   # (A B C) (D E F) -> A B C D E F
   def merge_neighboring_sequences(node: base.Node):
+    nonlocal changed
     new_items: T.List[base.Node] = []
     if isinstance(node, groups.Sequence):
       new_items: T.List[base.Node] = []
@@ -153,6 +150,8 @@ def collapse_groups(root: base.Group) -> base.Group:
       while left is not None:
         right = next(item_list, None)
         if isinstance(left, groups.Sequence) and isinstance(right, groups.Sequence):
+          changed = True
+          # print(inspect.stack()[0].function)
           left.items = list(left.items) + list(right.items)
           left.mark.end = right.mark.end
           # Skip the right Sequence in the next iteration, but repeat for the left Sequence
@@ -161,33 +160,73 @@ def collapse_groups(root: base.Group) -> base.Group:
         new_items.append(left)
         left = right
       node.items = new_items
-  root.walk(merge_neighboring_sequences)
 
   # A|(B|C) -> A|B|C
   def merge_nested_choices(node: base.Node):
+    nonlocal changed
     if isinstance(node, groups.Choice):
       new_items: T.List[base.Node] = []
       for item in node.items:
         if isinstance(item, groups.Choice):
+          changed = True
+          # print(inspect.stack()[0].function)
           new_items += item.items
         else:
           new_items.append(item)
       node.items = new_items
-  root.walk(merge_nested_choices)
 
   # (A...)... -> A...
   def remove_nested_repeatables(node: base.Node) -> base.Node:
+    nonlocal changed
     if isinstance(node, (groups.Repeatable)):
-      assert len(node.items) == 1
       if isinstance(node.items[0], (groups.Repeatable)):
+        changed = True
+        # print(inspect.stack()[0].function)
         return node.items[0]
     return node
-  root = coerce_to_sequence(root.replace(remove_nested_repeatables))
 
-  return root
+  # A|A -> A
+  def remove_same_choice(node: base.Node):
+    nonlocal changed
+    if isinstance(node, (groups.Choice)):
+      new_items: T.List[base.Node] = []
+      for item in node.items:
+        if not any([item == new_item for new_item in new_items]):
+          new_items.append(item)
+        else:
+          changed = True
+          # print(inspect.stack()[0].function)
+      node.items = new_items
+
+  new_root = root.replace(dissolve_groups)
+  if new_root is None:
+    return groups.Sequence(root_mark << [])
+  i = 0
+  # Run until nothing can be remove any longer
+  while changed:
+    changed = False
+    new_root = new_root.replace(remove_empty_groups)
+    if new_root is None:
+      return groups.Sequence(root_mark << [])
+    new_root = new_root.replace(remove_intermediate_groups_with_one_item)
+    if new_root is None:
+      return groups.Sequence(root_mark << [])
+    new_root.walk(merge_nested_sequences)
+    new_root.walk(merge_nested_optionals)
+    new_root.walk(merge_neighboring_sequences)
+    new_root.walk(merge_nested_choices)
+    new_root = new_root.replace(remove_nested_repeatables)
+    if new_root is None:
+      return groups.Sequence(root_mark << [])
+    new_root.walk(remove_same_choice)
+    i += 1
+    if i > 100:
+      raise Exception(new_root)
+
+  return new_root
 
 
-def mark_multiple(root: base.Group) -> None:
+def mark_multiple(root: base.Node) -> None:
   # Mark leaves that can be specified multiple times
   marked_leaves: T.Set[base.Leaf] = set()
 
@@ -232,7 +271,7 @@ def mark_multiple(root: base.Group) -> None:
   root.replace(mark_identical_nodes)
 
 
-def merge_identical_leaves(root: base.Group, ignore_option_args: bool = False) -> base.Group:
+def merge_identical_leaves(root: base.Node, ignore_option_args: bool = False) -> base.Node:
   known_leaves: T.Set[base.Leaf] = set()
 
   def merge(node: base.Node):
@@ -246,17 +285,25 @@ def merge_identical_leaves(root: base.Group, ignore_option_args: bool = False) -
           return leaf
       known_leaves.add(node)
     return node
-  return T.cast(base.Group, root.replace(merge))
+  new_root = root.replace(merge)
+  if new_root is None:
+    return groups.Sequence(root.mark << [])
+  else:
+    return new_root
 
 
-def merge_identical_groups(root: base.Group) -> base.Group:
+def merge_identical_groups(root: base.Node) -> base.Node:
   known_groups: T.Set[base.Group] = set()
 
-  def merge(node: base.Node):
+  def merge(node: base.Node) -> base.Node:
     if isinstance(node, base.Group):
       for group in known_groups:
         if type(node) == type(group) and node.items == group.items:
           return group
       known_groups.add(node)
     return node
-  return T.cast(base.Group, root.replace(merge))
+  new_root = root.replace(merge)
+  if new_root is None:
+    return groups.Sequence(root.mark << [])
+  else:
+    return new_root
