@@ -16,7 +16,7 @@ classifiers = [
 packages = [{ include = "docopt_parser" }]
 
 [tool.poetry.dependencies]
-python = ">=3.7"
+python = ">=3.7.2,<4.0"
 docopt = "^0.6.2"
 termcolor = "^1.1.0"
 parsec = "^3.13"
@@ -25,6 +25,7 @@ typing_extensions = "^4.1.1"
 ordered-set = "^4.1.0"
 
 [tool.poetry.dev-dependencies]
+pylint = "^2.15.4"
 flake8 = "^4.0.0"
 pytest = "^7.1.1"
 pytest-xdist = "^2.5.0"
