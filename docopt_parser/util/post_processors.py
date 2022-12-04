@@ -106,7 +106,6 @@ def collapse_groups(root: base.Node) -> base.Node:
       for item in node.items:
         if isinstance(item, groups.Sequence):
           changed = True
-          # print(inspect.stack()[0].function)
           new_items += item.items
         else:
           new_items.append(item)
@@ -120,7 +119,6 @@ def collapse_groups(root: base.Node) -> base.Node:
       for item in node.items:
         if isinstance(item, groups.Optional):
           changed = True
-          # print(inspect.stack()[0].function)
           new_items += item.items
         else:
           new_items.append(item)
@@ -151,7 +149,6 @@ def collapse_groups(root: base.Node) -> base.Node:
         right = next(item_list, None)
         if isinstance(left, groups.Sequence) and isinstance(right, groups.Sequence):
           changed = True
-          # print(inspect.stack()[0].function)
           left.items = list(left.items) + list(right.items)
           left.mark.end = right.mark.end
           # Skip the right Sequence in the next iteration, but repeat for the left Sequence
@@ -169,7 +166,6 @@ def collapse_groups(root: base.Node) -> base.Node:
       for item in node.items:
         if isinstance(item, groups.Choice):
           changed = True
-          # print(inspect.stack()[0].function)
           new_items += item.items
         else:
           new_items.append(item)
@@ -195,7 +191,6 @@ def collapse_groups(root: base.Node) -> base.Node:
           new_items.append(item)
         else:
           changed = True
-          # print(inspect.stack()[0].function)
       node.items = new_items
 
   new_root = root.replace(dissolve_groups)
