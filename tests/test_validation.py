@@ -33,7 +33,7 @@ Options:
 ''')
 
 def test_missing_arg_from_doc():
-  with PT.raises(DocoptError, match=r'.*' + re.escape('expected: argument at') + r'.*'):
+  with PT.raises(DocoptError, match=r'.*' + re.escape('expected: \'argument\' at') + r'.*'):
     parse('''Usage:
   prog -a
 
@@ -42,7 +42,7 @@ Options:
 ''')
 
 def test_missing_arg_from_usage():
-  with PT.raises(DocoptError, match=r'.*' + re.escape('expected: argument at') + r'.*'):
+  with PT.raises(DocoptError, match=r'.*' + re.escape('expected: \'argument\' at') + r'.*'):
     parse('''Usage:
   prog --long=F
   prog --long
