@@ -2,7 +2,7 @@
   "name": "Python 3",
   "image": "mcr.microsoft.com/vscode/devcontainers/python:0-3.11",
   "settings": {
-    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.typeCheckingMode": "strict",
     "python.defaultInterpreterPath": ".venv/bin/python",
     "python.linting.enabled": true,
     "python.linting.flake8Enabled": true,

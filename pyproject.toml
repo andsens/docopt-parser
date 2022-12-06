@@ -29,6 +29,10 @@ disable = [
 max-line-length = 120
 ignore = "E111,E114,E121,W503,E302,E303,E305"
 
+[tool.pyright]
+include = ["docopt_parser", "tests"]
+typeCheckingMode = "strict"
+
 [tool.poetry.dependencies]
 python = ">=3.11.0,<4.0"
 docopt = "^0.6.2"
@@ -49,73 +53,6 @@ pyright = "^1.1.238"
 [tool.poetry.scripts]
 docopt-parser = "docopt_parser.__main__:main"
 
-[tool.pyright]
-include = ["docopt_parser", "tests"]
-strict = ["docopt_parser", "tests"]
-strictListInference = true
-strictDictionaryInference = true
-strictSetInference = true
-strictParameterNoneValue = true
-enableTypeIgnoreComments = true
-reportGeneralTypeIssues = true
-reportPropertyTypeMismatch = true
-reportFunctionMemberAccess = true
-reportMissingImports = true
-reportMissingModuleSource = true
-reportMissingTypeStubs = true
-reportImportCycles = false
-reportUnusedImport = true
-reportUnusedClass = true
-reportUnusedFunction = true
-reportUnusedVariable = true
-reportDuplicateImport = true
-reportWildcardImportFromLibrary = true
-reportOptionalSubscript = true
-reportOptionalMemberAccess = true
-reportOptionalCall = true
-reportOptionalIterable = true
-reportOptionalContextManager = true
-reportOptionalOperand = true
-reportTypedDictNotRequiredAccess = true
-reportUntypedFunctionDecorator = true
-reportUntypedClassDecorator = true
-reportUntypedBaseClass = true
-reportUntypedNamedTuple = true
-reportPrivateUsage = true
-reportPrivateImportUsage = true
-reportConstantRedefinition = true
-reportIncompatibleMethodOverride = true
-reportIncompatibleVariableOverride = true
-reportInconsistentConstructor = true
-reportOverlappingOverload = true
-reportMissingSuperCall = true
-reportUninitializedInstanceVariable = true
-reportInvalidStringEscapeSequence = true
-reportUnknownParameterType = true
-reportUnknownArgumentType = true
-reportUnknownLambdaType = true
-reportUnknownVariableType = true
-reportUnknownMemberType = true
-reportMissingParameterType = true
-reportMissingTypeArgument = true
-reportInvalidTypeVarUse = true
-reportCallInDefaultInitializer = true
-reportUnnecessaryIsInstance = true
-reportUnnecessaryCast = true
-reportUnnecessaryComparison = true
-reportAssertAlwaysTrue = true
-reportSelfClsParameterName = true
-reportImplicitStringConcatenation = true
-reportUndefinedVariable = true
-reportUnboundVariable = true
-reportInvalidStubStatement = true
-reportIncompleteStub = true
-reportUnsupportedDunderAll = true
-reportUnusedCallResult = false
-reportUnusedCoroutine = true
-reportUnusedExpression = true
-reportUnnecessaryTypeIgnoreComment = true
-reportMatchNotExhaustive = true
 
 [build-system]
 requires = ["poetry_core>=1.0.0"]
