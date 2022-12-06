@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import typing as T
 from functools import total_ordering
 
@@ -10,11 +11,11 @@ MarkedTuple = T.Tuple[LocInfo, _T, LocInfo]
 
 class ByteCount(int):
 
-  def show(self, text: "T.List[str] | str", message: "str | None" = None):
+  def show(self, text: T.List[str] | str, message: str | None = None):
     lines = text if isinstance(text, list) else text.split('\n')
     return self.to_location(lines).show(lines, message)
 
-  def to_location(self, text: "T.List[str] | str") -> "Location":
+  def to_location(self, text: T.List[str] | str) -> "Location":
     lines = text if isinstance(text, list) else text.split('\n')
     count = self
     for line_no, line in enumerate(lines):
@@ -41,14 +42,15 @@ class LineNumber(int):
     return len(f'{(self + 1):02d} ')
 
 @total_ordering
-class Location(object):
+@dataclass(frozen=True, init=False, eq=False, repr=False)
+class Location:
   line: LineNumber
   col: int
 
   def __init__(self, loc: LocInfo):
     super().__init__()
-    self.line = LineNumber(loc[0])
-    self.col = loc[1]
+    object.__setattr__(self, 'line', LineNumber(loc[0]))
+    object.__setattr__(self, 'col', loc[1])
 
   def __eq__(self, other: object):
     return isinstance(other, Location) and self.line == other.line and self.col == other.col
@@ -74,14 +76,15 @@ class Location(object):
     return f'{self.line.show(text)}\n{col_offset}^{message}'
 
 @total_ordering
-class Range(object):
+@dataclass(frozen=True, eq=False)
+class Range:
   start: Location
   end: Location
 
   def __init__(self, range: RangeTuple):
     super().__init__()
-    self.start = Location(range[0])
-    self.end = Location(range[1])
+    object.__setattr__(self, 'start', Location(range[0]))
+    object.__setattr__(self, 'end', Location(range[1]))
 
   def __eq__(self, other: object):
     return isinstance(other, Range) and self.start == other.start and self.end == other.end
@@ -116,8 +119,7 @@ class Range(object):
     # If "end" is at column 0 on a new line,
     # move the location back to the end of the previous line.
     if end.col == 0 and end > start:
-      end.line = LineNumber(end.line - 1)
-      end.col = len(lines[end.line])
+      end = Location((end.line - 1, len(lines[end.line])))
     if start.line == end.line:
       line = lines[start.line]
       if line.strip() == line[start.col:end.col].strip():
@@ -136,9 +138,10 @@ class Range(object):
       end_col_offset = ' ' * (end.col + end.line.prefix_length)
       return f'{start_col_offset}V\n{all_lines}\n{end_col_offset}^'
 
+@dataclass(frozen=True)
 class Marked(Range, T.Generic[_T]):
   elm: _T
 
   def __init__(self, mark: MarkedTuple[_T]):
     super().__init__((mark[0], mark[2]))
-    self.elm = mark[1]
+    object.__setattr__(self, 'elm', mark[1])

@@ -1,12 +1,11 @@
 import typing as T
 import parsec as P
-
 from docopt_parser import base
 from docopt_parser.util import helpers, marks, parsers
 
 class Argument(base.Leaf):
   @property
-  def default(self) -> "T.List[str] | None":
+  def default(self) -> T.List[str] | None:
     if self._multiple:
       return []
     else:

@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-import typing as T
-import sys
-import os
-import docopt
 import logging
+import os
+import sys
+import typing as T
+import docopt
 import termcolor
 import yaml
 
-# pyright: reportUnknownVariableType=false
 from docopt_parser import DocoptError, parse, __doc__ as pkg_doc, \
   __name__ as root_name, __version__
-from docopt_parser.util.post_processors import collapse_groups, merge_identical_groups, merge_identical_leaves
+from docopt_parser.util.post_processors import collapse_groups, \
+  merge_identical_groups, merge_identical_leaves
 
 log = logging.getLogger(root_name)
 
@@ -35,10 +35,11 @@ def docopt_parser(params: Params):
     ast = merge_identical_groups(ast)
     ast = collapse_groups(ast)
     if params['ast']:
-      sys.stdout.write(yaml.dump(ast.dict, sort_keys=False) if params['--yaml'] else repr(ast) + '\n')
-  except DocoptError as e:
-    log.error(str(e))
-    sys.exit(e.exit_code)
+      sys.stdout.write(
+        yaml.dump(ast.dict, sort_keys=False) if params['--yaml'] else repr(ast) + '\n')
+  except DocoptError as err:
+    log.error(str(err))
+    sys.exit(err.exit_code)
 
 
 def setup_logging():
@@ -50,8 +51,8 @@ def setup_logging():
   class ColorFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord):
-        record.msg = termcolor.colored(str(record.msg), level_colors.get(record.levelno, None))
-        return super(ColorFormatter, self).format(record)
+      record.msg = termcolor.colored(str(record.msg), level_colors.get(record.levelno, None))
+      return super().format(record)
 
   stderr = logging.StreamHandler(sys.stderr)
   if os.isatty(2):

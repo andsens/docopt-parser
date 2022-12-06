@@ -1,5 +1,4 @@
 import typing as T
-
 from docopt_parser import base
 from docopt_parser.util import marks
 

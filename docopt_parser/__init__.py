@@ -17,7 +17,7 @@ except ImportError:
   __version__ = '0.0.0-dev'
 
 __all__ = [
-  'parse', 'get_prog', 'DocoptError', 'DocoptParseError', '__version__', '__doc__',
+  'parse', 'get_prog', 'DocoptError', 'DocoptParseError', '__version__',
   'Group', 'Leaf', 'Node',
   'Choice', 'Optional', 'Repeatable', 'Sequence',
   'Argument', 'ArgumentSeparator', 'Command', 'OptionsShortcut', 'Option',

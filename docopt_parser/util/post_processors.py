@@ -1,9 +1,9 @@
 import typing as T
 from ordered_set import OrderedSet
 import logging
-import inspect
 
 from docopt_parser import base, leaves, groups
+from docopt_parser.util.marks import Range
 
 log = logging.getLogger(__name__)
 TNode = T.TypeVar('TNode', bound=base.Node)
@@ -150,7 +150,7 @@ def collapse_groups(root: base.Node) -> base.Node:
         if isinstance(left, groups.Sequence) and isinstance(right, groups.Sequence):
           changed = True
           left.items = list(left.items) + list(right.items)
-          left.mark.end = right.mark.end
+          left.mark = Range(((left.mark.start.line, left.mark.start.col), (right.mark.end.line, right.mark.end.col)))
           # Skip the right Sequence in the next iteration, but repeat for the left Sequence
           # so we can merge with another potential Sequence
           right = left
