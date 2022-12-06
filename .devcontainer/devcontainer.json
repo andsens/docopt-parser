@@ -8,6 +8,7 @@
     "python.linting.flake8Enabled": true,
     "python.linting.flake8Path": ".venv/bin/flake8",
     "python.poetryPath": "${userHome}/.local/bin/poetry",
+    "python.linting.pylintPath": ".venv/bin/pylint",
     "python.testing.pytestEnabled": true,
     "python.testing.pytestPath": ".venv/bin/pytest",
     "python.venvPath": ".venv",
