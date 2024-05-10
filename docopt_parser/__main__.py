@@ -6,9 +6,10 @@ import typing as T
 import docopt
 import termcolor
 import yaml
+import importlib.metadata
 
 from docopt_parser import DocoptError, parse, __doc__ as pkg_doc, \
-  __name__ as root_name, __version__
+  __name__ as root_name
 from docopt_parser.util.post_processors import collapse_groups, \
   merge_identical_groups, merge_identical_leaves
 
@@ -63,7 +64,11 @@ def setup_logging():
 
 def main():
   setup_logging()
-  params = T.cast(Params, docopt.docopt(__doc__, version=__version__))
+  try:
+    version = 'v' + importlib.metadata.version('docopt-parser')
+  except importlib.metadata.PackageNotFoundError:
+    version = 'v0.0.0-dev'
+  params = T.cast(Params, docopt.docopt(__doc__, version=version))
   docopt_parser(params)
 
 

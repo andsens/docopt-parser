@@ -5,3 +5,4 @@ __pycache__/
 /docopt_parser/version.py
 /.hypothesis
 /*.txt
+/dist

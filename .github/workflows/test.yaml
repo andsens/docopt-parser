@@ -2,22 +2,26 @@ name: Lint, typecheck, test
 
 on:
   push:
-    branches: [ '*' ]
+    branches: ['*']
+    tags:
+    - '*'
+    - '!v*' # Don't run on version tags, instead the release workflow will include this file and call the build step
+  workflow_call: {}
   pull_request:
-    branches: [ '*' ]
+    branches: ['*']
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout the project
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: Set up Python 3.11
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
     - name: Cache virtualenv
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: .venv
         key: venv
@@ -33,13 +37,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout the project
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: Set up Python 3.11
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
     - name: Cache virtualenv
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: .venv
         key: venv
@@ -54,20 +58,20 @@ jobs:
         python-version: ['3.11']
     steps:
     - name: Checkout the project
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
     - name: Cache virtualenv
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: .venv
         key: venv
     - name: Install dependencies
       run: .devcontainer/post.sh
     - name: Cache hypothesis DB
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: .hypothesis
         key: hypothesis

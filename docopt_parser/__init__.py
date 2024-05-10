@@ -10,14 +10,8 @@ from docopt_parser.util import DocoptError, DocoptParseError, \
   LineNumber, Location, LocInfo, Marked, MarkedTuple, Range, RangeTuple
 from docopt_parser.util.post_processors import merge_identical_leaves, merge_identical_groups, collapse_groups
 
-__version__: str
-try:
-  from .version import __version__  # type: ignore
-except ImportError:
-  __version__ = '0.0.0-dev'
-
 __all__ = [
-  'parse', 'get_prog', 'DocoptError', 'DocoptParseError', '__version__',
+  'parse', 'get_prog', 'DocoptError', 'DocoptParseError',
   'Group', 'Leaf', 'Node',
   'Choice', 'Optional', 'Repeatable', 'Sequence',
   'Argument', 'ArgumentSeparator', 'Command', 'OptionsShortcut', 'Option',
