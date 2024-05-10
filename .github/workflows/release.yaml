@@ -8,6 +8,7 @@ jobs:
   test:
     uses: ./.github/workflows/test.yaml
   publish:
+    name: Publish docopt-parser to PyPI
     needs: [test]
     runs-on: ubuntu-latest
     environment: release
