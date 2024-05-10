@@ -16,6 +16,10 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: '3.11'
+    - name: Cache virtualenv
+      uses: actions/cache@v3
+      with:
+        path: .venv
     - name: Install dependencies
       run: .devcontainer/post.sh
     - name: Lint with flake8
@@ -33,6 +37,10 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: '3.11'
+    - name: Cache virtualenv
+      uses: actions/cache@v3
+      with:
+        path: .venv
     - name: Install dependencies
       run: .devcontainer/post.sh
     - name: Typecheck with pyright
@@ -49,6 +57,10 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Cache virtualenv
+      uses: actions/cache@v3
+      with:
+        path: .venv
     - name: Install dependencies
       run: .devcontainer/post.sh
     - name: Cache hypothesis DB
