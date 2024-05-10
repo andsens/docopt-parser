@@ -3,7 +3,7 @@
 	"configurations": [
 		{
 			"name": "docopt-parser",
-			"type": "python",
+			"type": "debugpy",
 			"request": "launch",
 			"module": "docopt_parser"
 		}
