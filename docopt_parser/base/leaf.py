@@ -43,7 +43,7 @@ class Leaf(base.Node):
   def __repr__(self):
     return f'{str(type(self).__name__)}{self._multiple_suffix}: {self.ident}'
 
-  def __iter__(self):
+  def __iter__(self):  # type: ignore
     yield from super().__iter__()
     yield 'ident', self.ident
 
@@ -56,7 +56,7 @@ class Leaf(base.Node):
   _V = T.TypeVar('_V', bound="base.Node | None")
 
   def replace(self, function: T.Callable[[_U], _V]):
-    return function(self)
+    return function(self)  # type: ignore
 
   def walk(self, function: T.Callable[[_U], None]):
-    function(self)
+    function(self)  # type: ignore

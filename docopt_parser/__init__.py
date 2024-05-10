@@ -31,9 +31,9 @@ def parse(text: str) -> Node:
   from docopt_parser import usage, leaves
   from docopt_parser.util import post_processors, errors, marks
   try:
-    options = leaves.documented_options.parse_strict(text)
+    options = leaves.documented_options.parse_strict(text)  # type: ignore
     documented_options = options.copy()
-    root = usage.usage(options).parse_strict(text)
+    root = usage.usage(options).parse_strict(text)  # type: ignore
     root = post_processors.post_process_ast(root, documented_options, text)
     return root
   except errors.DocoptParseError as e:
@@ -42,7 +42,7 @@ def parse(text: str) -> Node:
     else:
       raise errors.DocoptError(e.message, e.exit_code) from e
   except P.ParseError as e:
-    (line, col) = e.loc_info(e.text, e.index)
+    (line, col) = e.loc_info(e.text, e.index)  # type: ignore
     loc = marks.Location((line, col))
     err = re.sub(f'{line}:{col}$', str(loc), str(e))
     raise errors.DocoptError(loc.show(text, err)) from e
@@ -53,14 +53,14 @@ def get_prog(text: str) -> Marked[str]:
   from docopt_parser import usage
   from docopt_parser.util import errors, marks
   try:
-    return usage.prog_in_usage.parse_strict(text)
+    return usage.prog_in_usage.parse_strict(text)  # type: ignore
   except errors.DocoptParseError as e:
     if e.mark is not None:
       raise errors.DocoptError(e.mark.show(text, e.message), e.exit_code) from e
     else:
       raise errors.DocoptError(e.message, e.exit_code) from e
   except P.ParseError as e:
-    (line, col) = e.loc_info(e.text, e.index)
+    (line, col) = e.loc_info(e.text, e.index)  # type: ignore
     loc = marks.Location((line, col))
     err = re.sub(f'{line}:{col}$', str(loc), str(e))
     raise errors.DocoptError(loc.show(text, err)) from e

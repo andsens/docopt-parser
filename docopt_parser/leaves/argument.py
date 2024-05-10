@@ -11,7 +11,7 @@ class Argument(base.Leaf):
     else:
       return None
 
-  def __iter__(self):
+  def __iter__(self):  # type: ignore
     yield from super().__iter__()
     yield 'default', self.default
 

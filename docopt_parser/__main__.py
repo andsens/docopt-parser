@@ -14,7 +14,7 @@ from docopt_parser.util.post_processors import collapse_groups, \
 
 log = logging.getLogger(root_name)
 
-__doc__: str = T.cast(str, pkg_doc) + """
+__doc__: str = pkg_doc + """
 Usage:
   docopt-parser [-y] ast
   docopt-parser -h
@@ -51,7 +51,7 @@ def setup_logging():
   class ColorFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord):
-      record.msg = termcolor.colored(str(record.msg), level_colors.get(record.levelno, None))
+      record.msg = termcolor.colored(str(record.msg), level_colors.get(record.levelno, None))  # type: ignore
       return super().format(record)
 
   stderr = logging.StreamHandler(sys.stderr)

@@ -33,22 +33,22 @@ def text(illegal: "P.Parser[T.Any] | str | None"):
 
 def string(s: str) -> "P.Parser[str]":
   '''Parses a string.'''
-  @P.Parser
+  @P.Parser  # type: ignore
   def string_parser(text: str, index: int = 0) -> "P.Value[str]":
     slen = len(s)
     if text[index:index + slen] == s:
-      return P.Value.success(index + slen, s)
+      return P.Value.success(index + slen, s)  # type: ignore
     else:
       return T.cast("P.Value[str]", P.Value.failure(index, s))
   return string_parser
 
-@P.Parser
+@P.Parser  # type: ignore
 def location(text: str, index: int = 0) -> "P.Value[marks.LocInfo]":
   '''Returns the current location of the parser'''
-  return P.Value.success(index, P.ParseError.loc_info(text, index))
+  return P.Value.success(index, P.ParseError.loc_info(text, index))  # type: ignore
 
 def throw(message: str) -> "P.Parser[None]":
-  @P.Parser
+  @P.Parser  # type: ignore
   def throw_parser(text: str, index: int = 0) -> "P.Value[None]":
     '''raises a DocoptParseError'''
     raise errors.DocoptParseError(message, marks.ByteCount(index))

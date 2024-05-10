@@ -46,7 +46,7 @@ class Node(abc.ABC):
   _V = T.TypeVar('_V', bound="Node | None")
 
   def replace(self, function: T.Callable[[_U], _V]) -> _V:
-    return function(self)
+    return function(self)  # type: ignore
 
   def walk(self, function: T.Callable[[_U], None]):
     pass

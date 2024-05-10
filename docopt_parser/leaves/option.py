@@ -57,7 +57,7 @@ class Option(base.Leaf):
     arg_suffix = ' ' + self.argname.elm if self.argname else ''
     return f'{self.ident}{self._multiple_suffix}{arg_suffix}'
 
-  def __iter__(self):
+  def __iter__(self):  # type: ignore
     yield from super().__iter__()
     if not self.__is_definition:
       yield 'definition', self.definition.dict

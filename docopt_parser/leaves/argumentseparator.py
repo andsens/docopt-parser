@@ -12,7 +12,7 @@ class ArgumentSeparator(base.Leaf):
     else:
       return False
 
-  def __iter__(self):
+  def __iter__(self):  # type: ignore
     yield from super().__iter__()
     yield 'default', self.default
 

@@ -32,6 +32,10 @@ ignore = "E111,E114,E121,W503,E302,E303,E305"
 [tool.pyright]
 include = ["docopt_parser", "tests"]
 typeCheckingMode = "strict"
+reportMissingTypeStubs = false
+exclude = [ ".venv" ]
+venvPath = "."
+venv = ".venv"
 
 [tool.poetry.dependencies]
 python = ">=3.11.0,<4.0"

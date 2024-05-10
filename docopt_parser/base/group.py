@@ -27,19 +27,19 @@ class Group(base.Node):
       if isinstance(item, Group):
         item = item.replace(function)
       else:
-        item = function(item)
+        item = function(item)  # type: ignore
       if item is not None:
         new_items.append(item)
     self.items = new_items
-    return function(self)
+    return function(self)  # type: ignore
 
   def walk(self, function: T.Callable[[_U], None]):
     for item in self.items:
       if isinstance(item, Group):
         item.walk(function)
       else:
-        function(item)
-    function(self)
+        function(item)  # type: ignore
+    function(self)  # type: ignore
 
   def __repr__(self):
     return f'''<{str(type(self).__name__).capitalize()}>

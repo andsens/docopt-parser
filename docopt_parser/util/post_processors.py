@@ -194,25 +194,25 @@ def collapse_groups(root: base.Node) -> base.Node:
       node.items = new_items
 
   new_root = root.replace(dissolve_groups)
-  if new_root is None:
-    return groups.Sequence(root_mark << [])
+  if new_root is None:  # type: ignore
+    return groups.Sequence(root_mark << [])  # type: ignore
   i = 0
   # Run until nothing can be remove any longer
   while changed:
     changed = False
     new_root = new_root.replace(remove_empty_groups)
     if new_root is None:
-      return groups.Sequence(root_mark << [])
+      return groups.Sequence(root_mark << [])  # type: ignore
     new_root = new_root.replace(remove_intermediate_groups_with_one_item)
-    if new_root is None:
-      return groups.Sequence(root_mark << [])
+    if new_root is None:  # type: ignore
+      return groups.Sequence(root_mark << [])  # type: ignore
     new_root.walk(merge_nested_sequences)
     new_root.walk(merge_nested_optionals)
     new_root.walk(merge_neighboring_sequences)
     new_root.walk(merge_nested_choices)
     new_root = new_root.replace(remove_nested_repeatables)
-    if new_root is None:
-      return groups.Sequence(root_mark << [])
+    if new_root is None:  # type: ignore
+      return groups.Sequence(root_mark << [])  # type: ignore
     new_root.walk(remove_same_choice)
     i += 1
     if i > 100:
@@ -281,8 +281,8 @@ def merge_identical_leaves(root: base.Node, ignore_option_args: bool = False) ->
       known_leaves.add(node)
     return node
   new_root = root.replace(merge)
-  if new_root is None:
-    return groups.Sequence(root.mark << [])
+  if new_root is None:  # type: ignore
+    return groups.Sequence(root.mark << [])  # type: ignore
   else:
     return new_root
 
@@ -298,7 +298,7 @@ def merge_identical_groups(root: base.Node) -> base.Node:
       known_groups.add(node)
     return node
   new_root = root.replace(merge)
-  if new_root is None:
-    return groups.Sequence(root.mark << [])
+  if new_root is None:  # type: ignore
+    return groups.Sequence(root.mark << [])  # type: ignore
   else:
     return new_root
