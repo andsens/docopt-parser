@@ -1,36 +1,42 @@
 {
   "name": "Python 3",
   "image": "mcr.microsoft.com/vscode/devcontainers/python:0-3.11",
-  "settings": {
-    "python.analysis.typeCheckingMode": "strict",
-    "python.defaultInterpreterPath": ".venv/bin/python",
-    "python.linting.enabled": true,
-    "python.linting.flake8Enabled": true,
-    "python.linting.flake8Path": ".venv/bin/flake8",
-    "python.poetryPath": "${userHome}/.local/bin/poetry",
-    "python.testing.pylintEnabled": true,
-    "python.linting.pylintPath": ".venv/bin/pylint",
-    "python.testing.pytestEnabled": true,
-    "python.testing.pytestPath": ".venv/bin/pytest",
-    "python.venvPath": ".venv",
-    "terminal.integrated.env.linux": {
-      "VIRTUAL_ENV_DISABLE_PROMPT": "true"
-    },
-    "files.exclude": {
-      ".venv": true,
-      ".pytest_cache": true,
-      ".hypothesis": true
-    }
-  },
-  "extensions": [
-    "ms-python.python",
-    "ms-python.vscode-pylance",
-    "timonwong.shellcheck",
-    "bungcip.better-toml",
-    "asciidoctor.asciidoctor-vscode",
-    "me-dutour-mathieu.vscode-github-actions"
-  ],
   "postCreateCommand": ".devcontainer/post.sh",
   "containerUser": "vscode",
-  "updateRemoteUserUID": true
+  "updateRemoteUserUID": true,
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.analysis.typeCheckingMode": "strict",
+        "python.poetryPath": "${userHome}/.local/bin/poetry",
+        "python.testing.pylintEnabled": true,
+        "python.testing.pytestEnabled": true,
+        "python.testing.pytestPath": "./.venv/bin/pytest",
+        "python.venvPath": "./.venv",
+        "terminal.integrated.env.linux": {
+          "VIRTUAL_ENV_DISABLE_PROMPT": "true"
+        },
+        "files.exclude": {
+          ".venv": true,
+          ".pytest_cache": true,
+          ".hypothesis": true
+        },
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter",
+          "editor.insertSpaces": true,
+          "editor.tabSize": 2
+        }
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.black-formatter",
+        "ms-python.flake8",
+        "timonwong.shellcheck",
+        "bungcip.better-toml",
+        "asciidoctor.asciidoctor-vscode",
+        "me-dutour-mathieu.vscode-github-actions"
+      ]
+    }
+  }
 }
